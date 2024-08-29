@@ -1,8 +1,8 @@
 class Mineral {
-    constructor(rarity, type) {   
-        this.rarity = rarity;
-        this.type = type;
-    }
+  constructor(rarity, type) {
+    this.rarity = rarity;
+    this.type = type;
+  }
 }
 
 let air;
@@ -10,6 +10,22 @@ let iron;
 let gold;
 let water;
 let rocks;
+
+function setupTerrain()
+{
+  // Listing mineral types and their properties
+  air = new Mineral(200, 0);
+  iron = new Mineral(50, 1);
+  gold = new Mineral(25, 2);
+  water = new Mineral(50, 3);
+  rocks = new Mineral(170, 4);
+
+  createRessourceMap(air);
+  createRessourceMap(rocks);
+  createRessourceMap(water);
+  createRessourceMap(iron);
+  createRessourceMap(gold);
+}
 
 // Store minerals in storedMap
 function createRessourceMap(mineral) {
@@ -24,7 +40,13 @@ function createRessourceMap(mineral) {
 
       let c = noiseLevel * noise(nx + (1 * 0.000001 + 10000) * (mineral.rarity - 100 * 100), ny + (1 * 0.000001 + 1000) * (100*mineral.rarity - 100));
 
-      if (c <= mineral.rarity)
+
+      // TODO dégradé de terre vers la pierre
+      if (mineral.type===4 && c < mineral.rarity /2)
+        storePixel(mineral.type, x, y);
+
+
+      else if (c <= mineral.rarity)
         storePixel(mineral.type, x, y);
     }
   }

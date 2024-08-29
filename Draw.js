@@ -28,6 +28,9 @@ function drawMap()
     {
       switch (storedMap[i][j])
       {
+      case 0 :
+        c = color(50, 20, 15);
+        break;
       case 1:
         c = color(220, 210, 180);
         break;
@@ -38,7 +41,7 @@ function drawMap()
         c = color(30, 50, 210);
         break;
       case 4:
-        c = color(98, 40, 30);
+        c = color(70, 25, 20);
         break;
         //case 0:
       default:
