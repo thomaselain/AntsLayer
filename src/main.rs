@@ -1,13 +1,16 @@
 //mod shaders;
 //use shaders::create_shader;
 
-mod units;
 use std::thread;
 use std::time::{Duration, Instant};
 
+mod units;
+use terrain::Terrain;
 use units::{ActionType, Actions, Coords, JobType, RaceType, Unit};
 
 mod window;
+
+mod terrain;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -36,8 +39,8 @@ fn main() {
                 y: 300,
             },
         );
-        // add 20 move action for testing
-        for _ in 0..300 {
+        // add move actions for testing
+        for _ in 0..2 {
             unit.action_queue.push(ActionType::MOVE);
         }
         unit_list.push(unit);
@@ -48,6 +51,9 @@ fn main() {
 
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     let mut last_time = Instant::now();
+
+    let mut terrain = Terrain::new(800, 600);
+    terrain.generate();
 
     'running: loop {
         let current_time = Instant::now();
@@ -68,21 +74,20 @@ fn main() {
             }
         }
 
-        // CACA BOUDIN
-        if delta_time < 16 {
-            thread::sleep(Duration::from_millis(16 - delta_time as u64)); // Attendre pour atteindre 60 FPS
-        }
-        
-        // Handle units
+// clear screen
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
 
+        // draw terrain
+        terrain.draw(&mut canvas);
+
+        // Make every unit think() of what to do,
         for u in &mut unit_list {
             u.think(delta_time);
-            u.do_action();
             u.draw(&mut canvas)
                 .expect("Cannot draw Unit for some reason :^)");
         }
+
         canvas.present();
     }
 }

@@ -3,6 +3,10 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
+use rand;
+
+const UNIT_SIZE: i32 = 2;
+
 #[derive(Copy, Clone)]
 pub enum RaceType {
     HUMAN,
@@ -20,6 +24,7 @@ pub enum JobType {
 
 #[derive(Copy, Clone, Debug)]
 pub enum ActionType {
+    WANDER,
     WAIT,
     MOVE,
     DIG,
@@ -64,9 +69,9 @@ impl Unit {
             action_queue: vec![],
             last_action_timer: 0,
             speed: match race {
-                RaceType::HUMAN => 1000,
-                RaceType::ALIEN => 1000,
-                RaceType::ANT => 1000,
+                RaceType::HUMAN => 1500,
+                RaceType::ANT => 500,
+                RaceType::ALIEN => 500,
                 _ => {
                     panic!("Invalid RaceType for new Unit !!!")
                 }
@@ -76,7 +81,7 @@ impl Unit {
 }
 
 pub trait Actions {
-    fn do_action(&mut self);
+    fn do_action(&mut self, action: ActionType);
     fn think(&mut self, delta_time: i32);
     fn draw(&self, canvas: &mut Canvas<Window>) -> Result<(), String>;
     fn r#move(&mut self, m: Coords);
@@ -85,26 +90,24 @@ pub trait Actions {
 }
 
 impl Actions for Unit {
-    fn do_action(&mut self) {
-        if let Some(action) = self.action_queue.first() {
-            match action {
-                ActionType::MOVE => {
-                    self.r#move(Coords { x: 1, y: 1 });
-                }
-                _ => {}
+    fn do_action(&mut self, action: ActionType) {
+        match action {
+            ActionType::MOVE => {
+                self.r#move(Coords { x: 1, y: 0 });
             }
-            self.action_queue.remove(0);
+            _ => {}
         }
     }
-
     // Decide what to do next
     fn think(&mut self, delta_time: i32) {
-        self.last_action_timer += delta_time;
-
         if self.last_action_timer >= self.speed {
-            self.last_action_timer = 0;
-            self.action_queue.push(ActionType::MOVE);
-            return;
+            if let Some(action) = self.action_queue.first() {
+                self.do_action(*action);
+                self.last_action_timer = 0;
+                self.action_queue.remove(0);
+            }
+        } else {
+            self.last_action_timer += delta_time;
         }
     }
 
@@ -115,8 +118,8 @@ impl Actions for Unit {
     }
     //move
     fn r#move(&mut self, m: Coords) {
-        self.coords.x += m.x;
-        self.coords.y += m.y;
+        self.coords.x += m.x * UNIT_SIZE;
+        self.coords.y += m.y * UNIT_SIZE;
     }
     fn dig(&self) {}
     fn build(&self) {}
