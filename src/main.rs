@@ -26,22 +26,21 @@ enum Directions {
 fn main() {
     let mut unit_list: Vec<Unit> = Vec::new();
 
-    for i in 0..20 {
+    for i in 0..100 {
         let mut unit = Unit::new(
-            if i % 2 == 0 {
+            if i % 3 == 0 {
                 RaceType::HUMAN
-            } else {
+            } else if i % 3 == 1 {
                 RaceType::ANT
+            } else {
+                RaceType::ALIEN
             },
             JobType::MINER,
-            Coords {
-                x: 400 + i * 20,
-                y: 300,
-            },
+            Coords { x: 400, y: 300 },
         );
         // add move actions for testing
-        for _ in 0..2 {
-            unit.action_queue.push(ActionType::MOVE);
+        for _ in 0..10 {
+            unit.action_queue.push(ActionType::WANDER);
         }
         unit_list.push(unit);
     }
@@ -52,8 +51,19 @@ fn main() {
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     let mut last_time = Instant::now();
 
+    let texture_creator = canvas.texture_creator();
+    let mut terrain_texture = texture_creator
+        .create_texture_target(None, 800, 600)
+        .expect("Failed to create texture");
+
     let mut terrain = Terrain::new(800, 600);
     terrain.generate();
+
+    canvas
+        .with_texture_canvas(&mut terrain_texture, |texture_canvas| {
+            terrain.draw(texture_canvas);
+        })
+        .expect("Failed to draw terrain on texture");
 
     'running: loop {
         let current_time = Instant::now();
@@ -74,12 +84,12 @@ fn main() {
             }
         }
 
-// clear screen
+        // clear screen
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
-
-        // draw terrain
-        terrain.draw(&mut canvas);
+        canvas
+            .copy(&terrain_texture, None, None)
+            .expect("Failed to copy texture");
 
         // Make every unit think() of what to do,
         for u in &mut unit_list {

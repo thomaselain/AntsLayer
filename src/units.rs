@@ -4,8 +4,9 @@ use sdl2::render::Canvas;
 use sdl2::video::Window;
 
 use rand;
+use rand::seq::SliceRandom;
 
-const UNIT_SIZE: i32 = 2;
+const UNIT_SIZE: i32 = 5;
 
 #[derive(Copy, Clone)]
 pub enum RaceType {
@@ -43,12 +44,18 @@ pub struct Coords {
 #[derive(Clone)]
 pub struct Unit {
     color: Color,
-    job: JobType,
-    race: RaceType,
+    pub job: JobType,
+    pub race: RaceType,
     pub coords: Coords,
+    pub action_coords: Option<Coords>,
     pub action_queue: Vec<ActionType>,
     speed: i32,
     last_action_timer: i32,
+}
+
+fn random_direction() -> i32 {
+    let choices = [-1, 0, 1];
+    *choices.choose(&mut rand::thread_rng()).unwrap()
 }
 
 impl Unit {
@@ -66,12 +73,14 @@ impl Unit {
             race,
             job,
             coords,
+            action_coords: None,
             action_queue: vec![],
             last_action_timer: 0,
             speed: match race {
-                RaceType::HUMAN => 1500,
-                RaceType::ANT => 500,
-                RaceType::ALIEN => 500,
+                // Thinking speed, not real speed (value is in milliseconds, the higher the slower they act)
+                RaceType::HUMAN => 300,
+                RaceType::ANT => 10,
+                RaceType::ALIEN => 150,
                 _ => {
                     panic!("Invalid RaceType for new Unit !!!")
                 }
@@ -95,6 +104,12 @@ impl Actions for Unit {
             ActionType::MOVE => {
                 self.r#move(Coords { x: 1, y: 0 });
             }
+            ActionType::WANDER => {
+                self.r#move(Coords {
+                    x: random_direction(),
+                    y: random_direction(),
+                });
+            }
             _ => {}
         }
     }
@@ -108,14 +123,16 @@ impl Actions for Unit {
             }
         } else {
             self.last_action_timer += delta_time;
+            self.action_queue.push(ActionType::WANDER);
         }
     }
 
     fn draw(&self, canvas: &mut Canvas<Window>) -> Result<(), String> {
         canvas.set_draw_color(self.color);
-        canvas.fill_rect(Rect::new(self.coords.x, self.coords.y, 10, 10))?;
+        canvas.fill_rect(Rect::new(self.coords.x, self.coords.y, UNIT_SIZE as u32, UNIT_SIZE as u32))?;
         Ok(())
     }
+
     //move
     fn r#move(&mut self, m: Coords) {
         self.coords.x += m.x * UNIT_SIZE;
