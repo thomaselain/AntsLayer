@@ -6,6 +6,10 @@ use sdl2::video::Window;
 use rand;
 use rand::seq::SliceRandom;
 
+use terrain::Terrain;
+
+use crate::terrain::{self, TileType};
+
 const UNIT_SIZE: i32 = 5;
 
 #[derive(Copy, Clone)]
@@ -80,7 +84,7 @@ impl Unit {
                 // Thinking speed, not real speed (value is in milliseconds, the higher the slower they act)
                 RaceType::HUMAN => 300,
                 RaceType::ANT => 10,
-                RaceType::ALIEN => 150,
+                RaceType::ALIEN => 50,
                 _ => {
                     panic!("Invalid RaceType for new Unit !!!")
                 }
@@ -90,53 +94,66 @@ impl Unit {
 }
 
 pub trait Actions {
-    fn do_action(&mut self, action: ActionType);
-    fn think(&mut self, delta_time: i32);
-    fn draw(&self, canvas: &mut Canvas<Window>) -> Result<(), String>;
-    fn r#move(&mut self, m: Coords);
+    fn do_action(&mut self, terrain: Terrain, action: ActionType);
+    fn think(&mut self, terrain: Terrain, delta_time: i32);
+    fn draw_at(&self, canvas: &mut Canvas<Window>, x: i32, y: i32) -> Result<(), String>;
+    fn r#move(&mut self, terrain: Terrain, m: Coords);
     fn dig(&self);
     fn build(&self);
 }
 
 impl Actions for Unit {
-    fn do_action(&mut self, action: ActionType) {
+    fn do_action(&mut self, terrain: Terrain, action: ActionType) {
         match action {
             ActionType::MOVE => {
-                self.r#move(Coords { x: 1, y: 0 });
+                self.r#move(terrain, Coords { x: 1, y: 0 });
             }
             ActionType::WANDER => {
-                self.r#move(Coords {
-                    x: random_direction(),
-                    y: random_direction(),
-                });
+                self.r#move(
+                    terrain,
+                    Coords {
+                        x: random_direction(),
+                        y: random_direction(),
+                    },
+                );
             }
             _ => {}
         }
     }
     // Decide what to do next
-    fn think(&mut self, delta_time: i32) {
+    fn think(&mut self, terrain: Terrain, delta_time: i32) {
         if self.last_action_timer >= self.speed {
             if let Some(action) = self.action_queue.first() {
-                self.do_action(*action);
+                self.do_action(terrain, *action);
                 self.last_action_timer = 0;
                 self.action_queue.remove(0);
             }
-        } else {
-            self.last_action_timer += delta_time;
+        }
+        if self.action_queue.is_empty() {
             self.action_queue.push(ActionType::WANDER);
         }
+        self.last_action_timer += delta_time;
     }
 
-    fn draw(&self, canvas: &mut Canvas<Window>) -> Result<(), String> {
+    fn draw_at(&self, canvas: &mut Canvas<Window>, x: i32, y: i32) -> Result<(), String> {
         canvas.set_draw_color(self.color);
-        canvas.fill_rect(Rect::new(self.coords.x, self.coords.y, UNIT_SIZE as u32, UNIT_SIZE as u32))?;
+        canvas.fill_rect(Rect::new(x, y, UNIT_SIZE as u32, UNIT_SIZE as u32))?;
         Ok(())
     }
 
     //move
-    fn r#move(&mut self, m: Coords) {
-        self.coords.x += m.x * UNIT_SIZE;
-        self.coords.y += m.y * UNIT_SIZE;
+    fn r#move(&mut self, terrain: Terrain, m: Coords) {
+        // CRADO, A AMELIORER
+        let target_x = (self.coords.x + m.x * UNIT_SIZE) as usize;
+        let target_y = (self.coords.y + m.y * UNIT_SIZE) as usize;
+
+        if terrain.data.len() > target_x
+        && terrain.data[target_x].len() > target_y
+        && terrain.data[target_x][target_y] == TileType::AIR
+        {
+            self.coords.x += m.x * UNIT_SIZE;
+            self.coords.y += m.y * UNIT_SIZE;
+        }
     }
     fn dig(&self) {}
     fn build(&self) {}

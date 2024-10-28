@@ -36,7 +36,7 @@ pub struct Mineral {
 
 #[derive(Clone)]
 pub struct Terrain {
-    data: Vec<Vec<TileType>>,
+    pub data: Vec<Vec<TileType>>,
     pixel_buffer: Vec<u32>,
 }
 
@@ -75,7 +75,7 @@ impl Terrain {
             },
             Mineral {
                 r#type: MineralType::ROCK,
-                occurence: 0.7,
+                occurence: 0.5,
                 color: 0x232323,
             },
         ];
