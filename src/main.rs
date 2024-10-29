@@ -46,10 +46,13 @@ fn main() -> Result<(), String> {
 
     ///////////////////////////////////////////// UNITS CREATION ///////////////////////////////////
     for i in 0..100 {
-        let mut coords;
+        let mut coords = Coords {
+            x: (window::WIDTH / 2) as i32,
+            y: (window::HEIGHT / 2) as i32,
+        };
 
         // Boucle jusqu'à ce qu'on trouve une case de type AIR
-        loop {
+        for _ in 0..10 {
             let x = rand::thread_rng().gen_range(0..window::WIDTH - 1);
             let y = rand::thread_rng().gen_range(0..window::HEIGHT - 1);
             coords = Coords {
@@ -115,13 +118,14 @@ fn main() -> Result<(), String> {
                         let delta_x = x - prev_mouse_x;
                         let delta_y = y - prev_mouse_y;
 
-                        camera_x += (delta_x as f32 / camera.zoom * 0.9) as i32;
-                        camera_y += (delta_y as f32 / camera.zoom * 0.9) as i32;
+                        camera_x += (delta_x as f32) as i32;
+                        camera_y += (delta_y as f32) as i32;
 
                         prev_mouse_x = x;
                         prev_mouse_y = y;
                     }
                 }
+                // TODO : Réparer le décalage du zoom (les unités et le terrain ont pas la bonne taille)
                 Event::MouseWheel { y, .. } => {
                     if y > 0 && camera.zoom < 10.0 {
                         camera.zoom += 0.1;
@@ -152,8 +156,8 @@ fn main() -> Result<(), String> {
         canvas.set_viewport(Some(Rect::new(
             camera_x,
             camera_y,
-            window::WIDTH,
-            window::HEIGHT,
+            (window::WIDTH as f32 * camera.zoom) as u32,
+            (window::HEIGHT as f32 * camera.zoom) as u32,
         )));
         let terrain_dst = Rect::new(
             0,
@@ -173,7 +177,5 @@ fn main() -> Result<(), String> {
         }
 
         canvas.present();
-
-        //thread::sleep(Duration::from_millis(16)); // Approx. 60 FPS
     }
 }
