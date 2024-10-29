@@ -8,9 +8,14 @@ use rand::seq::SliceRandom;
 
 use terrain::Terrain;
 
-use crate::terrain::{self, TileType};
+use crate::{
+    coords::{self},
+    camera::{self},
+    terrain::{self, TileType},
+};
+use coords::Coords as Coords;
 
-const UNIT_SIZE: u32 = 10;
+const UNIT_SIZE: u32 = terrain::TILE_SIZE;
 
 #[derive(Copy, Clone)]
 pub enum RaceType {
@@ -39,12 +44,7 @@ pub enum ActionType {
     BUILD,
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct Coords {
-    pub x: i32,
-    pub y: i32,
-}
-
+#[doc = "Unit.speed is thinking speed (in milliseconds) not moving speed"]
 #[derive(Clone)]
 pub struct Unit {
     color: Color,
@@ -64,7 +64,6 @@ fn random_direction() -> i32 {
 
 impl Unit {
     pub fn new(race: RaceType, job: JobType, coords: Coords) -> Unit {
-        //pub fn new(&self, race: RaceType, job: JobType, coords: (i32, i32)) -> Unit {
         Unit {
             color: match race {
                 RaceType::HUMAN => Color::BLUE,
@@ -81,7 +80,6 @@ impl Unit {
             action_queue: vec![],
             last_action_timer: 0,
             speed: match race {
-                // Thinking speed, not real speed (value is in milliseconds, the higher the slower they act)
                 RaceType::HUMAN => 300,
                 RaceType::ANT => 10,
                 RaceType::ALIEN => 50,
@@ -120,7 +118,7 @@ impl Actions for Unit {
             _ => {}
         }
     }
-    // Decide what to do next
+    /// Decide what to do next
     fn think(&mut self, terrain: Terrain, delta_time: i32) {
         if self.last_action_timer >= self.speed {
             if let Some(action) = self.action_queue.first() {
@@ -134,7 +132,7 @@ impl Actions for Unit {
         }
         self.last_action_timer += delta_time;
     }
-
+    /// Draw unit at the correct coords on sdl_window
     fn draw_at(&self, canvas: &mut Canvas<Window>, zoom: f32) -> Result<(), String> {
         let x: f32 = self.coords.x as f32 * zoom;
         let y: f32 = self.coords.y as f32 * zoom;

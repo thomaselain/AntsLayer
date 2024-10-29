@@ -9,8 +9,13 @@ use sdl2::render::Canvas;
 use sdl2::video::Window;
 
 use rand::{self, Rng};
+pub(crate) const TILE_SIZE: u32 = 3;
 
-use crate::window;
+use crate::{
+    Coords::{self},
+    camera::{self, Camera},
+    window::{self, HEIGHT, WIDTH},
+};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum MineralType {
@@ -162,28 +167,62 @@ impl Terrain {
                             })
                             .unwrap();
                         mineral.color
-                    },
+                    }
                     None => 0x000000,
                 };
                 self.pixel_buffer[x * window::HEIGHT as usize + y] = color;
-
             }
         }
     }
+    pub fn draw(
+        &mut self,
+        canvas: &mut sdl2::render::Canvas<sdl2::video::Window>,
+        camera: &Camera,
+    ) {
+        // Calculer les limites de la vue en fonction de la caméra et du zoom
+        let start_x = (camera.position.x as f32 / camera.tile_size as f32) as usize;
+        let start_y = (camera.position.y as f32 / camera.tile_size as f32) as usize;
+        let end_x = ((camera.position.x as f32 + canvas.viewport().width() as f32)
+            / camera.tile_size as f32)
+            .ceil() as usize;
+        let end_y = ((camera.position.y as f32 + canvas.viewport().height() as f32)
+            / camera.tile_size as f32)
+            .ceil() as usize;
 
-    pub fn draw(&self, canvas: &mut Canvas<Window>) {
-        for x in 0..window::WIDTH {
-            for y in 0..window::HEIGHT {
-                let index = x * window::HEIGHT + y;
-                let mut color: u32 = 0x000000;
+        let end_x = end_x.min(WIDTH as usize);
+        let end_y = end_y.min(HEIGHT as usize);
 
-                if (index as usize) < self.pixel_buffer.len() {
-                    color = self.pixel_buffer[index as usize];
-                }
-                let sdl_color = color_from_u32(color);
-                canvas.set_draw_color(sdl_color);
+        for y in start_y..end_y {
+            for x in start_x..end_x {
+                let tile = match self.get_data(x, y) {
+                    Some(_) => self.data[x][y],
+                    None => continue,
+                };
+
+                let tile_coords = Coords {
+                    x: x as i32,
+                    y: y as i32,
+                };
+
+                let color = match tile {
+                    TileType::Mineral(_) => Color::GREY,
+                    TileType::AIR => sdl2::pixels::Color::RGB(255, 255, 255),
+                    TileType::WATER => Color::BLUE,
+                };
+
+                let draw_x: f32 = start_x as f32 + (tile_coords.x as f32 * camera.tile_size as f32 * camera.zoom)
+                    - camera.position.x as f32;
+                let draw_y: f32 = start_y as f32 + (tile_coords.y as f32 * camera.tile_size as f32 * camera.zoom)
+                    - camera.position.y as f32;
+
+                canvas.set_draw_color(color);
                 canvas
-                    .fill_rect(Rect::new(x as i32, y as i32, 1, 1))
+                    .fill_rect(sdl2::rect::Rect::new(
+                        draw_x as i32,
+                        draw_y as i32,
+                        camera.tile_size as u32,
+                        camera.tile_size as u32,
+                    ))
                     .unwrap();
             }
         }
