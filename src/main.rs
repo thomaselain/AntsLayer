@@ -36,10 +36,10 @@ fn main() -> Result<(), String> {
 
     let texture_creator = canvas.texture_creator();
     let mut terrain_texture = texture_creator
-        .create_texture_target(None, 800, 600)
+        .create_texture_target(None, window::WIDTH, window::HEIGHT)
         .expect("Failed to create texture");
 
-    let mut terrain = Terrain::new(800, 600);
+    let mut terrain = Terrain::new();
     terrain.generate();
 
     ///////////////////////////////////////////// UNITS CREATION ///////////////////////////////////
@@ -48,19 +48,19 @@ fn main() -> Result<(), String> {
 
         // Boucle jusqu'à ce qu'on trouve une case de type AIR
         loop {
-            let x = rand::thread_rng().gen_range(100..700);
-            let y = rand::thread_rng().gen_range(50..550);
-            coords = Coords { x, y };
+            let x = rand::thread_rng().gen_range(0..window::WIDTH - 1);
+            let y = rand::thread_rng().gen_range(0..window::HEIGHT - 1);
+            coords = Coords { x: x as i32, y: y as i32 };
 
             // Vérifie si la case est de type AIR avant d'assigner
-            if terrain.data[x as usize][y as usize] == TileType::AIR {
+            if terrain.get_data(x as usize, y as usize) == Some(TileType::AIR) {
                 break; // Coordonnées valides, on peut sortir de la boucle
             }
         }
 
         let mut unit = Unit::new(
             if i % 3 == 0 {
-                RaceType::HUMAN
+                RaceType::HUMAN 
             } else if i % 3 == 1 {
                 RaceType::ANT
             } else {
@@ -137,8 +137,8 @@ fn main() -> Result<(), String> {
         // clear screen
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
-        canvas.set_viewport(Some(Rect::new(camera_x, camera_y, 800, 600)));
-        let terrain_dst = Rect::new(0, 0, (800 as f32 * zoom) as u32, (600 as f32 * zoom) as u32);
+        canvas.set_viewport(Some(Rect::new(camera_x, camera_y, window::WIDTH, window::HEIGHT)));
+        let terrain_dst = Rect::new(0, 0, (window::WIDTH as f32 * zoom) as u32, (window::HEIGHT as f32 * zoom) as u32);
 
         canvas
             .copy(&terrain_texture, None, terrain_dst)
@@ -148,10 +148,7 @@ fn main() -> Result<(), String> {
         for u in &mut unit_list {
             u.think(terrain.clone(), delta_time);
 
-            let zoomed_x = (u.coords.x as f32 * zoom) as i32;
-            let zoomed_y = (u.coords.y as f32 * zoom) as i32;
-
-            u.draw_at(&mut canvas, zoomed_x, zoomed_y)
+            u.draw_at(&mut canvas, zoom)
                 .expect("Cannot draw Unit for some reason :^)");
         }
         canvas.set_scale(zoom, zoom)?;

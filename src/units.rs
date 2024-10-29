@@ -10,7 +10,7 @@ use terrain::Terrain;
 
 use crate::terrain::{self, TileType};
 
-const UNIT_SIZE: i32 = 5;
+const UNIT_SIZE: u32 = 10;
 
 #[derive(Copy, Clone)]
 pub enum RaceType {
@@ -96,7 +96,7 @@ impl Unit {
 pub trait Actions {
     fn do_action(&mut self, terrain: Terrain, action: ActionType);
     fn think(&mut self, terrain: Terrain, delta_time: i32);
-    fn draw_at(&self, canvas: &mut Canvas<Window>, x: i32, y: i32) -> Result<(), String>;
+    fn draw_at(&self, canvas: &mut Canvas<Window>, zoom: f32) -> Result<(), String>;
     fn r#move(&mut self, terrain: Terrain, m: Coords);
     fn dig(&self);
     fn build(&self);
@@ -135,24 +135,31 @@ impl Actions for Unit {
         self.last_action_timer += delta_time;
     }
 
-    fn draw_at(&self, canvas: &mut Canvas<Window>, x: i32, y: i32) -> Result<(), String> {
+    fn draw_at(&self, canvas: &mut Canvas<Window>, zoom: f32) -> Result<(), String> {
+        let x: f32 = self.coords.x as f32 * zoom;
+        let y: f32 = self.coords.y as f32 * zoom;
+
         canvas.set_draw_color(self.color);
-        canvas.fill_rect(Rect::new(x, y, UNIT_SIZE as u32, UNIT_SIZE as u32))?;
+        canvas.fill_rect(Rect::new(
+            x as i32,
+            y as i32,
+            UNIT_SIZE as u32,
+            UNIT_SIZE as u32,
+        ))?;
         Ok(())
     }
 
     //move
     fn r#move(&mut self, terrain: Terrain, m: Coords) {
-        // CRADO, A AMELIORER
-        let target_x = (self.coords.x + m.x * UNIT_SIZE) as usize;
-        let target_y = (self.coords.y + m.y * UNIT_SIZE) as usize;
+        let target_x = (self.coords.x + m.x * UNIT_SIZE as i32) as usize;
+        let target_y = (self.coords.y + m.y * UNIT_SIZE as i32) as usize;
 
         if terrain.data.len() > target_x
-        && terrain.data[target_x].len() > target_y
-        && terrain.data[target_x][target_y] == TileType::AIR
+            && terrain.data[target_x].len() > target_y
+            && terrain.data[target_x][target_y] == TileType::AIR
         {
-            self.coords.x += m.x * UNIT_SIZE;
-            self.coords.y += m.y * UNIT_SIZE;
+            self.coords.x += m.x as i32;
+            self.coords.y += m.y as i32;
         }
     }
     fn dig(&self) {}
