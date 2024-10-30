@@ -9,11 +9,11 @@ use rand::seq::SliceRandom;
 use terrain::Terrain;
 
 use crate::{
+    camera::{self, Camera},
     coords::{self},
-    camera::{self},
     terrain::{self, TileType},
 };
-use coords::Coords as Coords;
+use coords::Coords;
 
 pub const UNIT_SIZE: u32 = terrain::TILE_SIZE;
 
@@ -47,7 +47,7 @@ pub enum ActionType {
 #[doc = "Unit.speed is thinking speed (in milliseconds) not moving speed"]
 #[derive(Clone)]
 pub struct Unit {
-    color: Color,
+    pub color: u32,
     pub job: JobType,
     pub race: RaceType,
     pub coords: Coords,
@@ -64,11 +64,12 @@ fn random_direction() -> i32 {
 
 impl Unit {
     pub fn new(race: RaceType, job: JobType, coords: Coords) -> Unit {
+        println!("new unit !");
         Unit {
             color: match race {
-                RaceType::HUMAN => Color::BLUE,
-                RaceType::ALIEN => Color::GREEN,
-                RaceType::ANT => Color::RED,
+                RaceType::ALIEN => 0xff0000ff,
+                RaceType::ANT => 0x00ff00ff,
+                RaceType::HUMAN => 0x0000ffff,
                 _ => {
                     panic!("Invalid RaceType for new Unit !!!")
                 }
@@ -94,7 +95,6 @@ impl Unit {
 pub trait Actions {
     fn do_action(&mut self, terrain: Terrain, action: ActionType);
     fn think(&mut self, terrain: Terrain, delta_time: i32);
-    fn draw_at(&self, canvas: &mut Canvas<Window>, zoom: f32) -> Result<(), String>;
     fn r#move(&mut self, terrain: Terrain, m: Coords);
     fn dig(&self);
     fn build(&self);
@@ -132,21 +132,6 @@ impl Actions for Unit {
         }
         self.last_action_timer += delta_time;
     }
-    /// Draw unit at the correct coords on sdl_window
-    fn draw_at(&self, canvas: &mut Canvas<Window>, zoom: f32) -> Result<(), String> {
-        let x: f32 = self.coords.x as f32 * zoom;
-        let y: f32 = self.coords.y as f32 * zoom;
-
-        canvas.set_draw_color(self.color);
-        canvas.fill_rect(Rect::new(
-            x as i32,
-            y as i32,
-            (UNIT_SIZE as f32 * zoom) as u32,
-            (UNIT_SIZE as f32 * zoom) as u32,
-        ))?;
-        Ok(())
-    }
-
     //move
     fn r#move(&mut self, terrain: Terrain, m: Coords) {
         let target_x = (self.coords.x + m.x * UNIT_SIZE as i32) as usize;

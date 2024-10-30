@@ -40,16 +40,18 @@ fn main() -> Result<(), String> {
             y: (window::HEIGHT / 2) as i32,
         };
 
-        for _ in 0..10 {
-            let x = rand::thread_rng().gen_range(0..window::WIDTH - 1);
+        for _ in 0..300 {
+            let mut x = rand::thread_rng().gen_range(0..window::WIDTH - 1);
             let y = rand::thread_rng().gen_range(0..window::HEIGHT - 1);
             coords = Coords {
                 x: x as i32,
                 y: y as i32,
             };
 
-            if terrain.get_data(x as usize, y as usize) == Some(TileType::AIR) {
-                break;
+            while x < window::WIDTH
+                && terrain.get_data(x as usize, y as usize) != Some(TileType::AIR)
+            {
+                x += 1;
             }
         }
 
@@ -177,7 +179,6 @@ fn main() -> Result<(), String> {
                         terrain.minerals[2].automaton.perlin_threshold,
                         terrain.minerals[2].automaton.perlin_scale
                     );
-
                 }
 
                 _ => {}
@@ -187,13 +188,13 @@ fn main() -> Result<(), String> {
         let current_time = Instant::now();
         let delta_time = current_time.duration_since(last_time).as_millis() as i32;
         last_time = current_time;
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.clear();
 
         for u in &mut unit_list {
             u.think(terrain.clone(), delta_time);
-            u.draw_at(&mut canvas, camera.zoom).expect("cant draw unit");
+            terrain.draw_unit_in_pixel_buffer(u.clone(), &camera);
         }
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
         canvas.set_viewport(Some(Rect::new(
             camera_x,
             camera_y,

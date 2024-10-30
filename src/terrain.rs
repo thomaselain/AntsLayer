@@ -5,11 +5,12 @@ use sdl2::pixels::Color;
 
 use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
-pub(crate) const TILE_SIZE: u32 = 1;
+pub(crate) const TILE_SIZE: u32 = 5;
 
 use crate::{
     automaton::{self, Automaton},
     camera::{self, Camera},
+    units::{Unit, UNIT_SIZE},
     window::{self, HEIGHT, WIDTH},
     Coords::{self},
 };
@@ -42,14 +43,6 @@ pub struct Terrain {
     pixel_buffer: Vec<u32>,
 }
 
-// Custom function to use Color::from(hexa value)
-fn color_from_u32(hex: u32) -> Color {
-    let r = ((hex >> 16) & 0xFF) as u8;
-    let g = ((hex >> 8) & 0xFF) as u8;
-    let b = (hex & 0xFF) as u8;
-    Color::RGB(r, g, b)
-}
-
 impl Terrain {
     pub fn new() -> Terrain {
         let tiles: Vec<Vec<TileType>> =
@@ -63,12 +56,12 @@ impl Terrain {
                 Mineral {
                     r#type: TileType::Mineral(MineralType::GOLD),
                     color: 0xffff1cff,
-                    automaton: Automaton::new(4, 6, 3, 0.05, 0.05, 1.0),
+                    automaton: Automaton::new(4, 6, 3, 0.05, 0.045, 0.95),
                 },
                 Mineral {
                     r#type: TileType::Mineral(MineralType::IRON),
                     color: 0xAAAAAAff,
-                    automaton: Automaton::new(4, 5, 4, 0.05, 0.1, 1.0),
+                    automaton: Automaton::new(4, 5, 4, 0.05, 0.075, 1.0),
                 },
                 Mineral {
                     r#type: TileType::Mineral(MineralType::ROCK),
@@ -224,5 +217,41 @@ impl Terrain {
         // Afficher uniquement la partie visible de la texture
         self.update_pixel_buffer();
         canvas.copy(&texture, None, dest_rect).unwrap();
+    }
+
+    pub fn draw_unit_in_pixel_buffer(
+        &mut self,
+        unit: Unit,
+        camera: &Camera,          // Référence à la caméra
+    ) {
+        // Vérifiez si l'unité est sur l'écran
+        if !camera.is_on_screen(unit.coords) {
+            return; // Ne rien dessiner si l'unité n'est pas visible
+        }
+    
+        // Convertir les coordonnées du monde en coordonnées de l'écran
+        let screen_coords = camera.world_to_screen(unit.coords);
+        
+        // Calculer les indices du tampon de pixels
+        let start_x = screen_coords.x as usize;
+        let start_y = screen_coords.y as usize;
+        let tile_size = camera.tile_size as usize;
+    
+        // S'assurer que l'unité ne déborde pas du tampon
+        if start_x >= WIDTH as usize || start_y >= HEIGHT as usize {
+            return; // L'unité est hors de l'écran
+        }
+    println!("Unit of color : {:#X}", unit.color);
+        // Dessiner l'unité dans le tampon de pixels
+        for x in 0..tile_size {
+            for y in 0..tile_size {
+                let pixel_x = start_x + x;
+                let pixel_y = start_y + y;
+                if pixel_x < WIDTH as usize && pixel_y < HEIGHT as usize {
+                    let pixel_index = pixel_y * WIDTH as usize + pixel_x;
+                    self.pixel_buffer[pixel_index] = unit.color; // Remplace la couleur du pixel
+                }
+            }
+        }
     }
 }
