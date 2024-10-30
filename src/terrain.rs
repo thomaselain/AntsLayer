@@ -32,7 +32,6 @@ pub enum TileType {
 pub struct Mineral {
     pub r#type: TileType,
     pub automaton: Automaton,
-    pub occurence: f64,
     pub color: u32,
 }
 
@@ -63,21 +62,18 @@ impl Terrain {
             minerals: vec![
                 Mineral {
                     r#type: TileType::Mineral(MineralType::GOLD),
-                    occurence: 0.001,
                     color: 0xffff1cff,
-                    automaton: Automaton::new(1, 1, 1),
+                    automaton: Automaton::new(4, 6, 3, 0.05, 0.05, 1.0),
                 },
                 Mineral {
                     r#type: TileType::Mineral(MineralType::IRON),
-                    occurence: 0.01,
-                    color: 0xCCCCCCff,
-                    automaton: Automaton::new(2, 2, 1),
+                    color: 0xAAAAAAff,
+                    automaton: Automaton::new(4, 5, 4, 0.05, 0.1, 1.0),
                 },
                 Mineral {
                     r#type: TileType::Mineral(MineralType::ROCK),
-                    occurence: 0.7,
                     color: 0x303030FF,
-                    automaton: Automaton::new(5, 2, 1),
+                    automaton: Automaton::new(4, 4, 5, 0.035, 0.35, 1.0),
                 },
             ],
         }
@@ -91,7 +87,7 @@ impl Terrain {
         }
     }
 
-    fn check_data(&mut self, x: usize, y: usize) -> bool {
+    pub fn check_data(&mut self, x: usize, y: usize) -> bool {
         if x < self.data.len() && y < self.data[x].len() {
             true
         } else {
@@ -102,15 +98,18 @@ impl Terrain {
     pub fn generate_caves(&mut self, mineral: &Mineral) {
         let mut rng = rand::thread_rng();
         let noise: Perlin = Perlin::new(rng.gen());
-        let scale = 0.2;
         println!("Color = {:#X}", mineral.color); // Ajout pour le debug
-
 
         for x in 0..WIDTH as usize {
             for y in 0..HEIGHT as usize {
                 if self.check_data(x, y) {
-                    let noise_value = noise.get([x as f64 * scale, y as f64 * scale]);
-                    if noise_value > (1.0 - mineral.occurence) {
+                    let noise_value = noise.get([
+                        x as f64 * mineral.automaton.perlin_scale,
+                        y as f64 * mineral.automaton.perlin_scale,
+                    ]);
+                    if noise_value.abs()
+                        < mineral.automaton.perlin_threshold * mineral.automaton.occurence
+                    {
                         self.data[x][y] = mineral.r#type;
                     }
                 }
@@ -138,10 +137,18 @@ impl Terrain {
         count
     }
 
+    fn clear_tiles(&mut self) {
+        self.data = vec![vec![TileType::AIR; window::WIDTH as usize]; window::HEIGHT as usize];
+    }
+
     pub fn generate(&mut self) {
-        // Code de génération du terrain (bruit, automate cellulaire, etc.)
-        self.minerals
-            .sort_by(|a, b| b.occurence.partial_cmp(&a.occurence).unwrap());
+        self.minerals.sort_by(|b, a| {
+            b.automaton
+                .occurence
+                .partial_cmp(&a.automaton.occurence)
+                .unwrap()
+        });
+        self.clear_tiles();
 
         let minerals_copy: Vec<Mineral> = self.minerals.clone();
 
@@ -171,7 +178,6 @@ impl Terrain {
                 self.pixel_buffer[y * WIDTH as usize + x] = color;
             }
         }
-        
     }
 
     pub fn draw(
@@ -197,7 +203,7 @@ impl Terrain {
                     buffer[i * 4 + 0] = ((color >> 8) & 0xFF) as u8; // R
                     buffer[i * 4 + 1] = ((color >> 16) & 0xFF) as u8; // G
                     buffer[i * 4 + 2] = ((color >> 24) & 0xFF) as u8; // B
-                                    }
+                }
             })
             .unwrap();
 
@@ -214,7 +220,6 @@ impl Terrain {
             viewport_width,
             viewport_height,
         );
-
 
         // Afficher uniquement la partie visible de la texture
         self.update_pixel_buffer();

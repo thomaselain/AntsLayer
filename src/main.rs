@@ -7,8 +7,8 @@ mod window;
 
 use camera::Camera;
 use coords::Coords;
-use terrain::{Terrain, TileType};
-use units::{ActionType, JobType, RaceType, Unit};
+use terrain::{Mineral, Terrain, TileType};
+use units::{ActionType, Actions, JobType, RaceType, Unit};
 
 use rand::Rng;
 use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
@@ -131,7 +131,36 @@ fn main() -> Result<(), String> {
                 } => {
                     return Ok(());
                 }
+                //////////////// Regenerate terrain after its modification (for testing)
+                sdl2::event::Event::KeyUp {
+                    keycode: Some(sdl2::keyboard::Keycode::A),
+                    ..
+                }
+                | sdl2::event::Event::KeyUp {
+                    keycode: Some(sdl2::keyboard::Keycode::Z),
+                    ..
+                } => {
+                    terrain.generate();
+                    canvas
+                        .with_texture_canvas(&mut terrain_texture, |texture_canvas| {
+                            terrain.draw(texture_canvas, &texture_creator, &camera);
+                        })
+                        .expect("Failed to draw terrain on texture");
+                }
                 Event::KeyDown {
+                    keycode: Some(Keycode::A),
+                    ..
+                } => {
+                    terrain.minerals[2].automaton.perlin_scale += 0.01;
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Z),
+                    ..
+                } => {
+                    terrain.minerals[2].automaton.perlin_scale -= 0.005;
+                }
+
+                Event::KeyUp {
                     keycode: Some(Keycode::R),
                     ..
                 } => {
@@ -143,6 +172,12 @@ fn main() -> Result<(), String> {
                             terrain.draw(texture_canvas, &texture_creator, &camera);
                         })
                         .expect("Failed to draw terrain on texture");
+                    println!(
+                        "threshold : {:?} ||| scale : {:?} ||| iteration",
+                        terrain.minerals[2].automaton.perlin_threshold,
+                        terrain.minerals[2].automaton.perlin_scale
+                    );
+
                 }
 
                 _ => {}
@@ -153,6 +188,10 @@ fn main() -> Result<(), String> {
         let delta_time = current_time.duration_since(last_time).as_millis() as i32;
         last_time = current_time;
 
+        for u in &mut unit_list {
+            u.think(terrain.clone(), delta_time);
+            u.draw_at(&mut canvas, camera.zoom).expect("cant draw unit");
+        }
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
         canvas.set_viewport(Some(Rect::new(
