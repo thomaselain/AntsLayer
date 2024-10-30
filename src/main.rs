@@ -1,3 +1,4 @@
+mod automaton;
 mod camera;
 mod coords;
 mod terrain;
@@ -7,19 +8,13 @@ mod window;
 use camera::Camera;
 use coords::Coords;
 use terrain::{Terrain, TileType};
-use units::{ActionType, Actions, JobType, RaceType, Unit};
+use units::{ActionType, JobType, RaceType, Unit};
 
 use rand::Rng;
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::mouse::{MouseButton, MouseState};
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
-use std::thread;
-use std::time::{Duration, Instant};
+use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
+use std::time::Instant;
 
 fn main() -> Result<(), String> {
-    // CAMERA //
     let mut camera = Camera::new(window::WIDTH, window::HEIGHT);
 
     let mut camera_x: i32 = 0;
@@ -36,22 +31,15 @@ fn main() -> Result<(), String> {
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     let mut last_time = Instant::now();
 
-    let texture_creator = canvas.texture_creator();
-    let mut terrain_texture = texture_creator
-        .create_texture_target(None, window::WIDTH, window::HEIGHT)
-        .expect("Failed to create texture");
-
     let mut terrain = Terrain::new();
     terrain.generate();
 
-    ///////////////////////////////////////////// UNITS CREATION ///////////////////////////////////
-    for i in 0..100 {
+    for i in 0..10 {
         let mut coords = Coords {
             x: (window::WIDTH / 2) as i32,
             y: (window::HEIGHT / 2) as i32,
         };
 
-        // Boucle jusqu'à ce qu'on trouve une case de type AIR
         for _ in 0..10 {
             let x = rand::thread_rng().gen_range(0..window::WIDTH - 1);
             let y = rand::thread_rng().gen_range(0..window::HEIGHT - 1);
@@ -60,9 +48,8 @@ fn main() -> Result<(), String> {
                 y: y as i32,
             };
 
-            // Vérifie si la case est de type AIR avant d'assigner
             if terrain.get_data(x as usize, y as usize) == Some(TileType::AIR) {
-                break; // Coordonnées valides, on peut sortir de la boucle
+                break;
             }
         }
 
@@ -77,17 +64,20 @@ fn main() -> Result<(), String> {
             JobType::MINER,
             coords,
         );
-        // add move actions for testing
+
         for _ in 0..10 {
             unit.action_queue.push(ActionType::WANDER);
         }
         unit_list.push(unit);
     }
-    ////////////////////////////////////////////////////////////////////////////////////////////////
 
+    let texture_creator = canvas.texture_creator();
+    let mut terrain_texture = texture_creator
+        .create_texture_target(None, window::WIDTH, window::HEIGHT)
+        .expect("Failed to create texture");
     canvas
         .with_texture_canvas(&mut terrain_texture, |texture_canvas| {
-            terrain.draw(texture_canvas, &camera);
+            terrain.draw(texture_canvas, &texture_creator, &camera);
         })
         .expect("Failed to draw terrain on texture");
 
@@ -125,7 +115,6 @@ fn main() -> Result<(), String> {
                         prev_mouse_y = y;
                     }
                 }
-                // TODO : Réparer le décalage du zoom (les unités et le terrain ont pas la bonne taille)
                 Event::MouseWheel { y, .. } => {
                     if y > 0 && camera.zoom < 10.0 {
                         camera.zoom += 0.1;
@@ -142,6 +131,20 @@ fn main() -> Result<(), String> {
                 } => {
                     return Ok(());
                 }
+                Event::KeyDown {
+                    keycode: Some(Keycode::R),
+                    ..
+                } => {
+                    camera.zoom = 1.0;
+                    terrain = Terrain::new();
+                    terrain.generate();
+                    canvas
+                        .with_texture_canvas(&mut terrain_texture, |texture_canvas| {
+                            terrain.draw(texture_canvas, &texture_creator, &camera);
+                        })
+                        .expect("Failed to draw terrain on texture");
+                }
+
                 _ => {}
             }
         }
@@ -150,7 +153,6 @@ fn main() -> Result<(), String> {
         let delta_time = current_time.duration_since(last_time).as_millis() as i32;
         last_time = current_time;
 
-        // clear screen
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
         canvas.set_viewport(Some(Rect::new(
@@ -169,12 +171,6 @@ fn main() -> Result<(), String> {
         canvas
             .copy(&terrain_texture, None, terrain_dst)
             .expect("Failed to copy texture");
-
-        // Make every unit think() of what to do
-        for u in &mut unit_list {
-            u.think(terrain.clone(), delta_time);
-            u.draw_at(&mut canvas, camera.zoom).expect("cant draw unit");
-        }
 
         canvas.present();
     }

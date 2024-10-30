@@ -6,6 +6,7 @@ version = 3
 name = "ants_layer"
 version = "0.1.0"
 dependencies = [
+ "automata",
  "gl",
  "gl_constants",
  "gl_loader",
@@ -19,6 +20,12 @@ name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
+
+[[package]]
+name = "automata"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "009691a9c5eac4b790d6a25112c225557e7e2797a736e6c720acb716589eaf7c"
 
 [[package]]
 name = "bitflags"

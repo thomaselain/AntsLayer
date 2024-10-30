@@ -15,7 +15,7 @@ use crate::{
 };
 use coords::Coords as Coords;
 
-const UNIT_SIZE: u32 = terrain::TILE_SIZE;
+pub const UNIT_SIZE: u32 = terrain::TILE_SIZE;
 
 #[derive(Copy, Clone)]
 pub enum RaceType {
@@ -141,8 +141,8 @@ impl Actions for Unit {
         canvas.fill_rect(Rect::new(
             x as i32,
             y as i32,
-            UNIT_SIZE as u32,
-            UNIT_SIZE as u32,
+            (UNIT_SIZE as f32 * zoom) as u32,
+            (UNIT_SIZE as f32 * zoom) as u32,
         ))?;
         Ok(())
     }

@@ -3,10 +3,12 @@ extern crate sdl2;
 
 use sdl2::pixels::Color;
 
+use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
-pub(crate) const TILE_SIZE: u32 = 3;
+pub(crate) const TILE_SIZE: u32 = 1;
 
 use crate::{
+    automaton::{self, Automaton},
     camera::{self, Camera},
     window::{self, HEIGHT, WIDTH},
     Coords::{self},
@@ -28,8 +30,8 @@ pub enum TileType {
 
 #[derive(Copy, Clone)]
 pub struct Mineral {
-    pub r#type: MineralType,
-    pub iterations: u32,
+    pub r#type: TileType,
+    pub automaton: Automaton,
     pub occurence: f64,
     pub color: u32,
 }
@@ -60,22 +62,22 @@ impl Terrain {
             pixel_buffer,
             minerals: vec![
                 Mineral {
-                    r#type: MineralType::GOLD,
-                    occurence: 0.0,
-                    iterations: 1,
-                    color: 0xffff1c,
+                    r#type: TileType::Mineral(MineralType::GOLD),
+                    occurence: 0.001,
+                    color: 0xffff1cff,
+                    automaton: Automaton::new(1, 1, 1),
                 },
                 Mineral {
-                    r#type: MineralType::IRON,
-                    occurence: 0.0,
-                    iterations: 1,
-                    color: 0xCCCCCC,
+                    r#type: TileType::Mineral(MineralType::IRON),
+                    occurence: 0.01,
+                    color: 0xCCCCCCff,
+                    automaton: Automaton::new(2, 2, 1),
                 },
                 Mineral {
-                    r#type: MineralType::ROCK,
-                    occurence: 0.8,
-                    iterations: 2,
-                    color: 0x000000,
+                    r#type: TileType::Mineral(MineralType::ROCK),
+                    occurence: 0.7,
+                    color: 0x303030FF,
+                    automaton: Automaton::new(5, 2, 1),
                 },
             ],
         }
@@ -99,42 +101,27 @@ impl Terrain {
 
     pub fn generate_caves(&mut self, mineral: &Mineral) {
         let mut rng = rand::thread_rng();
+        let noise: Perlin = Perlin::new(rng.gen());
+        let scale = 0.2;
+        println!("Color = {:#X}", mineral.color); // Ajout pour le debug
 
-        // Remplissage initial avec des roches aléatoires
-        for x in 0..window::WIDTH as usize {
-            for y in 0..window::HEIGHT as usize {
+
+        for x in 0..WIDTH as usize {
+            for y in 0..HEIGHT as usize {
                 if self.check_data(x, y) {
-                    if rng.gen_bool(mineral.occurence) {
-                        self.data[x][y] = TileType::Mineral(mineral.r#type)
+                    let noise_value = noise.get([x as f64 * scale, y as f64 * scale]);
+                    if noise_value > (1.0 - mineral.occurence) {
+                        self.data[x][y] = mineral.r#type;
                     }
                 }
             }
         }
-
         // Application des règles de l'automate cellulaire
-        for _ in 0..mineral.iterations {
-            let mut new_data = self.data.clone();
-
-            for x in 1..(window::WIDTH as usize) {
-                for y in 1..(window::HEIGHT as usize) {
-                    let count = self.count_same_neighbors(x, y);
-                    if self.get_data(x, y) == Some(TileType::AIR) && rng.gen_bool(mineral.occurence)
-                    {
-                        if count >= 5 {
-                            new_data[x][y] = TileType::Mineral(mineral.r#type)
-                        } else if count < 4 {
-                            new_data[x][y] = TileType::AIR
-                        }
-                    }
-                }
-            }
-            self.data = new_data;
-        }
+        mineral.automaton.apply_rules(self, mineral.r#type);
     }
 
-    fn count_same_neighbors(&mut self, x: usize, y: usize) -> usize {
+    pub fn count_same_neighbors(&mut self, x: usize, y: usize, tile_type: TileType) -> usize {
         let mut count = 0;
-        let tile_type = self.get_data(x, y);
 
         for dx in -1..=1 {
             for dy in -1..=1 {
@@ -143,7 +130,7 @@ impl Terrain {
                 }
                 let nx = x as isize + dx;
                 let ny = y as isize + dy;
-                if self.get_data(nx as usize, ny as usize) == tile_type {
+                if self.get_data(nx as usize, ny as usize) == Some(tile_type) {
                     count += 1;
                 }
             }
@@ -152,93 +139,85 @@ impl Terrain {
     }
 
     pub fn generate(&mut self) {
+        // Code de génération du terrain (bruit, automate cellulaire, etc.)
         self.minerals
-            .sort_by(|a, b| a.occurence.partial_cmp(&b.occurence).unwrap());
-        let minerals_copy = self.minerals.clone();
+            .sort_by(|a, b| b.occurence.partial_cmp(&a.occurence).unwrap());
+
+        let minerals_copy: Vec<Mineral> = self.minerals.clone();
 
         for m in minerals_copy {
             self.generate_caves(&m);
         }
 
-        for x in 0..window::WIDTH as usize {
-            for y in 0..window::HEIGHT as usize {
+        self.update_pixel_buffer();
+    }
+
+    fn update_pixel_buffer(&mut self) {
+        for x in 0..WIDTH as usize {
+            for y in 0..HEIGHT as usize {
                 let color = match self.get_data(x, y) {
-                    Some(TileType::AIR) => 0xAAAAAA,   // Blanc pale
-                    Some(TileType::WATER) => 0x0000FF, // Bleu
+                    Some(TileType::AIR) => 0x2b180cff,
+                    Some(TileType::WATER) => 0x0000FFFF,
                     Some(TileType::Mineral(_)) => {
                         let mineral = self
                             .minerals
                             .iter()
-                            .find(|m| {
-                                self.data[x as usize][y as usize] == TileType::Mineral(m.r#type)
-                            })
+                            .find(|m| self.data[x as usize][y as usize] == m.r#type)
                             .unwrap();
                         mineral.color
                     }
-                    None => 0x000000,
+                    None => 0x000000ff,
                 };
-                self.pixel_buffer[x * window::HEIGHT as usize + y] = color;
+                self.pixel_buffer[y * WIDTH as usize + x] = color;
             }
         }
+        
     }
 
     pub fn draw(
         &mut self,
         canvas: &mut sdl2::render::Canvas<sdl2::video::Window>,
+        texture_creator: &sdl2::render::TextureCreator<sdl2::video::WindowContext>,
         camera: &Camera,
     ) {
-        // Calculer les limites de la vue en fonction de la caméra et du zoom
-        let start_x = (camera.position.x as f32 / camera.tile_size as f32) as usize;
-        let start_y = (camera.position.y as f32 / camera.tile_size as f32) as usize;
-        let end_x = ((camera.position.x as f32 + canvas.viewport().width() as f32)
-            / camera.tile_size as f32)
-            .ceil() as usize;
-        let end_y = ((camera.position.y as f32 + canvas.viewport().height() as f32)
-            / camera.tile_size as f32)
-            .ceil() as usize;
+        let mut texture = texture_creator
+            .create_texture_streaming(
+                sdl2::pixels::PixelFormatEnum::ARGB8888,
+                window::WIDTH,
+                window::HEIGHT,
+            )
+            .unwrap();
 
-        let end_x = end_x.min(WIDTH as usize);
-        let end_y = end_y.min(HEIGHT as usize);
+        // Mettre à jour la texture avec le contenu du pixel_buffer
+        texture
+            .with_lock(None, |buffer: &mut [u8], _pitch: usize| {
+                for (i, pixel) in self.pixel_buffer.iter().enumerate() {
+                    let color = *pixel;
+                    buffer[i * 4 + 3] = ((color >> 0) & 0xFF) as u8; // A
+                    buffer[i * 4 + 0] = ((color >> 8) & 0xFF) as u8; // R
+                    buffer[i * 4 + 1] = ((color >> 16) & 0xFF) as u8; // G
+                    buffer[i * 4 + 2] = ((color >> 24) & 0xFF) as u8; // B
+                                    }
+            })
+            .unwrap();
 
-        for y in start_y..end_y {
-            for x in start_x..end_x {
-                let tile_coords = Coords {
-                    x: x as i32,
-                    y: y as i32,
-                };
+        // Calculer la zone visible en fonction de la caméra et du zoom
+        let start_x = camera.position.x as f32 / camera.zoom;
+        let start_y = camera.position.y as f32 / camera.zoom;
 
-                let color = match self.get_data(x, y) {
-                    Some(TileType::AIR) => 0x303030,   // Gris (le sol de la caverne)
-                    Some(TileType::WATER) => 0x0000FF, // Bleu
-                    Some(TileType::Mineral(_)) => {
-                        let mineral = self
-                            .minerals
-                            .iter()
-                            .find(|m| self.data[x][y] == TileType::Mineral(m.r#type))
-                            .unwrap();
-                        mineral.color
-                    }
-                    None => 0x000000,
-                };
+        let viewport_width = (canvas.viewport().width() as f32 / camera.zoom) as u32;
+        let viewport_height = (canvas.viewport().height() as f32 / camera.zoom) as u32;
 
-                let draw_x: f32 = start_x as f32
-                    + (tile_coords.x as f32 * TILE_SIZE as f32 * camera.zoom)
-                    - camera.position.x as f32;
-                let draw_y: f32 = start_y as f32
-                    + (tile_coords.y as f32 * TILE_SIZE as f32 * camera.zoom)
-                    - camera.position.y as f32;
+        let dest_rect = sdl2::rect::Rect::new(
+            start_x as i32,
+            start_y as i32,
+            viewport_width,
+            viewport_height,
+        );
 
-                canvas.set_draw_color(color_from_u32(color));
 
-                canvas
-                    .fill_rect(sdl2::rect::Rect::new(
-                        draw_x as i32,
-                        draw_y as i32,
-                        TILE_SIZE as u32,
-                        TILE_SIZE as u32,
-                    ))
-                    .unwrap();
-            }
-        }
+        // Afficher uniquement la partie visible de la texture
+        self.update_pixel_buffer();
+        canvas.copy(&texture, None, dest_rect).unwrap();
     }
 }

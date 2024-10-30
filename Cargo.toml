@@ -12,3 +12,5 @@ gl_constants = "0.1.1"
 gl_loader = "0.1.2"
 noise = "0.9.0"
 rand = "0.8.5"
+automata = "0.0.4"
+
