@@ -29,9 +29,40 @@ fn main() -> Result<(), String> {
         window::HEIGHT as usize,
     );
 
-    let mut last_time = Instant::now();
+    let last_time = Instant::now();
+
 
     let mut terrain = Terrain::new();
+    terrain.generate();
+
+
+    /////////////////////// UNITS /////////////////////////////
+    let mut units_list: Vec<Unit> = Vec::new();
+
+    for i in 0..100 {
+        let coords = Coords {
+            x: (window::WIDTH / 2) as i32,
+            y: (window::HEIGHT / 2) as i32,
+        };
+
+        let mut unit = Unit::new(
+            if i % 3 == 0 {
+                RaceType::HUMAN
+            } else if i % 3 == 1 {
+                RaceType::ANT
+            } else {
+                RaceType::ALIEN
+            },
+            JobType::MINER,
+            coords,
+        );
+
+        for _ in 0..1 {
+            unit.action_queue.push(ActionType::WANDER);
+        }
+        units_list.push(unit);
+    }
+    /////////////////////////////////////////////////////////
 
     'main: loop {
         let mouse_state = MouseState::new(&event_pump);
@@ -115,6 +146,7 @@ fn main() -> Result<(), String> {
                     terrain = Terrain::new();
                     terrain.generate();
 
+                    renderer.terrain.needs_update = true;
                     renderer.terrain.draw_terrain(&terrain);
                     renderer.draw(&camera);
                 }
@@ -124,19 +156,30 @@ fn main() -> Result<(), String> {
         }
 
         let current_time = Instant::now();
-        let last_time = current_time;
         let delta_time = current_time.duration_since(last_time).as_millis() as i32;
         renderer.canvas.set_draw_color(Color::RGBA(0, 0, 0, 0));
         renderer.canvas.clear();
-        println!("{:?}", renderer.terrain.needs_update);
+        print!(
+            "{}",
+            if renderer.terrain.needs_update == true {
+                "refreshing terrain buffers\n".to_string()
+            } else {
+                "".to_string()
+            }
+        );
 
+        units_list.think(&terrain, delta_time);
+        renderer.terrain.draw_terrain(&terrain);
+        renderer.units.draw_units(&units_list);
         renderer.draw(&camera);
+
         renderer.canvas.set_viewport(Some(Rect::new(
             camera.position.x,
             camera.position.y,
-            (window::WIDTH as f32 * camera.zoom) as u32,
-            (window::HEIGHT as f32 * camera.zoom) as u32,
+            (window::WIDTH as f32 / camera.zoom) as u32,
+            (window::HEIGHT as f32 / camera.zoom) as u32,
         )));
+        let last_time = current_time;
 
         renderer.canvas.present();
     }

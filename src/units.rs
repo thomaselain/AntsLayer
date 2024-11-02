@@ -91,24 +91,52 @@ impl Unit {
             action_queue: vec![],
             last_action_timer: 0,
             speed: match race {
-                RaceType::HUMAN => 300,
-                RaceType::ANT => 10,
-                RaceType::ALIEN => 50,
+                RaceType::HUMAN => 0,
+                RaceType::ANT => 0,
+                RaceType::ALIEN => 0,
             },
         }
     }
 }
 
 pub trait Actions {
-    fn do_action(&mut self, terrain: Terrain, action: ActionType);
-    fn think(&mut self, terrain: Terrain, delta_time: i32);
-    fn r#move(&mut self, terrain: Terrain, m: Coords);
+    fn do_action(&mut self, terrain: &Terrain, action: ActionType);
+    fn think(&mut self, terrain: &Terrain, delta_time: i32);
+    fn r#move(&mut self, terrain: &Terrain, m: Coords);
     fn dig(&self);
     fn build(&self);
 }
 
+/// ??? Pas sur de ca
+impl Actions for Vec<Unit> {
+    fn do_action(&mut self, terrain: &Terrain, action: ActionType) {
+        for u in self {
+            u.do_action(terrain, action)
+        }
+    }
+    fn think(&mut self, terrain: &Terrain, delta_time: i32) {
+        for u in self {
+            u.think(terrain, delta_time)
+        }
+    }
+    fn r#move(&mut self, terrain: &Terrain, m: Coords) {
+        for u in self {
+            u.r#move(terrain, m)
+        }
+    }
+    fn dig(&self) {
+        for u in self {
+            u.dig()
+        }
+    }
+    fn build(&self) {
+        for u in self {
+            u.build()
+        }
+    }
+}
 impl Actions for Unit {
-    fn do_action(&mut self, terrain: Terrain, action: ActionType) {
+    fn do_action(&mut self, terrain: &Terrain, action: ActionType) {
         match action {
             ActionType::MOVE => {
                 self.r#move(terrain, Coords { x: 1, y: 0 });
@@ -126,7 +154,7 @@ impl Actions for Unit {
         }
     }
     /// Decide what to do next
-    fn think(&mut self, terrain: Terrain, delta_time: i32) {
+    fn think(&mut self, terrain: &Terrain, delta_time: i32) {
         if self.last_action_timer >= self.speed {
             if let Some(action) = self.action_queue.first() {
                 self.do_action(terrain, *action);
@@ -140,15 +168,19 @@ impl Actions for Unit {
         self.last_action_timer += delta_time;
     }
     //move
-    fn r#move(&mut self, terrain: Terrain, m: Coords) {
-        let target_x = (self.coords.x + m.x * UNIT_SIZE as i32) as usize;
-        let target_y = (self.coords.y + m.y * UNIT_SIZE as i32) as usize;
+    fn r#move(&mut self, terrain: &Terrain, m: Coords) {
+        let target_x = (self.coords.x + m.x) as usize;
+        let target_y = (self.coords.y + m.y) as usize;
 
-        if terrain.clone().get_data(target_x, target_y) == Some(TileType::AIR) {
+        if terrain.get_data(target_x, target_y) == Some(TileType::AIR) {
             self.coords.x += m.x as i32;
             self.coords.y += m.y as i32;
         }
     }
-    fn dig(&self) {}
-    fn build(&self) {}
+    fn dig(&self) {
+        todo!("unit.dig")
+    }
+    fn build(&self) {
+        todo!("unit.build")
+    }
 }

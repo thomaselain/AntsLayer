@@ -5,8 +5,8 @@ use crate::{
     terrain::{Terrain, TileType, TILE_SIZE},
     units::Unit,
 };
-pub const WIDTH: u32 = 600;
-pub const HEIGHT: u32 = 600;
+pub const WIDTH: u32 = 1200;
+pub const HEIGHT: u32 = 900;
 
 pub fn init_sdl2_window() -> (sdl2::Sdl, Window) {
     // Initialiser SDL2
@@ -45,27 +45,27 @@ impl Buffer<BufferType> {
             typ: t,
         }
     }
-    pub fn clear_buffers(&mut self) {
-        self.buffer.fill(0);
-        self.buffer.fill(0);
+    pub fn clear_buffer(&mut self) {
         self.buffer.fill(0);
     }
 }
 
 impl Buffer<BufferType> {
     pub fn draw_unit(&mut self, u: &Unit) {
-        for x in 0..TILE_SIZE {
-            for y in 0..TILE_SIZE {
+        for x in u.coords.x..(TILE_SIZE as i32 + u.coords.x) {
+            for y in u.coords.y..(TILE_SIZE as i32 + u.coords.y) {
                 let pixel_x: usize = u.coords.x as usize + x as usize;
                 let pixel_y: usize = u.coords.y as usize + y as usize;
-                if pixel_x < WIDTH as usize && pixel_y < HEIGHT as usize {
-                    let pixel_index: usize = pixel_y * (WIDTH as usize + pixel_x);
-                    self.buffer[pixel_index] = u.color; // Remplace la couleur du pixel
+                if x < WIDTH as i32 && y < HEIGHT as i32 {
+                    let pixel_index: usize = y as usize * WIDTH as usize + x as usize as usize;
+                    self.buffer[pixel_index] = u.color;
+                    self.needs_update = true;
                 }
             }
         }
     }
     pub fn draw_units(&mut self, units: &[Unit]) {
+        self.buffer.fill(0);
         for u in units {
             self.draw_unit(u);
         }
@@ -91,8 +91,9 @@ impl Buffer<BufferType> {
                     }
                     None => 0x00000000,
                 };
-                self.buffer[y * WIDTH as usize + x] = color;
-            }
+                let pixel_index: usize = y as usize * WIDTH as usize + x as usize as usize;
+                self.buffer[pixel_index] = color;
+        }
         }
         self.needs_update = false;
     }
@@ -132,12 +133,35 @@ impl Renderer {
         }
     }
 
-
     /* TODO
         pub fn draw_buildings(&mut self, buildings: &[Building]) {
             // Remplissage du buffer bâtiment avec les données de `buildings`
         }
     */
+    fn combine_buffers(&self) -> Vec<u32> {
+        let mut combined_buffer = vec![0x00000000; WIDTH as usize * HEIGHT as usize];
+
+        for (i, &color) in self.terrain.buffer.iter().enumerate() {
+            if color != 0x00000000 {
+                // Couleur non transparente
+                combined_buffer[i] = color;
+            }
+        }
+
+        for (i, &color) in self.buildings.buffer.iter().enumerate() {
+            if color != 0x00000000 {
+                combined_buffer[i] = color;
+            }
+        }
+
+        for (i, &color) in self.units.buffer.iter().enumerate() {
+            if color != 0x00000000 {
+                combined_buffer[i] = color;
+            }
+        }
+
+        combined_buffer
+    }
 
     pub fn draw(&mut self, camera: &Camera) {
         /*        // RESIZING (todo : dupe it for each buffer)
@@ -146,37 +170,31 @@ impl Renderer {
                     // Recréer le buffer
                 }
         */
-        self.update_pixel_buffer(BufferType::Terrain, camera);
-   //        self.update_pixel_buffer(BufferType::Buildings, camera);
-  //         self.update_pixel_buffer(BufferType::Units, camera);
+        let combined_buffers = self.combine_buffers();
+        self.update_pixel_buffer(&combined_buffers, camera);
     }
 
-    fn update_pixel_buffer(&mut self, buffer_type: BufferType, camera: &Camera) {
+    fn update_pixel_buffer(&mut self, pixel_buffer: &[u32], camera: &Camera) {
         // chose wich buffer to access
-        let pixel_buffer = match buffer_type {
-            BufferType::Terrain => &self.terrain.buffer,
-            BufferType::Buildings => &self.buildings.buffer,
-            BufferType::Units => &self.units.buffer,
-        };
+
         if pixel_buffer.is_empty() {
-            println!("CACA");
-            return;
+            panic!("CACA");
         } // Dont show fully empty buffers
-        let start_x = camera.position.x as f32 / camera.zoom;
-        let start_y = camera.position.y as f32 / camera.zoom;
+        let start_x = camera.position.x as f32;
+        let start_y = camera.position.y as f32;
 
         let viewport_width = WIDTH as f32 / camera.zoom;
         let viewport_height = HEIGHT as f32 / camera.zoom;
         /* TODO : zoom handling
                 let width = (WIDTH as f32 / camera.zoom) as usize;
                 let height = (HEIGHT as f32 / camera.zoom) as usize;
-        */
         let mut texture = self
             .texture_creator
             .create_texture_target(None, WIDTH, HEIGHT)
             .expect("Failed to create texture");
+        */
 
-        texture = self
+        let mut texture = self
             .texture_creator
             .create_texture_streaming(
                 sdl2::pixels::PixelFormatEnum::RGBA8888,
@@ -189,10 +207,14 @@ impl Renderer {
             .with_lock(None, |buffer: &mut [u8], _pitch: usize| {
                 for (i, pixel) in pixel_buffer.iter().enumerate() {
                     let color = *pixel;
-                    buffer[i * 4 + 0] = ((color >> 0) & 0xFF) as u8; // R
-                    buffer[i * 4 + 1] = ((color >> 8) & 0xFF) as u8; // G
-                    buffer[i * 4 + 2] = ((color >> 16) & 0xFF) as u8; // B
-                    buffer[i * 4 + 3] = ((color >> 24) & 0xFF) as u8; // A
+                    if color != 0x00000000 {
+                        buffer[i * 4 + 0] = ((color >> 0) & 0xFF) as u8; // R
+                        buffer[i * 4 + 1] = ((color >> 8) & 0xFF) as u8; // G
+                        buffer[i * 4 + 2] = ((color >> 16) & 0xFF) as u8; // B
+                        buffer[i * 4 + 3] = ((color >> 24) & 0xFF) as u8; // A
+                    } else {
+                        //println!("pixel at ({:?},{:?}) is empty", i / 4, i % 4)
+                    }
                 }
             })
             .unwrap();
@@ -205,5 +227,6 @@ impl Renderer {
         );
 
         self.canvas.copy(&texture, None, dest_rect).unwrap();
+        self.canvas.present();
     }
 }

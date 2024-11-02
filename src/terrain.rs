@@ -7,7 +7,7 @@ use sdl2::{libc::AM_STR, pixels::Color, rect::Rect};
 
 use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
-pub(crate) const TILE_SIZE: u32 = 5;
+pub(crate) const TILE_SIZE: u32 = 1;
 
 use crate::{
     automaton::Automaton,
@@ -41,44 +41,16 @@ pub struct Mineral {
 pub struct Terrain {
     pub minerals: Vec<Mineral>,
     pub data: Vec<Vec<TileType>>,
-    pub units: Vec<Unit>,
     //pub pixel_buffer: Vec<u32>,
 }
 
 impl Terrain {
     pub fn new() -> Terrain {
         let tiles: Vec<Vec<TileType>> = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
- //       let pixel_buffer: Vec<u32> = vec![0; window::WIDTH as usize * window::HEIGHT as usize]; // Initialise un buffer avec des pixels noirs (0)
-        let mut units: Vec<Unit> = Vec::new();
 
-        for i in 0..32 {
-            let coords = Coords {
-                x: (window::WIDTH / 2) as i32,
-                y: (window::HEIGHT / 2) as i32,
-            };
-
-            let mut unit = Unit::new(
-                if i % 3 == 0 {
-                    RaceType::HUMAN
-                } else if i % 3 == 1 {
-                    RaceType::ANT
-                } else {
-                    RaceType::ALIEN
-                },
-                JobType::MINER,
-                coords,
-            );
-
-            for _ in 0..10 {
-                unit.action_queue.push(ActionType::WANDER);
-            }
-            units.push(unit);
-        }
 
         Terrain {
             data: tiles,
-//            pixel_buffer,
-            units: units,
             minerals: vec![
                 Mineral {
                     r#type: TileType::Mineral(MineralType::GOLD),
