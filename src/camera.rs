@@ -44,19 +44,19 @@ impl Camera {
             && screen_coords.y < self.screen_height as i32 + tile_size
     }
 
-    pub fn apply_zoom(&mut self, zoom: f32, mouse_x: i32, mouse_y: i32) {
+    pub fn apply_zoom(&mut self, mouse_x: i32, mouse_y: i32) {
         let previous_zoom = self.zoom; // Garder le zoom précédent pour ajuster la position
-        self.zoom *= zoom; // Appliquer le zoom
+        self.zoom *= self.zoom; // Appliquer le zoom
+
+        // Mettre à jour la taille des tuiles
+        self.tile_size = (terrain::TILE_SIZE as f32 * self.zoom) as u32;
+
 
         // Obtenir les coordonnées du monde avant le zoom
         let world_coords_before_zoom = self.screen_to_world(Coords {
             x: mouse_x,
             y: mouse_y,
         });
-
-        // Mettre à jour la taille des tuiles
-        self.tile_size = (self.tile_size as f32 * zoom) as u32;
-
         // Ajuster la position de la caméra en fonction du changement de zoom
         self.position.x += ((world_coords_before_zoom.x
             - self
@@ -65,7 +65,7 @@ impl Camera {
                     y: (mouse_y as f32 * previous_zoom) as i32,
                 })
                 .x) as f32
-            * (1.0 - zoom)) as i32;
+            * (1.0 - self.zoom)) as i32;
 
         self.position.y += ((world_coords_before_zoom.y
             - self
@@ -74,6 +74,6 @@ impl Camera {
                     y: (mouse_y as f32 * previous_zoom) as i32,
                 })
                 .y) as f32
-            * (1.0 - zoom)) as i32;
+            * (1.0 - self.zoom)) as i32;
     }
 }

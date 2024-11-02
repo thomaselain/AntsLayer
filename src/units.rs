@@ -3,15 +3,17 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-use rand;
 use rand::seq::SliceRandom;
+use rand::{self, Rng};
 
 use terrain::Terrain;
 
+use crate::terrain::TILE_SIZE;
 use crate::{
     camera::{self, Camera},
     coords::{self},
     terrain::{self, TileType},
+    window::{self, HEIGHT, WIDTH},
 };
 use coords::Coords;
 
@@ -64,15 +66,23 @@ fn random_direction() -> i32 {
 
 impl Unit {
     pub fn new(race: RaceType, job: JobType, coords: Coords) -> Unit {
-        println!("new unit !");
+        print!("new unit : ");
+        println!(
+            "(x : {:?} | y : {:?}) --> {:?}",
+            coords.x,
+            coords.y,
+            match race {
+                RaceType::ALIEN => "ALIEN",
+                RaceType::ANT => "ANT",
+                RaceType::HUMAN => "HUMAN",
+            }
+        );
+
         Unit {
             color: match race {
-                RaceType::ALIEN => 0xff0000ff,
-                RaceType::ANT => 0x00ff00ff,
+                RaceType::ANT => 0xff0000ff,
+                RaceType::ALIEN => 0x00ff00ff,
                 RaceType::HUMAN => 0x0000ffff,
-                _ => {
-                    panic!("Invalid RaceType for new Unit !!!")
-                }
             },
             race,
             job,
@@ -84,9 +94,6 @@ impl Unit {
                 RaceType::HUMAN => 300,
                 RaceType::ANT => 10,
                 RaceType::ALIEN => 50,
-                _ => {
-                    panic!("Invalid RaceType for new Unit !!!")
-                }
             },
         }
     }
@@ -137,10 +144,7 @@ impl Actions for Unit {
         let target_x = (self.coords.x + m.x * UNIT_SIZE as i32) as usize;
         let target_y = (self.coords.y + m.y * UNIT_SIZE as i32) as usize;
 
-        if terrain.data.len() > target_x
-            && terrain.data[target_x].len() > target_y
-            && terrain.data[target_x][target_y] == TileType::AIR
-        {
+        if terrain.clone().get_data(target_x, target_y) == Some(TileType::AIR) {
             self.coords.x += m.x as i32;
             self.coords.y += m.y as i32;
         }

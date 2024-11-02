@@ -13,75 +13,25 @@ use units::{ActionType, Actions, JobType, RaceType, Unit};
 use rand::Rng;
 use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
 use std::time::Instant;
+use window::{init_sdl2_window, Renderer};
 
 fn main() -> Result<(), String> {
-    let mut camera = Camera::new(window::WIDTH, window::HEIGHT);
-
-    let mut camera_x: i32 = 0;
-    let mut camera_y: i32 = 0;
     let mut dragging = false;
     let mut prev_mouse_x = 0;
     let mut prev_mouse_y = 0;
 
-    let mut unit_list: Vec<Unit> = Vec::new();
-
-    let (sdl_context, window) = window::init_sdl2_window();
+    let mut camera = Camera::new(window::WIDTH, window::HEIGHT);
+    let (sdl_context, win) = init_sdl2_window();
     let mut event_pump = sdl_context.event_pump().unwrap();
+    let mut renderer: Renderer = Renderer::new(
+        (sdl_context, win),
+        window::WIDTH as usize,
+        window::HEIGHT as usize,
+    );
 
-    let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     let mut last_time = Instant::now();
 
     let mut terrain = Terrain::new();
-    terrain.generate();
-
-    for i in 0..10 {
-        let mut coords = Coords {
-            x: (window::WIDTH / 2) as i32,
-            y: (window::HEIGHT / 2) as i32,
-        };
-
-        for _ in 0..300 {
-            let mut x = rand::thread_rng().gen_range(0..window::WIDTH - 1);
-            let y = rand::thread_rng().gen_range(0..window::HEIGHT - 1);
-            coords = Coords {
-                x: x as i32,
-                y: y as i32,
-            };
-
-            while x < window::WIDTH
-                && terrain.get_data(x as usize, y as usize) != Some(TileType::AIR)
-            {
-                x += 1;
-            }
-        }
-
-        let mut unit = Unit::new(
-            if i % 3 == 0 {
-                RaceType::HUMAN
-            } else if i % 3 == 1 {
-                RaceType::ANT
-            } else {
-                RaceType::ALIEN
-            },
-            JobType::MINER,
-            coords,
-        );
-
-        for _ in 0..10 {
-            unit.action_queue.push(ActionType::WANDER);
-        }
-        unit_list.push(unit);
-    }
-
-    let texture_creator = canvas.texture_creator();
-    let mut terrain_texture = texture_creator
-        .create_texture_target(None, window::WIDTH, window::HEIGHT)
-        .expect("Failed to create texture");
-    canvas
-        .with_texture_canvas(&mut terrain_texture, |texture_canvas| {
-            terrain.draw(texture_canvas, &texture_creator, &camera);
-        })
-        .expect("Failed to draw terrain on texture");
 
     'main: loop {
         let mouse_state = MouseState::new(&event_pump);
@@ -110,8 +60,8 @@ fn main() -> Result<(), String> {
                         let delta_x = x - prev_mouse_x;
                         let delta_y = y - prev_mouse_y;
 
-                        camera_x += (delta_x as f32) as i32;
-                        camera_y += (delta_y as f32) as i32;
+                        camera.position.x += (delta_x as f32) as i32;
+                        camera.position.y += (delta_y as f32) as i32;
 
                         prev_mouse_x = x;
                         prev_mouse_y = y;
@@ -123,8 +73,8 @@ fn main() -> Result<(), String> {
                     } else if y < 0 && camera.zoom > 0.5 {
                         camera.zoom -= 0.1;
                     }
-                    let zoom = if y > 0 { 1.1 } else { 0.9 };
-                    camera.apply_zoom(zoom, mouse_x, mouse_y);
+                    camera.zoom = if y > 0 { 1.1 } else { 0.9 };
+                    camera.apply_zoom(mouse_x, mouse_y);
                 }
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -142,12 +92,7 @@ fn main() -> Result<(), String> {
                     keycode: Some(sdl2::keyboard::Keycode::Z),
                     ..
                 } => {
-                    terrain.generate();
-                    canvas
-                        .with_texture_canvas(&mut terrain_texture, |texture_canvas| {
-                            terrain.draw(texture_canvas, &texture_creator, &camera);
-                        })
-                        .expect("Failed to draw terrain on texture");
+                    renderer.draw(&camera);
                 }
                 Event::KeyDown {
                     keycode: Some(Keycode::A),
@@ -169,16 +114,9 @@ fn main() -> Result<(), String> {
                     camera.zoom = 1.0;
                     terrain = Terrain::new();
                     terrain.generate();
-                    canvas
-                        .with_texture_canvas(&mut terrain_texture, |texture_canvas| {
-                            terrain.draw(texture_canvas, &texture_creator, &camera);
-                        })
-                        .expect("Failed to draw terrain on texture");
-                    println!(
-                        "threshold : {:?} ||| scale : {:?} ||| iteration",
-                        terrain.minerals[2].automaton.perlin_threshold,
-                        terrain.minerals[2].automaton.perlin_scale
-                    );
+
+                    renderer.terrain.draw_terrain(&terrain);
+                    renderer.draw(&camera);
                 }
 
                 _ => {}
@@ -186,32 +124,20 @@ fn main() -> Result<(), String> {
         }
 
         let current_time = Instant::now();
+        let last_time = current_time;
         let delta_time = current_time.duration_since(last_time).as_millis() as i32;
-        last_time = current_time;
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
+        renderer.canvas.set_draw_color(Color::RGBA(0, 0, 0, 0));
+        renderer.canvas.clear();
+        println!("{:?}", renderer.terrain.needs_update);
 
-        for u in &mut unit_list {
-            u.think(terrain.clone(), delta_time);
-            terrain.draw_unit_in_pixel_buffer(u.clone(), &camera);
-        }
-        canvas.set_viewport(Some(Rect::new(
-            camera_x,
-            camera_y,
+        renderer.draw(&camera);
+        renderer.canvas.set_viewport(Some(Rect::new(
+            camera.position.x,
+            camera.position.y,
             (window::WIDTH as f32 * camera.zoom) as u32,
             (window::HEIGHT as f32 * camera.zoom) as u32,
         )));
-        let terrain_dst = Rect::new(
-            0,
-            0,
-            (window::WIDTH as f32 * camera.zoom) as u32,
-            (window::HEIGHT as f32 * camera.zoom) as u32,
-        );
 
-        canvas
-            .copy(&terrain_texture, None, terrain_dst)
-            .expect("Failed to copy texture");
-
-        canvas.present();
+        renderer.canvas.present();
     }
 }

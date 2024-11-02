@@ -1,16 +1,17 @@
 extern crate noise;
 extern crate sdl2;
 
-use sdl2::pixels::Color;
+use std::{thread::sleep, time::Duration};
+
+use sdl2::{libc::AM_STR, pixels::Color, rect::Rect};
 
 use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
 pub(crate) const TILE_SIZE: u32 = 5;
 
 use crate::{
-    automaton::{self, Automaton},
-    camera::{self, Camera},
-    units::{Unit, UNIT_SIZE},
+    automaton::Automaton,
+    units::{ActionType, JobType, RaceType, Unit},
     window::{self, HEIGHT, WIDTH},
     Coords::{self},
 };
@@ -40,18 +41,44 @@ pub struct Mineral {
 pub struct Terrain {
     pub minerals: Vec<Mineral>,
     pub data: Vec<Vec<TileType>>,
-    pixel_buffer: Vec<u32>,
+    pub units: Vec<Unit>,
+    //pub pixel_buffer: Vec<u32>,
 }
 
 impl Terrain {
     pub fn new() -> Terrain {
-        let tiles: Vec<Vec<TileType>> =
-            vec![vec![TileType::AIR; window::WIDTH as usize]; window::HEIGHT as usize];
-        let pixel_buffer: Vec<u32> = vec![0; window::WIDTH as usize * window::HEIGHT as usize]; // Initialise un buffer avec des pixels noirs (0)
+        let tiles: Vec<Vec<TileType>> = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
+ //       let pixel_buffer: Vec<u32> = vec![0; window::WIDTH as usize * window::HEIGHT as usize]; // Initialise un buffer avec des pixels noirs (0)
+        let mut units: Vec<Unit> = Vec::new();
+
+        for i in 0..32 {
+            let coords = Coords {
+                x: (window::WIDTH / 2) as i32,
+                y: (window::HEIGHT / 2) as i32,
+            };
+
+            let mut unit = Unit::new(
+                if i % 3 == 0 {
+                    RaceType::HUMAN
+                } else if i % 3 == 1 {
+                    RaceType::ANT
+                } else {
+                    RaceType::ALIEN
+                },
+                JobType::MINER,
+                coords,
+            );
+
+            for _ in 0..10 {
+                unit.action_queue.push(ActionType::WANDER);
+            }
+            units.push(unit);
+        }
 
         Terrain {
             data: tiles,
-            pixel_buffer,
+//            pixel_buffer,
+            units: units,
             minerals: vec![
                 Mineral {
                     r#type: TileType::Mineral(MineralType::GOLD),
@@ -72,7 +99,7 @@ impl Terrain {
         }
     }
 
-    pub fn get_data(&mut self, x: usize, y: usize) -> Option<TileType> {
+    pub fn get_data(&self, x: usize, y: usize) -> Option<TileType> {
         if self.check_data(x, y) {
             Some(self.data[x][y])
         } else {
@@ -80,7 +107,7 @@ impl Terrain {
         }
     }
 
-    pub fn check_data(&mut self, x: usize, y: usize) -> bool {
+    pub fn check_data(&self, x: usize, y: usize) -> bool {
         if x < self.data.len() && y < self.data[x].len() {
             true
         } else {
@@ -133,7 +160,6 @@ impl Terrain {
     fn clear_tiles(&mut self) {
         self.data = vec![vec![TileType::AIR; window::WIDTH as usize]; window::HEIGHT as usize];
     }
-
     pub fn generate(&mut self) {
         self.minerals.sort_by(|b, a| {
             b.automaton
@@ -141,117 +167,12 @@ impl Terrain {
                 .partial_cmp(&a.automaton.occurence)
                 .unwrap()
         });
-        self.clear_tiles();
 
         let minerals_copy: Vec<Mineral> = self.minerals.clone();
 
+        self.clear_tiles();
         for m in minerals_copy {
             self.generate_caves(&m);
-        }
-
-        self.update_pixel_buffer();
-    }
-
-    fn update_pixel_buffer(&mut self) {
-        for x in 0..WIDTH as usize {
-            for y in 0..HEIGHT as usize {
-                let color = match self.get_data(x, y) {
-                    Some(TileType::AIR) => 0x2b180cff,
-                    Some(TileType::WATER) => 0x0000FFFF,
-                    Some(TileType::Mineral(_)) => {
-                        let mineral = self
-                            .minerals
-                            .iter()
-                            .find(|m| self.data[x as usize][y as usize] == m.r#type)
-                            .unwrap();
-                        mineral.color
-                    }
-                    None => 0x000000ff,
-                };
-                self.pixel_buffer[y * WIDTH as usize + x] = color;
-            }
-        }
-    }
-
-    pub fn draw(
-        &mut self,
-        canvas: &mut sdl2::render::Canvas<sdl2::video::Window>,
-        texture_creator: &sdl2::render::TextureCreator<sdl2::video::WindowContext>,
-        camera: &Camera,
-    ) {
-        let mut texture = texture_creator
-            .create_texture_streaming(
-                sdl2::pixels::PixelFormatEnum::ARGB8888,
-                window::WIDTH,
-                window::HEIGHT,
-            )
-            .unwrap();
-
-        // Mettre à jour la texture avec le contenu du pixel_buffer
-        texture
-            .with_lock(None, |buffer: &mut [u8], _pitch: usize| {
-                for (i, pixel) in self.pixel_buffer.iter().enumerate() {
-                    let color = *pixel;
-                    buffer[i * 4 + 3] = ((color >> 0) & 0xFF) as u8; // A
-                    buffer[i * 4 + 0] = ((color >> 8) & 0xFF) as u8; // R
-                    buffer[i * 4 + 1] = ((color >> 16) & 0xFF) as u8; // G
-                    buffer[i * 4 + 2] = ((color >> 24) & 0xFF) as u8; // B
-                }
-            })
-            .unwrap();
-
-        // Calculer la zone visible en fonction de la caméra et du zoom
-        let start_x = camera.position.x as f32 / camera.zoom;
-        let start_y = camera.position.y as f32 / camera.zoom;
-
-        let viewport_width = (canvas.viewport().width() as f32 / camera.zoom) as u32;
-        let viewport_height = (canvas.viewport().height() as f32 / camera.zoom) as u32;
-
-        let dest_rect = sdl2::rect::Rect::new(
-            start_x as i32,
-            start_y as i32,
-            viewport_width,
-            viewport_height,
-        );
-
-        // Afficher uniquement la partie visible de la texture
-        self.update_pixel_buffer();
-        canvas.copy(&texture, None, dest_rect).unwrap();
-    }
-
-    pub fn draw_unit_in_pixel_buffer(
-        &mut self,
-        unit: Unit,
-        camera: &Camera,          // Référence à la caméra
-    ) {
-        // Vérifiez si l'unité est sur l'écran
-        if !camera.is_on_screen(unit.coords) {
-            return; // Ne rien dessiner si l'unité n'est pas visible
-        }
-    
-        // Convertir les coordonnées du monde en coordonnées de l'écran
-        let screen_coords = camera.world_to_screen(unit.coords);
-        
-        // Calculer les indices du tampon de pixels
-        let start_x = screen_coords.x as usize;
-        let start_y = screen_coords.y as usize;
-        let tile_size = camera.tile_size as usize;
-    
-        // S'assurer que l'unité ne déborde pas du tampon
-        if start_x >= WIDTH as usize || start_y >= HEIGHT as usize {
-            return; // L'unité est hors de l'écran
-        }
-    println!("Unit of color : {:#X}", unit.color);
-        // Dessiner l'unité dans le tampon de pixels
-        for x in 0..tile_size {
-            for y in 0..tile_size {
-                let pixel_x = start_x + x;
-                let pixel_y = start_y + y;
-                if pixel_x < WIDTH as usize && pixel_y < HEIGHT as usize {
-                    let pixel_index = pixel_y * WIDTH as usize + pixel_x;
-                    self.pixel_buffer[pixel_index] = unit.color; // Remplace la couleur du pixel
-                }
-            }
         }
     }
 }
