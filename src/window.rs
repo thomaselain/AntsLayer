@@ -1,12 +1,15 @@
-use sdl2::{rect::Rect, render::WindowCanvas, video::Window, Sdl};
+use std::{arch::x86_64, collections::btree_map::Range, ops::Neg};
+
+use gl_constants::GL_OFFSET;
+use sdl2::{libc::winsize, rect::Rect, render::WindowCanvas, video::Window, Sdl};
 
 use crate::{
     camera::Camera,
-    terrain::{Terrain, TileType, TILE_SIZE},
+    terrain::{self, Terrain, TileType},
     units::Unit,
 };
-pub const WIDTH: u32 = 1200;
-pub const HEIGHT: u32 = 900;
+pub const WIDTH: u32 = 1000;
+pub const HEIGHT: u32 = 1000;
 
 pub fn init_sdl2_window() -> (sdl2::Sdl, Window) {
     // Initialiser SDL2
@@ -45,39 +48,37 @@ impl Buffer<BufferType> {
             typ: t,
         }
     }
-    pub fn clear_buffer(&mut self) {
-        self.buffer.fill(0);
-    }
 }
 
 impl Buffer<BufferType> {
     pub fn draw_unit(&mut self, u: &Unit) {
-        for x in u.coords.x..(TILE_SIZE as i32 + u.coords.x) {
-            for y in u.coords.y..(TILE_SIZE as i32 + u.coords.y) {
-                let pixel_x: usize = u.coords.x as usize + x as usize;
-                let pixel_y: usize = u.coords.y as usize + y as usize;
-                if x < WIDTH as i32 && y < HEIGHT as i32 {
-                    let pixel_index: usize = y as usize * WIDTH as usize + x as usize as usize;
-                    self.buffer[pixel_index] = u.color;
-                    self.needs_update = true;
-                }
-            }
+        let x: usize = u.coords.x as usize;
+        let y: usize = u.coords.y as usize;
+
+        if x < WIDTH as usize && y < HEIGHT as usize {
+            self.draw_tile(x, y, u.color);
         }
     }
     pub fn draw_units(&mut self, units: &[Unit]) {
+        if !self.needs_update {
+            //return;
+        }
         self.buffer.fill(0);
         for u in units {
             self.draw_unit(u);
         }
     }
 
-    pub fn draw_terrain(&mut self, terrain: &Terrain) {
-        if !self.needs_update {
-            //return;
-        }
+    pub fn draw_terrain(&mut self, terrain: &Terrain, camera: Camera) {
+        let start_x = (camera.position.x as f32 / camera.zoom).max(0.0) as usize;
+        let start_y = (camera.position.y as f32 / camera.zoom).max(0.0) as usize;
+        let end_x = ((camera.position.x as f32 + camera.screen_width as f32) * camera.zoom)
+            .min(WIDTH as f32) as usize;
+        let end_y = ((camera.position.y as f32 + camera.screen_height as f32) * camera.zoom)
+            .min(HEIGHT as f32) as usize;
 
-        for x in 0..WIDTH as usize - 1 {
-            for y in 0..HEIGHT as usize - 1 {
+        for x in start_x..end_x {
+            for y in start_y..end_y {
                 let color = match terrain.get_data(x, y) {
                     Some(TileType::AIR) => 0x2b180cff,
                     Some(TileType::WATER) => 0x0000FFFF,
@@ -91,11 +92,14 @@ impl Buffer<BufferType> {
                     }
                     None => 0x00000000,
                 };
-                let pixel_index: usize = y as usize * WIDTH as usize + x as usize as usize;
-                self.buffer[pixel_index] = color;
+                self.draw_tile(x, y, color);
+            }
         }
-        }
-        self.needs_update = false;
+    }
+
+    fn draw_tile(&mut self, x: usize, y: usize, color: u32) {
+        let pixel_index: usize = y * WIDTH as usize + x;
+        self.buffer[pixel_index] = color;
     }
 }
 
@@ -117,17 +121,17 @@ impl Renderer {
             texture_creator,
             terrain: Buffer::<BufferType> {
                 buffer: vec![0; width * height],
-                needs_update: false,
+                needs_update: true,
                 typ: BufferType::Terrain,
             },
             buildings: Buffer::<BufferType> {
                 buffer: vec![0; width * height],
-                needs_update: false,
+                needs_update: true,
                 typ: BufferType::Buildings,
             },
             units: Buffer::<BufferType> {
                 buffer: vec![0; width * height],
-                needs_update: false,
+                needs_update: true,
                 typ: BufferType::Units,
             },
         }
@@ -138,95 +142,104 @@ impl Renderer {
             // Remplissage du buffer bâtiment avec les données de `buildings`
         }
     */
+    pub fn all_need_update(&mut self) {
+        self.terrain.needs_update = true;
+        self.buildings.needs_update = true;
+        self.units.needs_update = true;
+    }
+
     fn combine_buffers(&self) -> Vec<u32> {
         let mut combined_buffer = vec![0x00000000; WIDTH as usize * HEIGHT as usize];
 
-        for (i, &color) in self.terrain.buffer.iter().enumerate() {
-            if color != 0x00000000 {
-                // Couleur non transparente
-                combined_buffer[i] = color;
+        if self.terrain.needs_update {
+            for (i, &color) in self.terrain.buffer.iter().enumerate() {
+                if color != 0x00000000 {
+                    // Couleur non transparente
+                    combined_buffer[i] = color;
+                }
             }
         }
 
-        for (i, &color) in self.buildings.buffer.iter().enumerate() {
-            if color != 0x00000000 {
-                combined_buffer[i] = color;
+        if self.buildings.needs_update {
+            for (i, &color) in self.buildings.buffer.iter().enumerate() {
+                if color != 0x00000000 {
+                    combined_buffer[i] = color;
+                }
             }
         }
 
-        for (i, &color) in self.units.buffer.iter().enumerate() {
-            if color != 0x00000000 {
-                combined_buffer[i] = color;
+        if self.units.needs_update {
+            for (i, &color) in self.units.buffer.iter().enumerate() {
+                if color != 0x00000000 {
+                    combined_buffer[i] = color;
+                }
             }
         }
 
         combined_buffer
     }
 
-    pub fn draw(&mut self, camera: &Camera) {
+    pub fn draw(&mut self, terrain: &Terrain, units: &Vec<Unit>, camera: &Camera) {
         /*        // RESIZING (todo : dupe it for each buffer)
                 if self.pixel_buffer.len() != (viewport_width * viewport_height) as usize {
                     self.pixel_buffer = vec![0; (viewport_width * viewport_height) as usize];
                     // Recréer le buffer
                 }
         */
+        self.terrain.draw_terrain(&terrain, *camera);
+        self.units.draw_units(&units);
+
         let combined_buffers = self.combine_buffers();
         self.update_pixel_buffer(&combined_buffers, camera);
+        self.canvas.present();
     }
 
     fn update_pixel_buffer(&mut self, pixel_buffer: &[u32], camera: &Camera) {
-        // chose wich buffer to access
-
         if pixel_buffer.is_empty() {
-            panic!("CACA");
-        } // Dont show fully empty buffers
-        let start_x = camera.position.x as f32;
-        let start_y = camera.position.y as f32;
+            panic!("Invalid Bufffer !!!");
+        }
 
-        let viewport_width = WIDTH as f32 / camera.zoom;
-        let viewport_height = HEIGHT as f32 / camera.zoom;
-        /* TODO : zoom handling
-                let width = (WIDTH as f32 / camera.zoom) as usize;
-                let height = (HEIGHT as f32 / camera.zoom) as usize;
-        let mut texture = self
-            .texture_creator
-            .create_texture_target(None, WIDTH, HEIGHT)
-            .expect("Failed to create texture");
-        */
-
+        let viewport_width = (WIDTH as f32 * camera.zoom).ceil() as u32;
+        let viewport_height = (HEIGHT as f32 * camera.zoom).ceil() as u32;
+    
         let mut texture = self
             .texture_creator
             .create_texture_streaming(
                 sdl2::pixels::PixelFormatEnum::RGBA8888,
-                viewport_width as u32,
-                viewport_height as u32,
+                viewport_width,
+                viewport_height,
             )
             .unwrap();
 
         texture
             .with_lock(None, |buffer: &mut [u8], _pitch: usize| {
-                for (i, pixel) in pixel_buffer.iter().enumerate() {
-                    let color = *pixel;
-                    if color != 0x00000000 {
-                        buffer[i * 4 + 0] = ((color >> 0) & 0xFF) as u8; // R
-                        buffer[i * 4 + 1] = ((color >> 8) & 0xFF) as u8; // G
-                        buffer[i * 4 + 2] = ((color >> 16) & 0xFF) as u8; // B
-                        buffer[i * 4 + 3] = ((color >> 24) & 0xFF) as u8; // A
-                    } else {
-                        //println!("pixel at ({:?},{:?}) is empty", i / 4, i % 4)
+                for x in 0..viewport_width as usize - 1 {
+                    for y in 0..viewport_height as usize - 1 {
+                        let src_x = ((camera.position.x as f32 * camera.zoom) + x as f32) as usize;
+                        let src_y = ((camera.position.y as f32 * camera.zoom) + y as f32) as usize;
+    
+                        if src_x < WIDTH as usize
+                            && src_y < HEIGHT as usize
+                            && src_x > 0
+                            && src_y > 0
+                        {
+                            let pixel_index = src_y * WIDTH as usize + src_x;
+                            let color = pixel_buffer[pixel_index];
+
+                            let dest_index = (y * viewport_width as usize + x) * 4;
+                            buffer[dest_index + 0] = ((color >> 0) & 0xFF) as u8; // R
+                            buffer[dest_index + 1] = ((color >> 8) & 0xFF) as u8; // G
+                            buffer[dest_index + 2] = ((color >> 16) & 0xFF) as u8; // B
+                            buffer[dest_index + 3] = ((color >> 24) & 0xFF) as u8;
+                            // A
+                        }
                     }
                 }
             })
             .unwrap();
 
-        let dest_rect = Rect::new(
-            start_x as i32,
-            start_y as i32,
-            viewport_width as u32,
-            viewport_height as u32,
-        );
+        let dest_rect = Rect::new(0, 0, WIDTH, HEIGHT);
 
         self.canvas.copy(&texture, None, dest_rect).unwrap();
-        self.canvas.present();
     }
 }

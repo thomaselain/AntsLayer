@@ -1,20 +1,15 @@
 extern crate noise;
 extern crate sdl2;
 
-use std::{thread::sleep, time::Duration};
-
-use sdl2::{libc::AM_STR, pixels::Color, rect::Rect};
 
 use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
-pub(crate) const TILE_SIZE: u32 = 1;
 
 use crate::{
     automaton::Automaton,
-    units::{ActionType, JobType, RaceType, Unit},
-    window::{self, HEIGHT, WIDTH},
-    Coords::{self},
 };
+pub const HEIGHT: usize = 300;
+pub const WIDTH: usize = 300;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum MineralType {
@@ -41,7 +36,6 @@ pub struct Mineral {
 pub struct Terrain {
     pub minerals: Vec<Mineral>,
     pub data: Vec<Vec<TileType>>,
-    //pub pixel_buffer: Vec<u32>,
 }
 
 impl Terrain {
@@ -130,7 +124,7 @@ impl Terrain {
     }
 
     fn clear_tiles(&mut self) {
-        self.data = vec![vec![TileType::AIR; window::WIDTH as usize]; window::HEIGHT as usize];
+        self.data = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
     }
     pub fn generate(&mut self) {
         self.minerals.sort_by(|b, a| {

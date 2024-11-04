@@ -1,9 +1,5 @@
 extern crate automata;
 
-use std::arch::x86_64;
-
-use rand::Rng;
-
 use crate::{
     terrain::{self, MineralType, Terrain, TileType},
     window::{HEIGHT, WIDTH},

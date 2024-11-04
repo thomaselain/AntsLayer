@@ -10,6 +10,7 @@ use coords::Coords;
 use terrain::{Mineral, Terrain, TileType};
 use units::{ActionType, Actions, JobType, RaceType, Unit};
 
+use crate::{terrain::HEIGHT, terrain::WIDTH};
 use rand::Rng;
 use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
 use std::time::Instant;
@@ -31,31 +32,14 @@ fn main() -> Result<(), String> {
 
     let last_time = Instant::now();
 
-
     let mut terrain = Terrain::new();
     terrain.generate();
-
 
     /////////////////////// UNITS /////////////////////////////
     let mut units_list: Vec<Unit> = Vec::new();
 
     for i in 0..100 {
-        let coords = Coords {
-            x: (window::WIDTH / 2) as i32,
-            y: (window::HEIGHT / 2) as i32,
-        };
-
-        let mut unit = Unit::new(
-            if i % 3 == 0 {
-                RaceType::HUMAN
-            } else if i % 3 == 1 {
-                RaceType::ANT
-            } else {
-                RaceType::ALIEN
-            },
-            JobType::MINER,
-            coords,
-        );
+        let mut unit = Unit::new();
 
         for _ in 0..1 {
             unit.action_queue.push(ActionType::WANDER);
@@ -63,8 +47,12 @@ fn main() -> Result<(), String> {
         units_list.push(unit);
     }
     /////////////////////////////////////////////////////////
+    renderer.all_need_update();
 
     'main: loop {
+        renderer.canvas.set_draw_color(Color::RGBA(0, 0, 0, 0));
+        renderer.canvas.clear();
+
         let mouse_state = MouseState::new(&event_pump);
 
         for event in event_pump.poll_iter() {
@@ -79,33 +67,38 @@ fn main() -> Result<(), String> {
                         dragging = true;
                         prev_mouse_x = x;
                         prev_mouse_y = y;
+                        renderer.all_need_update();
                     }
                 }
                 Event::MouseButtonUp { mouse_btn, .. } => {
                     if mouse_btn == sdl2::mouse::MouseButton::Left {
                         dragging = false;
+                        renderer.all_need_update();
                     }
+                    println!(
+                        "camera pos : ({:?},{:?})",
+                        camera.position.x, camera.position.y
+                    );
                 }
                 Event::MouseMotion { x, y, .. } => {
                     if dragging {
-                        let delta_x = x - prev_mouse_x;
-                        let delta_y = y - prev_mouse_y;
+                        let delta_y = mouse_y - prev_mouse_y;
+                        let delta_x = mouse_x - prev_mouse_x;
 
-                        camera.position.x += (delta_x as f32) as i32;
-                        camera.position.y += (delta_y as f32) as i32;
+                        camera.position.x = (camera.position.x - delta_x as i32);
+                        camera.position.y = (camera.position.y - delta_y as i32);
 
-                        prev_mouse_x = x;
-                        prev_mouse_y = y;
+                        prev_mouse_x = mouse_x;
+                        prev_mouse_y = mouse_y;
                     }
                 }
                 Event::MouseWheel { y, .. } => {
-                    if y > 0 && camera.zoom < 10.0 {
-                        camera.zoom += 0.1;
-                    } else if y < 0 && camera.zoom > 0.5 {
-                        camera.zoom -= 0.1;
+                    if y > 0 {
+                        camera.zoom_in();
+                    } else if y < 0 {
+                        camera.zoom_out();
                     }
-                    camera.zoom = if y > 0 { 1.1 } else { 0.9 };
-                    camera.apply_zoom(mouse_x, mouse_y);
+                    println!("{:?}", camera.zoom);
                 }
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -114,41 +107,15 @@ fn main() -> Result<(), String> {
                 } => {
                     return Ok(());
                 }
-                //////////////// Regenerate terrain after its modification (for testing)
-                sdl2::event::Event::KeyUp {
-                    keycode: Some(sdl2::keyboard::Keycode::A),
-                    ..
-                }
-                | sdl2::event::Event::KeyUp {
-                    keycode: Some(sdl2::keyboard::Keycode::Z),
-                    ..
-                } => {
-                    renderer.draw(&camera);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::A),
-                    ..
-                } => {
-                    terrain.minerals[2].automaton.perlin_scale += 0.01;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Z),
-                    ..
-                } => {
-                    terrain.minerals[2].automaton.perlin_scale -= 0.005;
-                }
 
                 Event::KeyUp {
                     keycode: Some(Keycode::R),
                     ..
                 } => {
-                    camera.zoom = 1.0;
                     terrain = Terrain::new();
                     terrain.generate();
-
-                    renderer.terrain.needs_update = true;
-                    renderer.terrain.draw_terrain(&terrain);
-                    renderer.draw(&camera);
+                    renderer.all_need_update();
+                    renderer.draw(&terrain, &units_list, &camera);
                 }
 
                 _ => {}
@@ -157,30 +124,11 @@ fn main() -> Result<(), String> {
 
         let current_time = Instant::now();
         let delta_time = current_time.duration_since(last_time).as_millis() as i32;
-        renderer.canvas.set_draw_color(Color::RGBA(0, 0, 0, 0));
-        renderer.canvas.clear();
-        print!(
-            "{}",
-            if renderer.terrain.needs_update == true {
-                "refreshing terrain buffers\n".to_string()
-            } else {
-                "".to_string()
-            }
-        );
+        renderer.units.needs_update = true;
 
         units_list.think(&terrain, delta_time);
-        renderer.terrain.draw_terrain(&terrain);
-        renderer.units.draw_units(&units_list);
-        renderer.draw(&camera);
 
-        renderer.canvas.set_viewport(Some(Rect::new(
-            camera.position.x,
-            camera.position.y,
-            (window::WIDTH as f32 / camera.zoom) as u32,
-            (window::HEIGHT as f32 / camera.zoom) as u32,
-        )));
         let last_time = current_time;
-
-        renderer.canvas.present();
+        renderer.draw(&terrain, &units_list, &camera);
     }
 }

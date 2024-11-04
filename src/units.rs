@@ -1,23 +1,9 @@
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
-use sdl2::render::Canvas;
-use sdl2::video::Window;
-
 use rand::seq::SliceRandom;
 use rand::{self, Rng};
 
-use terrain::Terrain;
-
-use crate::terrain::TILE_SIZE;
-use crate::{
-    camera::{self, Camera},
-    coords::{self},
-    terrain::{self, TileType},
-    window::{self, HEIGHT, WIDTH},
-};
-use coords::Coords;
-
-pub const UNIT_SIZE: u32 = terrain::TILE_SIZE;
+use crate::coords::Coords;
+use crate::terrain::TileType;
+use crate::terrain::{self, Terrain};
 
 #[derive(Copy, Clone)]
 pub enum RaceType {
@@ -65,17 +51,37 @@ fn random_direction() -> i32 {
 }
 
 impl Unit {
-    pub fn new(race: RaceType, job: JobType, coords: Coords) -> Unit {
-        print!("new unit : ");
+    pub fn new() -> Unit {
+        let coords = Coords {
+            x: (terrain::WIDTH / 2) as i32,
+            y: (terrain::HEIGHT / 2) as i32,
+        };
+        let mut rng = rand::thread_rng();
+        let race = match rng.gen_range(0..3) {
+            1 => RaceType::HUMAN,
+            2 => RaceType::ANT,
+            3 => RaceType::ALIEN,
+            _ => RaceType::ANT,
+        };
+        let mut rng = rand::thread_rng();
+        let job = match rng.gen_range(1..=4) {
+            1 => JobType::MINER,
+            2 => JobType::BUILDER,
+            3 => JobType::FARMER,
+            4 => JobType::FIGHTER,
+            _ => JobType::MINER,
+        };
+        let race_type_str = match race {
+            RaceType::ALIEN => "ALIEN",
+            RaceType::ANT => "ANT",
+            RaceType::HUMAN => "HUMAN",
+        };
+
         println!(
-            "(x : {:?} | y : {:?}) --> {:?}",
+            "New Unit (x : {:?} | y : {:?}) --> {:?}",
             coords.x,
             coords.y,
-            match race {
-                RaceType::ALIEN => "ALIEN",
-                RaceType::ANT => "ANT",
-                RaceType::HUMAN => "HUMAN",
-            }
+            race_type_str
         );
 
         Unit {
