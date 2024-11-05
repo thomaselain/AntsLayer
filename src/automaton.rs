@@ -1,7 +1,7 @@
 extern crate automata;
 
 use crate::{
-    terrain::{self, MineralType, Terrain, TileType},
+    terrain::{Terrain, TileType},
     window::{HEIGHT, WIDTH},
 };
 

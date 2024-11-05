@@ -1,5 +1,7 @@
 use crate::{
-    coords::Coords, terrain, window::{self, WIDTH}
+    coords::Coords,
+    terrain::{self},
+    window::{self, WIDTH},
 };
 
 #[derive(Debug, Clone, Copy)]

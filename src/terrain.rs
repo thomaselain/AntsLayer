@@ -1,15 +1,17 @@
 extern crate noise;
 extern crate sdl2;
 
-
 use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
 
 use crate::{
     automaton::Automaton,
+    buildings::{Building, BuildingType},
+    coords::Coords,
+    units::RaceType,
 };
-pub const HEIGHT: usize = 300;
-pub const WIDTH: usize = 300;
+pub const HEIGHT: usize = 100;
+pub const WIDTH: usize = 100;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum MineralType {
@@ -20,6 +22,7 @@ pub enum MineralType {
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum TileType {
+    Building(BuildingType),
     Mineral(MineralType),
     AIR,
     WATER,
@@ -34,6 +37,7 @@ pub struct Mineral {
 
 #[derive(Clone)]
 pub struct Terrain {
+    pub buildings: Vec<(RaceType, Building)>,
     pub minerals: Vec<Mineral>,
     pub data: Vec<Vec<TileType>>,
 }
@@ -41,7 +45,6 @@ pub struct Terrain {
 impl Terrain {
     pub fn new() -> Terrain {
         let tiles: Vec<Vec<TileType>> = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
-
 
         Terrain {
             data: tiles,
@@ -54,13 +57,43 @@ impl Terrain {
                 Mineral {
                     r#type: TileType::Mineral(MineralType::IRON),
                     color: 0xAAAAAAff,
-                    automaton: Automaton::new(4, 5, 4, 0.05, 0.075, 1.0),
+                    automaton: Automaton::new(4, 5, 4, 0.05, 0.075, 0.85),
                 },
                 Mineral {
                     r#type: TileType::Mineral(MineralType::ROCK),
                     color: 0x303030FF,
-                    automaton: Automaton::new(4, 4, 5, 0.035, 0.35, 1.0),
+                    automaton: Automaton::new(4, 4, 5, 0.035, 0.35, 0.65),
+                    //automaton: Automaton::new(4, 4, 5, 0.035, 0.35, 1.0),
                 },
+            ],
+            buildings: vec![
+                (
+                    RaceType::ANT,
+                    Building {
+                        hp: 100,
+                        coords: Coords { x: 10, y: 75 },
+                        building_type: BuildingType::Hearth,
+                        race: RaceType::ANT,
+                    },
+                ),
+                (
+                    RaceType::HUMAN,
+                    Building {
+                        hp: 100,
+                        coords: Coords { x: 15, y: 15 },
+                        building_type: BuildingType::Hearth,
+                        race: RaceType::HUMAN,
+                    },
+                ),
+                (
+                    RaceType::ALIEN,
+                    Building {
+                        hp: 100,
+                        coords: Coords { x: 65, y: 65 },
+                        building_type: BuildingType::Hearth,
+                        race: RaceType::ALIEN,
+                    },
+                ),
             ],
         }
     }
@@ -139,6 +172,13 @@ impl Terrain {
         self.clear_tiles();
         for m in minerals_copy {
             self.generate_caves(&m);
+        }
+    }
+    pub fn is_walkable(&self, x: usize, y: usize) -> bool {
+        if let Some(tile) = self.get_data(x, y) {
+            matches!(tile, TileType::AIR|TileType::Building(BuildingType::Hearth))
+        } else {
+            false
         }
     }
 }

@@ -1,12 +1,7 @@
-use std::{arch::x86_64, collections::btree_map::Range, ops::Neg};
-
-use gl_constants::GL_OFFSET;
-use sdl2::{libc::winsize, rect::Rect, render::WindowCanvas, video::Window, Sdl};
+use sdl2::{rect::Rect, render::WindowCanvas, video::Window, Sdl};
 
 use crate::{
-    camera::Camera,
-    terrain::{self, Terrain, TileType},
-    units::Unit,
+    buildings::BuildingType, camera::Camera, terrain::{ Terrain, TileType}, units::Unit
 };
 pub const WIDTH: u32 = 1000;
 pub const HEIGHT: u32 = 1000;
@@ -89,7 +84,11 @@ impl Buffer<BufferType> {
                             .find(|m| terrain.data[x][y] == m.r#type)
                             .unwrap();
                         mineral.color
-                    }
+                    },
+                    Some(TileType::Building(t)) => { match t {
+                        BuildingType::Hearth => 0xe36505FF,
+                        BuildingType::Stockpile => 0x064f28FF,
+                    } },
                     None => 0x00000000,
                 };
                 self.draw_tile(x, y, color);

@@ -4,14 +4,14 @@ mod coords;
 mod terrain;
 mod units;
 mod window;
+mod buildings;
 
+use buildings::FindHome;
 use camera::Camera;
 use coords::Coords;
-use terrain::{Mineral, Terrain, TileType};
-use units::{ActionType, Actions, JobType, RaceType, Unit};
+use terrain::{Terrain, TileType};
+use units::{ActionType, Actions, RaceType, Unit};
 
-use crate::{terrain::HEIGHT, terrain::WIDTH};
-use rand::Rng;
 use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
 use std::time::Instant;
 use window::{init_sdl2_window, Renderer};
@@ -30,26 +30,53 @@ fn main() -> Result<(), String> {
         window::HEIGHT as usize,
     );
 
-    let last_time = Instant::now();
+    /////////////////////// BUILDINGS ///////////////////////////////////////////
+    let mut last_time = Instant::now();
 
     let mut terrain = Terrain::new();
-    terrain.generate();
+    // terrain.generate();
+    /////////////////////////////////////////////////////////
 
-    /////////////////////// UNITS /////////////////////////////
+
+
+    /////////////////////// BUILDINGS //////////////////////////////////////////
+    for b in terrain.buildings.clone() {
+        terrain.data[b.1.coords.x as usize][b.1.coords.y as usize] = TileType::Building(b.1.building_type);
+    }
+    /////////////////////////////////////////////////////////
+
+
+
+    /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for i in 0..100 {
+    for _ in 0..500 {
         let mut unit = Unit::new();
+        /*
 
         for _ in 0..1 {
-            unit.action_queue.push(ActionType::WANDER);
+            unit.action_queue
+                .push((ActionType::WANDER, Coords { x: 0, y: 0 }));
         }
+        */
+      
+        unit.action_queue.push((
+               ActionType::MOVE,
+               Coords {
+                   x: terrain::WIDTH as i32 / 2,
+                   y: terrain::HEIGHT as i32 / 2,
+               },
+           ));
+        //unit.race = RaceType::ANT;
         units_list.push(unit);
     }
     /////////////////////////////////////////////////////////
     renderer.all_need_update();
 
-    'main: loop {
+    '_main: loop {
+        let current_time = Instant::now();
+        let delta_time = current_time.duration_since(last_time).as_millis() as i32;
+        last_time = current_time;
         renderer.canvas.set_draw_color(Color::RGBA(0, 0, 0, 0));
         renderer.canvas.clear();
 
@@ -70,23 +97,37 @@ fn main() -> Result<(), String> {
                         renderer.all_need_update();
                     }
                 }
-                Event::MouseButtonUp { mouse_btn, .. } => {
+                Event::MouseButtonUp {
+                    x, y, mouse_btn, ..
+                } => {
                     if mouse_btn == sdl2::mouse::MouseButton::Left {
                         dragging = false;
                         renderer.all_need_update();
+                    } else if mouse_btn == sdl2::mouse::MouseButton::Right {
+                        for u in &mut units_list {
+                            //if u.race == RaceType::ANT {
+                                u.action_queue.push((
+                                    ActionType::MOVE,
+                                    Coords {
+                                        x: (x as f32 * camera.zoom) as i32,
+                                        y: (y as f32 * camera.zoom) as i32,
+                                    },
+                                ));
+                            //}
+                        }
                     }
                     println!(
-                        "camera pos : ({:?},{:?})",
-                        camera.position.x, camera.position.y
+                        "camera pos : ({:?},{:?}) / zoom ({:?})",
+                        camera.position.x, camera.position.y, camera.zoom
                     );
                 }
-                Event::MouseMotion { x, y, .. } => {
+                Event::MouseMotion { .. } => {
                     if dragging {
                         let delta_y = mouse_y - prev_mouse_y;
                         let delta_x = mouse_x - prev_mouse_x;
 
-                        camera.position.x = (camera.position.x - delta_x as i32);
-                        camera.position.y = (camera.position.y - delta_y as i32);
+                        camera.position.x = camera.position.x - delta_x as i32;
+                        camera.position.y = camera.position.y - delta_y as i32;
 
                         prev_mouse_x = mouse_x;
                         prev_mouse_y = mouse_y;
@@ -98,7 +139,6 @@ fn main() -> Result<(), String> {
                     } else if y < 0 {
                         camera.zoom_out();
                     }
-                    println!("{:?}", camera.zoom);
                 }
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -122,13 +162,9 @@ fn main() -> Result<(), String> {
             }
         }
 
-        let current_time = Instant::now();
-        let delta_time = current_time.duration_since(last_time).as_millis() as i32;
         renderer.units.needs_update = true;
-
         units_list.think(&terrain, delta_time);
 
-        let last_time = current_time;
         renderer.draw(&terrain, &units_list, &camera);
     }
 }
