@@ -7,7 +7,7 @@ use crate::coords::Coords;
 use crate::terrain::TileType;
 use crate::terrain::{self, Terrain};
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RaceType {
     HUMAN,
     ANT,
@@ -97,9 +97,9 @@ impl Unit {
             action_path: None,
             last_action_timer: 0,
             speed: match race {
-                RaceType::HUMAN => 100,
+                RaceType::HUMAN => 75,
                 RaceType::ANT => 10,
-                RaceType::ALIEN => 75,
+                RaceType::ALIEN => 35,
             },
         }
     }
@@ -269,7 +269,7 @@ impl Actions for Unit {
             }
             Some((ActionType::WANDER, _)) => {
                 //   print!("Going nowhere ...");
-                let home = terrain.buildings.find_home(terrain);
+                let home = terrain.buildings.find_home(self.race, terrain);
 
                 match home {
                     Some(coords) => {

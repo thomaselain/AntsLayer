@@ -1,12 +1,12 @@
 use crate::{coords::Coords, terrain::Terrain, units::RaceType};
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum BuildingType {
     Hearth,
     Stockpile,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Building {
     pub hp: u32,
     pub coords: Coords,
@@ -15,14 +15,13 @@ pub struct Building {
 }
 
 pub trait FindHome {
-    fn find_home(&self, terrain: &Terrain) -> Option<Coords>;
+    fn find_home(&self, race:RaceType,terrain: &Terrain) -> Option<Coords>;
 }
 
 impl FindHome for Vec<(RaceType, Building)> {
-    fn find_home(&self, terrain: &Terrain) -> Option<Coords> {
-        for (unit_race, building) in self {
-            if let Some(tb) = terrain.buildings.iter().find(|(_, b)| b.race == *unit_race) {
-               // println!("Home found at ({}, {})", tb.1.coords.x, tb.1.coords.y);
+    fn find_home(&self, race: RaceType, terrain: &Terrain) -> Option<Coords> {
+        for (_, _) in self {
+            if let Some(tb) = terrain.buildings.iter().find(|(_, b)| b.race == race) {
                 return Some(tb.1.coords);
             }
         }

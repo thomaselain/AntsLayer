@@ -10,8 +10,9 @@ use crate::{
     coords::Coords,
     units::RaceType,
 };
-pub const HEIGHT: usize = 100;
-pub const WIDTH: usize = 100;
+
+pub const HEIGHT: usize = 250;
+pub const WIDTH: usize = 250;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum MineralType {

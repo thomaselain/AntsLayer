@@ -50,7 +50,7 @@ fn main() -> Result<(), String> {
     /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..500 {
+    for _ in 0..100 {
         let mut unit = Unit::new();
         /*
 
