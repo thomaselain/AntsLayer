@@ -34,7 +34,7 @@ fn main() -> Result<(), String> {
     let mut last_time = Instant::now();
 
     let mut terrain = Terrain::new();
-    // terrain.generate();
+    terrain.generate();
     /////////////////////////////////////////////////////////
 
 
@@ -42,6 +42,7 @@ fn main() -> Result<(), String> {
     /////////////////////// BUILDINGS //////////////////////////////////////////
     for b in terrain.buildings.clone() {
         terrain.data[b.1.coords.x as usize][b.1.coords.y as usize] = TileType::Building(b.1.building_type);
+        terrain.dig_home(b.1.coords, 15);
     }
     /////////////////////////////////////////////////////////
 
