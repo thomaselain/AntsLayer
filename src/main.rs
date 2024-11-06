@@ -30,7 +30,7 @@ fn main() -> Result<(), String> {
         window::HEIGHT as usize,
     );
 
-    /////////////////////// BUILDINGS ///////////////////////////////////////////
+    /////////////////////// TERRAIN ///////////////////////////////////////////
     let mut last_time = Instant::now();
 
     let mut terrain = Terrain::new();
@@ -40,10 +40,9 @@ fn main() -> Result<(), String> {
 
 
     /////////////////////// BUILDINGS //////////////////////////////////////////
-    for b in terrain.buildings.clone() {
-        terrain.data[b.1.coords.x as usize][b.1.coords.y as usize] = TileType::Building(b.1.building_type);
-        terrain.dig_home(b.1.coords, 15);
-    }
+    //
+    //
+    //
     /////////////////////////////////////////////////////////
 
 
@@ -51,7 +50,7 @@ fn main() -> Result<(), String> {
     /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..100 {
+    for _ in 0..10 {
         let mut unit = Unit::new();
         /*
 
