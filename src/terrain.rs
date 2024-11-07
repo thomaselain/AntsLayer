@@ -11,8 +11,8 @@ use crate::{
     units::RaceType,
 };
 
-pub const HEIGHT: usize = 300;
-pub const WIDTH: usize = 300;
+pub const HEIGHT: usize = 50;
+pub const WIDTH: usize = 50;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum MineralType {
@@ -121,16 +121,16 @@ impl Terrain {
             ],
             buildings: vec![
                 (
-                    RaceType::ANT,
+                    RaceType::HUMAN,
                     Building {
                         hp: 100,
                         coords: Coords { x: 10, y: 10 },
                         building_type: BuildingType::Hearth,
-                        race: RaceType::ANT,
+                        race: RaceType::HUMAN,
                     },
                 ),
                 (
-                    RaceType::HUMAN,
+                    RaceType::ANT,
                     Building {
                         hp: 100,
                         coords: Coords {
@@ -138,7 +138,7 @@ impl Terrain {
                             y: HEIGHT as i32 / 2,
                         },
                         building_type: BuildingType::Hearth,
-                        race: RaceType::HUMAN,
+                        race: RaceType::ANT,
                     },
                 ),
                 (
@@ -261,20 +261,28 @@ impl Terrain {
         for b in self.buildings.clone() {
             self.data[b.1.coords.x as usize][b.1.coords.y as usize] =
                 TileType::Building(b.1.building_type);
-            self.dig_home(b.1.coords, 5);
+            self.dig_radius(b.1.coords, 15);
             self.data[b.1.coords.x as usize + 3][b.1.coords.y as usize] =
                 TileType::Building(BuildingType::Stockpile);
         }
     }
 
     pub fn is_walkable(&self, x: usize, y: usize) -> bool {
-        if let Some(tile) = self.get_data(x, y) {
-            matches!(tile, TileType::AIR | TileType::Building(_))
-        } else {
-            false
+        match self.get_data(x, y) {
+            Some(TileType::AIR) => true,
+            Some(TileType::WATER) => true,
+            _ => false,
         }
     }
-    pub fn dig_home(&mut self, center: Coords, radius: u32) {
+
+    pub fn is_diggable(&self, x: usize, y: usize) -> bool {
+        match self.get_data(x, y) {
+            Some(TileType::Mineral(MineralType::ROCK)) => true,
+            Some(TileType::Mineral(MineralType::DIRT)) => true,
+            _ => false,
+        }
+    }
+    pub fn dig_radius(&mut self, center: Coords, radius: u32) {
         let (cx, cy) = (center.x as i32, center.y as i32);
         let radius_squared = (radius * radius) as i32;
 
@@ -282,13 +290,13 @@ impl Terrain {
             for x in (cx - radius as i32)..=(cx + radius as i32) {
                 let dx = x - cx;
                 let dy = y - cy;
-                if !(x == center.x && y == center.y) {
+               // if !(x == center.x && y == center.y) {
                     if dx * dx + dy * dy <= radius_squared {
                         if let Some(_) = self.get_data(x as usize, y as usize) {
                             self.data[x as usize][y as usize] = TileType::AIR; // Dig
                         }
                     }
-                }
+                //}
             }
         }
     }

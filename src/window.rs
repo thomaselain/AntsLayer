@@ -1,7 +1,11 @@
+use rand::{self, Rng};
 use sdl2::{rect::Rect, render::WindowCanvas, video::Window, Sdl};
 
 use crate::{
-    buildings::BuildingType, camera::Camera, terrain::{ Terrain, TileType}, units::Unit
+    buildings::BuildingType,
+    camera::Camera,
+    terrain::{Terrain, TileType},
+    units::Unit,
 };
 pub const WIDTH: u32 = 1000;
 pub const HEIGHT: u32 = 1000;
@@ -84,11 +88,11 @@ impl Buffer<BufferType> {
                             .find(|m| terrain.data[x][y] == m.r#type)
                             .unwrap();
                         mineral.color
-                    },
-                    Some(TileType::Building(t)) => { match t {
+                    }
+                    Some(TileType::Building(t)) => match t {
                         BuildingType::Hearth => 0xe36505FF,
                         BuildingType::Stockpile => 0x064f28FF,
-                    } },
+                    },
                     None => 0x00000000,
                 };
                 self.draw_tile(x, y, color);
@@ -200,7 +204,7 @@ impl Renderer {
 
         let viewport_width = (WIDTH as f32 * camera.zoom).ceil() as u32;
         let viewport_height = (HEIGHT as f32 * camera.zoom).ceil() as u32;
-    
+
         let mut texture = self
             .texture_creator
             .create_texture_streaming(
@@ -216,7 +220,7 @@ impl Renderer {
                     for y in 0..viewport_height as usize - 1 {
                         let src_x = ((camera.position.x as f32 * camera.zoom) + x as f32) as usize;
                         let src_y = ((camera.position.y as f32 * camera.zoom) + y as f32) as usize;
-    
+
                         if src_x < WIDTH as usize
                             && src_y < HEIGHT as usize
                             && src_x > 0

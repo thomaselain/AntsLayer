@@ -1,10 +1,10 @@
 mod automaton;
+mod buildings;
 mod camera;
 mod coords;
 mod terrain;
 mod units;
 mod window;
-mod buildings;
 
 use buildings::FindHome;
 use camera::Camera;
@@ -37,36 +37,26 @@ fn main() -> Result<(), String> {
     terrain.generate();
     /////////////////////////////////////////////////////////
 
-
-
     /////////////////////// BUILDINGS //////////////////////////////////////////
     //
     //
     //
     /////////////////////////////////////////////////////////
 
-
-
     /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..10 {
+    for _ in 0..1 {
         let mut unit = Unit::new();
-        /*
 
-        for _ in 0..1 {
-            unit.action_queue
-                .push((ActionType::WANDER, Coords { x: 0, y: 0 }));
-        }
-        */
-      
+        unit.race = RaceType::ANT;
         unit.action_queue.push((
-               ActionType::MOVE,
-               Coords {
-                   x: terrain::WIDTH as i32 / 2,
-                   y: terrain::HEIGHT as i32 / 2,
-               },
-           ));
+            ActionType::WANDER,
+            Coords {
+                x: terrain::WIDTH as i32 / 2,
+                y: terrain::HEIGHT as i32 / 2,
+            },
+        ));
         //unit.race = RaceType::ANT;
         units_list.push(unit);
     }
@@ -105,9 +95,10 @@ fn main() -> Result<(), String> {
                         renderer.all_need_update();
                     } else if mouse_btn == sdl2::mouse::MouseButton::Right {
                         for u in &mut units_list {
+                            u.action_queue.clear();
                             //if u.race == RaceType::ANT {
                                 u.action_queue.push((
-                                    ActionType::MOVE,
+                                    ActionType::DIG,
                                     Coords {
                                         x: (x as f32 * camera.zoom) as i32,
                                         y: (y as f32 * camera.zoom) as i32,
@@ -163,7 +154,7 @@ fn main() -> Result<(), String> {
         }
 
         renderer.units.needs_update = true;
-        units_list.think(&terrain, delta_time);
+        units_list.think(&mut terrain, delta_time);
 
         renderer.draw(&terrain, &units_list, &camera);
     }
