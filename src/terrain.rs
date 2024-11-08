@@ -11,8 +11,8 @@ use crate::{
     units::RaceType,
 };
 
-pub const HEIGHT: usize = 50;
-pub const WIDTH: usize = 50;
+pub const HEIGHT: usize = 500;
+pub const WIDTH: usize = 500;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum MineralType {
@@ -261,7 +261,7 @@ impl Terrain {
         for b in self.buildings.clone() {
             self.data[b.1.coords.x as usize][b.1.coords.y as usize] =
                 TileType::Building(b.1.building_type);
-            self.dig_radius(b.1.coords, 15);
+            self.dig_radius(&b.1.coords, 25);
             self.data[b.1.coords.x as usize + 3][b.1.coords.y as usize] =
                 TileType::Building(BuildingType::Stockpile);
         }
@@ -282,7 +282,7 @@ impl Terrain {
             _ => false,
         }
     }
-    pub fn dig_radius(&mut self, center: Coords, radius: u32) {
+    pub fn dig_radius(&mut self, center: &Coords, radius: u32) {
         let (cx, cy) = (center.x as i32, center.y as i32);
         let radius_squared = (radius * radius) as i32;
 

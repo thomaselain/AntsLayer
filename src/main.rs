@@ -46,12 +46,12 @@ fn main() -> Result<(), String> {
     /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..1 {
+    for _ in 0..300 {
         let mut unit = Unit::new();
 
         unit.race = RaceType::ANT;
         unit.action_queue.push((
-            ActionType::WANDER,
+            ActionType::MOVE,
             Coords {
                 x: terrain::WIDTH as i32 / 2,
                 y: terrain::HEIGHT as i32 / 2,
@@ -91,19 +91,40 @@ fn main() -> Result<(), String> {
                     x, y, mouse_btn, ..
                 } => {
                     if mouse_btn == sdl2::mouse::MouseButton::Left {
+                        for u in &mut units_list {
+                            //  u.action_queue.clear();
+                            //if u.race == RaceType::ANT {
+                            u.action_queue.push((
+                                ActionType::MOVE,
+                                Coords {
+                                    x: (x as f32 * camera.zoom) as i32,
+                                    y: (y as f32 * camera.zoom) as i32,
+                                },
+                            ));
+                            //}
+                        }
+
                         dragging = false;
                         renderer.all_need_update();
                     } else if mouse_btn == sdl2::mouse::MouseButton::Right {
                         for u in &mut units_list {
-                            u.action_queue.clear();
+                            // u.action_queue.clear();
                             //if u.race == RaceType::ANT {
-                                u.action_queue.push((
-                                    ActionType::DIG,
-                                    Coords {
-                                        x: (x as f32 * camera.zoom) as i32,
-                                        y: (y as f32 * camera.zoom) as i32,
-                                    },
-                                ));
+                            u.action_queue.push((
+                                ActionType::MOVE,
+                                Coords {
+                                    x: (x as f32 * camera.zoom) as i32,
+                                    y: (y as f32 * camera.zoom) as i32,
+                                },
+                            ));
+
+                            u.action_queue.push((
+                                ActionType::DIG,
+                                Coords {
+                                    x: (x as f32 * camera.zoom) as i32,
+                                    y: (y as f32 * camera.zoom) as i32,
+                                },
+                            ));
                             //}
                         }
                     }

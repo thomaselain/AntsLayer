@@ -157,7 +157,6 @@ impl Renderer {
         if self.terrain.needs_update {
             for (i, &color) in self.terrain.buffer.iter().enumerate() {
                 if color != 0x00000000 {
-                    // Couleur non transparente
                     combined_buffer[i] = color;
                 }
             }

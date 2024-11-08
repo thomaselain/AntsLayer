@@ -46,6 +46,22 @@ pub struct Unit {
     speed: i32,
     last_action_timer: i32,
 }
+pub fn display_action_queue(unit: Unit) {
+    print!("ACTION LIST : ");
+    for action in unit.action_queue {
+        print!(
+            "{}",
+            match action.0 {
+                ActionType::MOVE => "M",
+                ActionType::DIG => "D",
+                ActionType::WANDER => "W",
+                _ => " ",
+            }
+        );
+        print!(" <-- ");
+    }
+    println!("");
+}
 
 pub fn display_action(action: ActionType, coords: Coords) {
     print!("Going to ");
@@ -110,12 +126,13 @@ impl Unit {
             action_path: None,
             last_action_timer: 0,
             speed: match race {
-                RaceType::HUMAN => 75,
-                RaceType::ANT => 10,
-                RaceType::ALIEN => 35,
+                RaceType::HUMAN => 100,
+                RaceType::ANT => 25,
+                RaceType::ALIEN => 50,
             },
         }
     }
+
     fn get_movement_cost(&self, is_diagonal: bool, action: Option<ActionType>) -> i32 {
         match self.race {
             RaceType::ANT => {
@@ -133,19 +150,19 @@ impl Unit {
                     return 10;
                 }
                 if is_diagonal {
-                    25
+                    20
                 } else {
-                    0
+                    10
                 }
             }
             RaceType::ALIEN => {
                 if let Some(ActionType::DIG) = action {
-                    return 3;
+                    return 10;
                 }
                 if is_diagonal {
-                    0
+                    10
                 } else {
-                    25
+                    20
                 }
             }
         }
@@ -158,7 +175,7 @@ impl Unit {
         terrain: Terrain,
         action: Option<ActionType>,
     ) -> Option<(Vec<(usize, usize)>, i32)> {
-        let (path, cost) = astar(
+        let (mut path, cost) = astar(
             &start,
             |&(x, y)| {
                 // Définir les voisins cardinaux et diagonaux
@@ -180,14 +197,14 @@ impl Unit {
                             if terrain.is_walkable(nx, ny) {
                                 Some((
                                     (nx, ny),
-                                    self.get_movement_cost(is_diagonal, Some(ActionType::DIG)),
+                                    self.get_movement_cost(is_diagonal, Some(ActionType::MOVE)),
                                 ))
                             } else {
                                 None
                             }
                         }
                         Some(ActionType::DIG) => {
-                            if terrain.is_diggable(nx, ny) || terrain.is_walkable(nx, ny) {
+                            if terrain.is_walkable(nx, ny) || terrain.is_diggable(nx, ny) {
                                 Some((
                                     (nx, ny),
                                     self.get_movement_cost(is_diagonal, Some(ActionType::DIG)),
@@ -209,21 +226,29 @@ impl Unit {
             |&pos| pos == goal,
         )?;
 
-        // Chercher la dernière position valide avant un obstacle
-        let mut last_valid_pos = None;
-        for (x, y) in path.iter().rev() {
-            if terrain.is_walkable(*x, *y) {
-                last_valid_pos = Some((*x, *y));
-                break; // On arrête dès qu'on trouve la dernière case valide
+        match action {
+            Some(ActionType::MOVE) => {
+                let mut new_path: Vec<(usize, usize)> = path.clone();
+                for (x, y) in path.iter().rev() {
+                    if terrain.is_diggable(*x, *y) && !terrain.is_walkable(*x, *y) {
+                        new_path.pop();
+                        break;
+                    }
+                }
+                return Some((new_path, cost))
             }
-        }
+            // Chercher la dernière position valide avant un obstacle
+            Some(ActionType::DIG) => {
+                let mut new_path: Vec<(usize, usize)> = vec![];
 
-        // Si une position valide a été trouvée, la retourner avec le chemin et le coût
-        if let Some(last_valid) = last_valid_pos {
-            Some((path, cost))
-        } else {
-            // Sinon, renvoyer None si aucune position valide
-            None
+                for (x, y) in path.clone().iter().rev() {
+                    if terrain.is_diggable(*x, *y) && !terrain.is_walkable(*x, *y) {
+                        new_path.push((*x, *y));
+                    } 
+                }
+                return Some((new_path, cost))
+            }
+            _ => todo!(),
         }
     }
 }
@@ -267,6 +292,8 @@ impl Actions for Vec<Unit> {
 
 impl Actions for Unit {
     fn do_action(&mut self, terrain: &mut Terrain) {
+        display_action_queue(self.clone());
+
         let action = self.action_queue.first().unwrap();
         match action {
             (ActionType::WAIT, _) => {
@@ -274,7 +301,7 @@ impl Actions for Unit {
                 match action {
                     (ActionType::WAIT, _) => {}
                     _ => {
-                        self.action_queue.remove(0);
+                        self.action_queue.pop();
                         println!("Waiting ...");
                     }
                 }
@@ -287,49 +314,52 @@ impl Actions for Unit {
                     let path = self.find_path(start, goal, terrain.clone(), Some(ActionType::MOVE));
                     let dig_path =
                         self.find_path(start, goal, terrain.clone(), Some(ActionType::DIG));
-                    match path {
-                        Some(_) => {
-                            match dig_path {
-                                Some(_) => {
-                                    // found a way ! --> go !
-                                    self.action_path = dig_path;
-                                }
-                                None => {
-                                    // can only go by walking --> ...  !
-                                    self.action_path = path;
-                                }
-                            }
-                        }
-                        None => {
-                            // Cant find path --> cancel move order
+                    match (dig_path, path) {
+                        (Some(dig_path), None) => {
+                            // Reached a wall ! --> Stop !
+                            println!("WALLLLLL -------------");
+                            self.action_path = Some(dig_path);
                             self.action_queue.remove(0);
+                            return;
+                        }
+                        (_, Some(path)) => {
+                            // Found a way ! --> Go !
+                            self.action_path = Some(path);
+                            //   self.action_queue.remove(0);
+                        }
+                        (None, None) => {
+                            self.action_queue.clear();
+                            self.action_queue.push((ActionType::WANDER, self.coords));
                             return;
                         }
                     }
                 }
                 match self.action_path.clone() {
-                    Some(next_move) => {
-                        if next_move.0.len() > 1 {
+                    Some(mut path) => {
+                        if path.0.len() > 0 {
                             let coords = Coords {
-                                x: next_move.0[1].0 as i32,
-                                y: next_move.0[1].1 as i32,
+                                x: path.0[0].0 as i32,
+                                y: path.0[0].1 as i32,
                             };
-                            self.r#move(terrain, coords);
-                            let mut path = <Option<(Vec<(usize, usize)>, i32)> as Clone>::clone(
-                                &self.action_path,
-                            )
-                            .unwrap();
+
+                            /*    let mut path = <Option<(Vec<(usize, usize)>, i32)> as Clone>::clone(
+                                   &self.action_path.clone()
+                               )
+                               .unwrap();
+                            */
                             path.0.remove(0);
                             self.action_path = Some(path);
+                            self.r#move(terrain, coords);
                         } else {
                             self.action_queue.remove(0);
                             self.action_path = None;
-                            self.action_queue.push((ActionType::WANDER, self.coords));
+                            self.action_queue
+                                .insert(0, (ActionType::WANDER, self.coords));
                         }
                     }
                     None => {
                         self.action_queue.clear();
-                        self.action_queue.push((ActionType::MOVE, self.coords));
+                        self.action_queue.push((ActionType::WANDER, self.coords));
                         println!("No path found to the goal.");
                         // DIG ?
                     }
@@ -347,64 +377,66 @@ impl Actions for Unit {
                 {
                     // Si la case n'est pas creusable, annuler l'action
                     println!("Impossible de creuser ici, action annulée");
-                    self.action_queue.remove(0); // Retirer l'action `DIG` de la queue
+                    self.action_queue.pop(); // Retirer l'action `DIG` de la queue
                     return; // Sortir sans ajouter d'autres actions
                 }
-                // Si l'unité est déjà à la position cible, on commence directement à creuser
-                if self.coords.distance_to(*coords) < 3.0 {
-                     terrain.dig_radius(*coords, 2);
+                // Close enough to dig !!!
+                let path = self.find_path(start, goal, terrain.clone(), Some(ActionType::MOVE));
+
+                if self.coords.distance_in_tiles(coords) == 1 {
+                    terrain.dig_radius(coords, 0);
+                    println!("prout");
                 }
 
-                // Chercher un chemin vers la destination
-                let path = self.find_path(start, goal, terrain.clone(), Some(ActionType::MOVE));
+                self.action_queue.remove(0);
                 let dig_path = self.find_path(start, goal, terrain.clone(), Some(ActionType::DIG));
-                match dig_path {
-                    Some(_) => match path {
-                        Some(_) => {
+                match (dig_path, path) {
+                    (Some(_), _) => {
+                        self.action_queue.push((
+                            ActionType::MOVE,
+                            Coords {
+                                x: goal.0 as i32,
+                                y: goal.1 as i32,
+                            },
+                        ));
 
-                            self.action_path = path.clone();
-                            self.action_queue.remove(0);
+                        self.action_queue.push((
+                            ActionType::DIG,
+                            Coords {
+                                x: goal.0 as i32,
+                                y: goal.1 as i32,
+                            },
+                        ));
 
-                            self.action_queue.push((
+                        return;
+                    }
+                    (None, Some(mut path)) => {
+                        self.action_queue.insert(
+                            0,
+                            (
                                 ActionType::MOVE,
                                 Coords {
-                                    x: path.clone().unwrap().0.select_nth_unstable(1).1 .0 as i32,
-                                    y: path.clone().unwrap().0.select_nth_unstable(1).1 .1 as i32,
+                                    x: path.0.select_nth_unstable(0).1 .0 as i32,
+                                    y: path.0.select_nth_unstable(0).1 .1 as i32,
                                 },
-                            ));
-                            self.action_queue.push((
-                                ActionType::DIG,
-                                Coords {
-                                    x: goal.0 as i32,
-                                    y: goal.1 as i32,
-                                },
-                            ));
+                            ),
+                        );
+                        self.action_queue.push((
+                            ActionType::DIG,
+                            Coords {
+                                x: goal.0 as i32,
+                                y: goal.1 as i32,
+                            },
+                        ));
+                        return;
+                    }
 
-                            return;
-                        }
-                        None => {
-                            self.action_path = dig_path.clone();
-                            self.action_queue.remove(0);
+                    (None, None) => {
+                        self.action_path = None;
+                        self.action_queue.clear();
+                        self.action_queue
+                            .insert(0, (ActionType::WANDER, self.coords));
 
-                            self.action_queue.push((
-                                ActionType::MOVE,
-                                Coords {
-                                    x: dig_path.clone().unwrap().0.select_nth_unstable(1).1 .0 as i32,
-                                    y: dig_path.clone().unwrap().0.select_nth_unstable(1).1 .1 as i32,
-                                },
-                            ));
-
-                            self.action_queue.push((
-                                ActionType::DIG,
-                                Coords {
-                                    x: goal.0 as i32,
-                                    y: goal.1 as i32,
-                                },
-                            ));
-                            return;
-                        }
-                    },
-                    None => {
                         // self.action_queue.remove(0);
                         return;
                     }
@@ -417,10 +449,11 @@ impl Actions for Unit {
 
                 match home {
                     Some(coords) => {
-                        if self.coords.distance_to(coords) > 5.0 && self.action_path == None {
+                        if self.coords.distance_to(&coords) > 10.0 && self.action_queue.len() == 1 {
+                            self.action_path = None;
                             self.action_queue.remove(0);
-                            self.action_queue.push((ActionType::WANDER, coords));
-                        } else {
+                            self.action_queue.push((ActionType::MOVE, coords));
+                        } else if self.action_queue.len() == 1 {
                             self.r#move(
                                 terrain,
                                 Coords {
@@ -428,6 +461,8 @@ impl Actions for Unit {
                                     y: self.coords.y + random_direction(),
                                 },
                             );
+                        } else {
+                            self.action_queue.remove(0);
                         }
                     }
                     None => {
