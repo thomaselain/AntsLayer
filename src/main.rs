@@ -17,6 +17,7 @@ use std::time::Instant;
 use window::{init_sdl2_window, Renderer};
 
 fn main() -> Result<(), String> {
+    let mut current_race = RaceType::ANT;
     let mut dragging = false;
     let mut prev_mouse_x = 0;
     let mut prev_mouse_y = 0;
@@ -49,7 +50,6 @@ fn main() -> Result<(), String> {
     for _ in 0..100 {
         let mut unit = Unit::new();
 
-        unit.race = RaceType::ANT;
         unit.action_queue.push((
             ActionType::MOVE,
             Coords {
@@ -57,7 +57,6 @@ fn main() -> Result<(), String> {
                 y: terrain::HEIGHT as i32 / 2,
             },
         ));
-        //unit.race = RaceType::ANT;
         units_list.push(unit);
     }
     /////////////////////////////////////////////////////////
@@ -92,38 +91,35 @@ fn main() -> Result<(), String> {
                 } => {
                     if mouse_btn == sdl2::mouse::MouseButton::Left {
                         for u in &mut units_list {
-                            u.action_queue.clear();
-                            //if u.race == RaceType::ANT {
-                            u.action_queue.insert(
-                                0,
-                                (
-                                    ActionType::MOVE,
-                                    Coords {
-                                        x: (x as f32 * camera.zoom) as i32,
-                                        y: (y as f32 * camera.zoom) as i32,
-                                    },
-                                ),
-                            );
-                            //}
+                            if u.race == current_race {
+                                u.action_queue.clear();
+                                u.action_queue.insert(
+                                    0,
+                                    (
+                                        ActionType::MOVE,
+                                        Coords {
+                                            x: (x as f32 * camera.zoom) as i32,
+                                            y: (y as f32 * camera.zoom) as i32,
+                                        },
+                                    ),
+                                );
+                            }
                         }
 
                         dragging = false;
                         renderer.all_need_update();
                     } else if mouse_btn == sdl2::mouse::MouseButton::Right {
                         for u in &mut units_list {
-                            u.action_queue.clear();
-                            //if u.race == RaceType::ANT {
-
-                            u.action_queue.push(
-                                (
+                            if u.race == current_race {
+                                u.action_queue.clear();
+                                u.action_queue.push((
                                     ActionType::DIG,
                                     Coords {
                                         x: (x as f32 * camera.zoom) as i32,
                                         y: (y as f32 * camera.zoom) as i32,
                                     },
-                                ),
-                            );
-                            //}
+                                ));
+                            }
                         }
                     }
                     println!(
@@ -168,15 +164,31 @@ fn main() -> Result<(), String> {
                     renderer.draw(&terrain, units_list.clone(), &camera);
                     continue;
                 }
+                Event::KeyDown {
+                    keycode: Some(Keycode::A),
+                    ..
+                } => current_race = RaceType::ANT,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Z),
+                    ..
+                } => current_race = RaceType::HUMAN,
+                Event::KeyDown {
+                    keycode: Some(Keycode::E),
+                    ..
+                } => current_race = RaceType::ALIEN,
 
                 _ => {}
             }
         }
+
         for u in units_list.iter_mut() {
             u.think(&mut terrain, delta_time);
         }
         renderer.units.needs_update = true;
 
         renderer.draw(&terrain, units_list.clone(), &camera);
+        renderer.canvas.set_draw_color(Color::RGB(255, 210, 0));
+        // A draw a rectangle which almost fills our window with it !
+        let _ = renderer.canvas.fill_rect(Rect::new(10, 10, 780, 580));
     }
 }

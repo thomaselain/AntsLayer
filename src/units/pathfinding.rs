@@ -9,6 +9,7 @@ impl Terrain {
         match self.get_data(x, y) {
             Some(TileType::AIR) => true,
             Some(TileType::WATER) => true,
+            Some(TileType::Building(_)) => true, // MAYBE NOT (But useful for future testings)
             _ => false,
         }
     }

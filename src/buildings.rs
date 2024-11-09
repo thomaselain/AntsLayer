@@ -15,17 +15,17 @@ pub struct Building {
 }
 
 pub trait FindHome {
-    fn find_home(&self, race:RaceType,terrain: &Terrain) -> Option<Coords>;
+    fn find_home(&self, race: RaceType, terrain: &Terrain) -> Option<Coords>;
 }
 
 impl FindHome for Vec<Building> {
     fn find_home(&self, race: RaceType, terrain: &Terrain) -> Option<Coords> {
-        for _b in self {
-            if let Some(tb) = terrain.buildings.iter().find(|b| b.race == race) {
-                return Some(tb.coords);
-            }
+    //    if let Some(tb) = terrain.buildings.iter().find(|b| b.race == race) { // ALL GO TO ANTS HEARTS FOR TESTINGS
+        if let Some(tb) = terrain.buildings.iter().find(|b| b.race == RaceType::ANT) {
+            return Some(tb.coords);
+        } else {
+            return None;
         }
-        None
     }
 }
 
