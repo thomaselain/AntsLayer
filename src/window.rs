@@ -181,7 +181,7 @@ impl Renderer {
         combined_buffer
     }
 
-    pub fn draw(&mut self, terrain: &Terrain, units: &Vec<Unit>, camera: &Camera) {
+    pub fn draw(&mut self, terrain: &Terrain, units: Vec<Unit>, camera: &Camera) {
         /*        // RESIZING (todo : dupe it for each buffer)
                 if self.pixel_buffer.len() != (viewport_width * viewport_height) as usize {
                     self.pixel_buffer = vec![0; (viewport_width * viewport_height) as usize];

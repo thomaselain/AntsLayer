@@ -11,8 +11,8 @@ use crate::{
     units::RaceType,
 };
 
-pub const HEIGHT: usize = 500;
-pub const WIDTH: usize = 500;
+pub const HEIGHT: usize = 100;
+pub const WIDTH: usize = 100;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum MineralType {
@@ -157,21 +157,6 @@ impl Terrain {
         }
     }
 
-    pub fn get_data(&self, x: usize, y: usize) -> Option<TileType> {
-        if self.check_data(x, y) {
-            Some(self.data[x][y])
-        } else {
-            None
-        }
-    }
-
-    pub fn check_data(&self, x: usize, y: usize) -> bool {
-        if x < self.data.len() && y < self.data[x].len() {
-            true
-        } else {
-            false
-        }
-    }
 
     pub fn generate_caves(&mut self, mineral: &Mineral) {
         let mut rng = rand::thread_rng();
@@ -223,35 +208,11 @@ impl Terrain {
         //  mineral.automaton.apply_rules(self, TileType::AIR);
     }
 
-    pub fn count_same_neighbors(&mut self, x: usize, y: usize, tile_type: TileType) -> usize {
-        let mut count = 0;
-
-        for dx in -1..=1 {
-            for dy in -1..=1 {
-                if dx == 0 && dy == 0 {
-                    continue;
-                }
-                let nx = x as isize + dx;
-                let ny = y as isize + dy;
-                if self.get_data(nx as usize, ny as usize) == Some(tile_type) {
-                    count += 1;
-                }
-            }
-        }
-        count
-    }
 
     fn clear_tiles(&mut self) {
         self.data = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
     }
     pub fn generate(&mut self) {
-        /*  self.minerals.sort_by(|b, a| {
-                    b.automaton
-                        .occurence
-                        .partial_cmp(&a.automaton.occurence)
-                        .unwrap()
-                });
-        */
         let minerals_copy: Vec<Mineral> = self.minerals.clone();
 
         self.clear_tiles();
@@ -267,21 +228,6 @@ impl Terrain {
         }
     }
 
-    pub fn is_walkable(&self, x: usize, y: usize) -> bool {
-        match self.get_data(x, y) {
-            Some(TileType::AIR) => true,
-            Some(TileType::WATER) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_diggable(&self, x: usize, y: usize) -> bool {
-        match self.get_data(x, y) {
-            Some(TileType::Mineral(MineralType::ROCK)) => true,
-            Some(TileType::Mineral(MineralType::DIRT)) => true,
-            _ => false,
-        }
-    }
     pub fn dig_radius(&mut self, center: &Coords, radius: u32) {
         let (cx, cy) = (center.x as i32, center.y as i32);
         let radius_squared = (radius * radius) as i32;

@@ -10,7 +10,7 @@ use buildings::FindHome;
 use camera::Camera;
 use coords::Coords;
 use terrain::{Terrain, TileType};
-use units::{ActionType, Actions, RaceType, Unit};
+use units::{ActionType, RaceType, Unit};
 
 use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
 use std::time::Instant;
@@ -44,9 +44,9 @@ fn main() -> Result<(), String> {
     /////////////////////////////////////////////////////////
 
     /////////////////////// UNITS /////////////////////////////////////////////
-    let mut units_list: Vec<Unit> = Vec::new();
+    let mut units_list: Vec<Unit> = Vec::with_capacity(30);
 
-    for _ in 0..300 {
+    for _ in 0..1 {
         let mut unit = Unit::new();
 
         unit.race = RaceType::ANT;
@@ -92,15 +92,18 @@ fn main() -> Result<(), String> {
                 } => {
                     if mouse_btn == sdl2::mouse::MouseButton::Left {
                         for u in &mut units_list {
-                            //  u.action_queue.clear();
+                            u.action_queue.clear();
                             //if u.race == RaceType::ANT {
-                            u.action_queue.push((
-                                ActionType::MOVE,
-                                Coords {
-                                    x: (x as f32 * camera.zoom) as i32,
-                                    y: (y as f32 * camera.zoom) as i32,
-                                },
-                            ));
+                            u.action_queue.insert(
+                                0,
+                                (
+                                    ActionType::MOVE,
+                                    Coords {
+                                        x: (x as f32 * camera.zoom) as i32,
+                                        y: (y as f32 * camera.zoom) as i32,
+                                    },
+                                ),
+                            );
                             //}
                         }
 
@@ -108,23 +111,19 @@ fn main() -> Result<(), String> {
                         renderer.all_need_update();
                     } else if mouse_btn == sdl2::mouse::MouseButton::Right {
                         for u in &mut units_list {
-                            // u.action_queue.clear();
+                            u.action_queue.clear();
                             //if u.race == RaceType::ANT {
-                            u.action_queue.push((
-                                ActionType::MOVE,
-                                Coords {
-                                    x: (x as f32 * camera.zoom) as i32,
-                                    y: (y as f32 * camera.zoom) as i32,
-                                },
-                            ));
 
-                            u.action_queue.push((
-                                ActionType::DIG,
-                                Coords {
-                                    x: (x as f32 * camera.zoom) as i32,
-                                    y: (y as f32 * camera.zoom) as i32,
-                                },
-                            ));
+                            u.action_queue.insert(
+                                0,
+                                (
+                                    ActionType::DIG,
+                                    Coords {
+                                        x: (x as f32 * camera.zoom) as i32,
+                                        y: (y as f32 * camera.zoom) as i32,
+                                    },
+                                ),
+                            );
                             //}
                         }
                     }
@@ -167,16 +166,18 @@ fn main() -> Result<(), String> {
                     terrain = Terrain::new();
                     terrain.generate();
                     renderer.all_need_update();
-                    renderer.draw(&terrain, &units_list, &camera);
+                    renderer.draw(&terrain, units_list.clone(), &camera);
+                    continue;
                 }
 
                 _ => {}
             }
         }
-
+        for u in units_list.iter_mut() {
+            u.think(&mut terrain, delta_time);
+        }
         renderer.units.needs_update = true;
-        units_list.think(&mut terrain, delta_time);
 
-        renderer.draw(&terrain, &units_list, &camera);
+        renderer.draw(&terrain, units_list.clone(), &camera);
     }
 }
