@@ -56,34 +56,25 @@ impl Terrain {
     }
 }
 impl Unit {
-    fn get_movement_cost(&self, is_diagonal: bool, action: Option<ActionType>) -> i32 {
+    fn get_movement_cost(&self, is_diagonal: bool) -> i32 {
         match self.race {
             RaceType::ANT => {
-                if let Some(ActionType::DIG) = action {
-                    return 10;
-                }
-                if is_diagonal {
-                    1
-                } else {
-                    1
-                }
-            }
-            RaceType::HUMAN => {
-                if let Some(ActionType::DIG) = action {
-                    return 10;
-                }
                 if is_diagonal {
                     10
                 } else {
-                    1
+                    0
+                }
+            }
+            RaceType::HUMAN => {
+                if is_diagonal {
+                    10
+                } else {
+                    10
                 }
             }
             RaceType::ALIEN => {
-                if let Some(ActionType::DIG) = action {
-                    return 10;
-                }
                 if is_diagonal {
-                    1
+                    0
                 } else {
                     10
                 }
@@ -120,7 +111,7 @@ impl Unit {
                             if terrain.is_walkable(nx, ny) {
                                 Some((
                                     (nx, ny),
-                                    self.get_movement_cost(is_diagonal, Some(ActionType::MOVE)),
+                                    self.get_movement_cost(is_diagonal),
                                 ))
                             } else {
                                 None
@@ -130,7 +121,7 @@ impl Unit {
                             if terrain.is_diggable(nx, ny) {
                                 Some((
                                     (nx, ny),
-                                    self.get_movement_cost(is_diagonal, Some(ActionType::DIG)),
+                                    self.get_movement_cost(is_diagonal),
                                 ))
                             } else {
                                 None
@@ -138,7 +129,7 @@ impl Unit {
                         }
                         None => {
                             if terrain.is_diggable(nx, ny) || terrain.is_walkable(nx, ny) {
-                                Some(((nx, ny), self.get_movement_cost(is_diagonal, None)))
+                                Some(((nx, ny), self.get_movement_cost(is_diagonal)))
                             } else {
                                 None
                             }

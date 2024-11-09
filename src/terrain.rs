@@ -1,17 +1,17 @@
 extern crate noise;
 extern crate sdl2;
 
-use noise::{NoiseFn, Perlin};
-use rand::{self, Rng};
-use buildings::HOME_STARTING_SIZE;
 use crate::{
     automaton::Automaton,
     buildings::{self, Building, BuildingType},
     coords::Coords,
-    units::RaceType,
+    units::{RaceType, Unit},
 };
+use buildings::HOME_STARTING_SIZE;
+use noise::{NoiseFn, Perlin};
+use rand::{self, Rng};
 
-pub const HEIGHT: usize = 75;
+pub const HEIGHT: usize = 200;
 pub const WIDTH: usize = HEIGHT;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -20,6 +20,11 @@ pub enum MineralType {
     GOLD,
     ROCK,
     DIRT,
+}
+impl MineralType {
+    pub fn find_closest(self, terrain: &Terrain, unit: &Unit) -> Coords {
+        unit.coords // WORK IN PROGRESS --- RETURNS NOTHING USEFUL FOR NOW
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -80,7 +85,6 @@ impl Terrain {
             BuildingType::Stockpile(MineralType::GOLD),
         ));
 
-
         Terrain {
             data: tiles,
             minerals: vec![
@@ -98,6 +102,7 @@ impl Terrain {
                         max_air_exposure: 5,
                     },
                 },
+
                 Mineral {
                     r#type: TileType::Mineral(MineralType::DIRT),
                     color: 0x140c07ff,
@@ -106,6 +111,7 @@ impl Terrain {
                             //TileType::Mineral(MineralType::ROCK),
                             // TileType::Mineral(MineralType::DIRT),
                             TileType::AIR,
+                            TileType::WATER,
                         ],
                         birth_limit: 5,
                         death_limit: 6,
@@ -151,6 +157,27 @@ impl Terrain {
                         max_air_exposure: 8,
                     },
                 },
+                Mineral {
+                    r#type: TileType::WATER,
+                    color: 0x334499ff,
+                    automaton: Automaton {
+                        can_replace: vec![
+                            TileType::AIR,
+                            TileType::Mineral(MineralType::DIRT),
+                        //    TileType::Mineral(MineralType::ROCK),
+                            //    TileType::Mineral(MineralType::IRON),
+                            //   TileType::Mineral(MineralType::GOLD),
+                        ],
+                        birth_limit: 1,
+                        death_limit: 5,
+                        iterations: 10,
+                        perlin_scale: 0.06,
+                        perlin_threshold: 0.1,
+                        occurence: -1.0,
+                        max_air_exposure: 5,
+                    },
+                },
+
             ],
             buildings,
         }
@@ -180,23 +207,14 @@ impl Terrain {
                 ]);
                 if can_replace {
                     match tile {
-                        Some(TileType::Mineral(_)) => {
+                        Some(_) => {
                             if noise_value
                                 < mineral.automaton.perlin_threshold * mineral.automaton.occurence
                             {
                                 self.data[x][y] = mineral.r#type;
                             }
                         }
-                        Some(TileType::AIR) => {
-                            if noise_value
-                                < mineral.automaton.perlin_threshold * mineral.automaton.occurence
-                            {
-                                self.data[x][y] = mineral.r#type;
-                            }
-                        }
-                        Some(TileType::WATER) => {}
-                        Some(TileType::Building(_)) => {}
-                        None => todo!(),
+                        None => panic!("oupsi"),
                     }
                 }
             }

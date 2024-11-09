@@ -57,16 +57,9 @@ fn main() -> Result<(), String> {
     /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::with_capacity(30);
 
-    for _ in 0..300 {
+    for _ in 0..50 {
         let mut unit = Unit::new();
-        //  unit.job = JobType::MINER;
-        unit.action_queue.push((
-            ActionType::MOVE,
-            Coords {
-                x: terrain::WIDTH as i32 / 2,
-                y: terrain::HEIGHT as i32 / 2,
-            },
-        ));
+        unit.action_queue.push(unit.job.get_action(&terrain, &unit));
         units_list.push(unit);
     }
     /////////////////////////////////////////////////////////
@@ -132,10 +125,12 @@ fn main() -> Result<(), String> {
                             }
                         }
                     }
+                    /*
                     println!(
                         "camera pos : ({:?},{:?}) / zoom ({:?})",
                         camera.position.x, camera.position.y, camera.zoom
                     );
+                    */
                 }
                 Event::MouseMotion { .. } => {
                     if dragging {
@@ -193,7 +188,9 @@ fn main() -> Result<(), String> {
 
         for u in units_list.iter_mut() {
             u.think(&mut terrain, delta_time);
-            display_action_queue(current_race, u.clone());
+            if u.last_action_timer == 0 && u.action_queue.len() > 0 && !u.action_path.is_none(){
+                display_action_queue(current_race, u.clone());
+            }
         }
         renderer.units.needs_update = true;
 

@@ -1,10 +1,10 @@
 mod pathfinding;
 
-use colored::Colorize;
-
+use colored::{ColoredString, Colorize};
 
 use rand::seq::SliceRandom;
 use rand::{self, Rng};
+use sdl2::pixels::Color;
 
 use crate::buildings::{Building, BuildingType, FindHome};
 use crate::coords::{self, Coords};
@@ -17,6 +17,36 @@ pub enum RaceType {
     ANT,
     ALIEN,
 }
+impl RaceType {
+    pub fn to_colored_string(self) -> ColoredString {
+        match self {
+            RaceType::ALIEN => "ALIEN".green(),
+            RaceType::ANT => "ANT".red(),
+            RaceType::HUMAN => "HUMAN".blue(),
+        }
+    }
+    pub fn to_string(self) -> String {
+        match self {
+            RaceType::ALIEN => "ALIEN".to_string(),
+            RaceType::ANT => "ANT".to_string(),
+            RaceType::HUMAN => "HUMAN".to_string(),
+        }
+    }
+    pub fn to_u32(self) -> u32 {
+        match self {
+            RaceType::ANT => 0xff0000ff,
+            RaceType::ALIEN => 0x00ff00ff,
+            RaceType::HUMAN => 0x0000ffff,
+        }
+    }
+    pub fn get_thinking_speed(self) -> i32 {
+        match self {
+            RaceType::HUMAN => 150,
+            RaceType::ANT => 50,
+            RaceType::ALIEN => 75,
+        }
+    }
+}
 
 #[derive(Copy, Clone)]
 pub enum JobType {
@@ -25,6 +55,16 @@ pub enum JobType {
     FARMER,
     FIGHTER,
     BUILDER,
+}
+impl JobType {
+    pub fn get_action(self, mut terrain: &Terrain, mut unit: &Unit) -> (ActionType, Coords) {
+        match self {
+            JobType::MINER(mineral_type) => {
+                (ActionType::DIG, mineral_type.find_closest(terrain, unit))
+            }
+            _ => (ActionType::WANDER, unit.coords),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -39,6 +79,17 @@ pub enum ActionType {
     FIGHT,
     BUILD,
 }
+impl ActionType {
+    pub fn get_ascii(self) -> ColoredString {
+        match self {
+            ActionType::MOVE => "-M>".bold().strikethrough().blue(),
+            ActionType::DIG => " D ".bold().red(),
+            ActionType::WANDER => " ? ".italic().green(),
+            ActionType::WAIT => "...".italic().bright_green(),
+            _ => " ".into(),
+        }
+    }
+}
 
 #[doc = "Unit.speed is thinking speed (in milliseconds) not moving speed"]
 #[derive(Clone)]
@@ -48,27 +99,19 @@ pub struct Unit {
     pub race: RaceType,
     pub coords: Coords,
     pub action_queue: Vec<(ActionType, Coords)>,
-    action_path: Option<(Vec<(usize, usize)>, i32)>,
-    speed: i32,
-    last_action_timer: i32,
+    pub action_path: Option<(Vec<(usize, usize)>, i32)>,
+    pub speed: i32,
+    pub last_action_timer: i32,
 }
 
 pub fn display_action_queue(current_race: RaceType, unit: Unit) {
     if current_race != unit.race {
         return;
     }
-    print!("ACTION LIST : ");
+    print!("{} : ", unit.race.to_colored_string());
+
     for action in unit.action_queue {
-        print!(
-            "{}",
-            match action.0 {
-                ActionType::MOVE => "\eM",
-                ActionType::DIG => "D",
-                ActionType::WANDER => "W",
-                _ => " ",
-            }
-        );
-        print!(" <-- ");
+        print!("[{}]", action.0.get_ascii());
     }
     println!("");
 }
@@ -113,34 +156,23 @@ impl Unit {
             5 => JobType::FIGHTER,
             _ => JobType::JOBLESS,
         };
-        let race_type_str = match race {
-            RaceType::ALIEN => "ALIEN",
-            RaceType::ANT => "ANT",
-            RaceType::HUMAN => "HUMAN",
-        };
 
         println!(
             "New Unit (x : {:?} | y : {:?}) --> {:?}",
-            coords.x, coords.y, race_type_str
+            coords.x,
+            coords.y,
+            race.to_string()
         );
 
         Unit {
-            color: match race {
-                RaceType::ANT => 0xff0000ff,
-                RaceType::ALIEN => 0x00ff00ff,
-                RaceType::HUMAN => 0x0000ffff,
-            },
+            color: race.to_u32(),
             race,
             job,
             coords,
             action_queue: vec![],
             action_path: None,
             last_action_timer: 0,
-            speed: match race {
-                RaceType::HUMAN => 100,
-                RaceType::ANT => 25,
-                RaceType::ALIEN => 50,
-            },
+            speed: race.get_thinking_speed(),
         }
     }
 
@@ -151,17 +183,17 @@ impl Unit {
             match self.clone().action_queue.first() {
                 Some((ActionType::MOVE, coords)) => {
                     if self.r#move(terrain, *coords).is_none() {
-                        self.action_queue.remove(0);
+                          self.action_queue.remove(0);
                         self.action_queue.push((ActionType::WANDER, self.coords));
                     }
                 }
                 Some((ActionType::DIG, coords)) => {
                     if self.coords.distance_in_tiles(coords) > 1 {
-                        self.action_queue.remove(0); // Action DIG complétée
                         self.action_queue.insert(0, (ActionType::MOVE, *coords));
                     } else {
                         let actions = self.dig(terrain, coords);
                         if !actions.is_none() {
+                            self.action_queue.remove(0); // Action DIG complétée
                             self.action_queue.append(&mut actions.unwrap());
                         }
                     }
@@ -269,7 +301,6 @@ impl Unit {
                 terrain.dig_radius(coords, 0);
                 println!("Digging at {:?}", coords);
             }
-            println!("Digging at {:?}", coords);
 
             // Ajouter le chemin pour le creusage à partir de la dernière case walkable
             let actions = dig_path
