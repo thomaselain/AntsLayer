@@ -39,7 +39,7 @@ pub struct Mineral {
 
 #[derive(Clone)]
 pub struct Terrain {
-    pub buildings: Vec<(RaceType, Building)>,
+    pub buildings: Vec<Building>,
     pub minerals: Vec<Mineral>,
     pub data: Vec<Vec<TileType>>,
 }
@@ -121,16 +121,14 @@ impl Terrain {
             ],
             buildings: vec![
                 (
-                    RaceType::HUMAN,
                     Building {
                         hp: 100,
                         coords: Coords { x: 10, y: 10 },
                         building_type: BuildingType::Hearth,
                         race: RaceType::HUMAN,
-                    },
+                    }
                 ),
                 (
-                    RaceType::ANT,
                     Building {
                         hp: 100,
                         coords: Coords {
@@ -139,10 +137,9 @@ impl Terrain {
                         },
                         building_type: BuildingType::Hearth,
                         race: RaceType::ANT,
-                    },
+                    }
                 ),
                 (
-                    RaceType::ALIEN,
                     Building {
                         hp: 100,
                         coords: Coords {
@@ -151,7 +148,7 @@ impl Terrain {
                         },
                         building_type: BuildingType::Hearth,
                         race: RaceType::ALIEN,
-                    },
+                    }
                 ),
             ],
         }
@@ -220,10 +217,10 @@ impl Terrain {
             self.generate_caves(&m);
         }
         for b in self.buildings.clone() {
-            self.data[b.1.coords.x as usize][b.1.coords.y as usize] =
-                TileType::Building(b.1.building_type);
-            self.dig_radius(&b.1.coords, 25);
-            self.data[b.1.coords.x as usize + 3][b.1.coords.y as usize] =
+            self.data[b.coords.x as usize][b.coords.y as usize] =
+                TileType::Building(b.building_type);
+            self.dig_radius(&b.coords, 25);
+            self.data[b.coords.x as usize + 3][b.coords.y as usize] =
                 TileType::Building(BuildingType::Stockpile);
         }
     }

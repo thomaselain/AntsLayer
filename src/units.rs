@@ -139,10 +139,10 @@ impl Unit {
     pub fn think(&mut self, terrain: &mut Terrain, delta_time: i32) {
         self.last_action_timer += delta_time;
         if self.last_action_timer >= self.speed {
-            display_action_queue(self.clone());
+            //display_action_queue(self.clone());
             match self.clone().action_queue.first() {
                 Some((ActionType::MOVE, coords)) => {
-                    display_action(ActionType::MOVE, *coords);
+                    //display_action(ActionType::MOVE, *coords);
                     if self.r#move(terrain, *coords).is_none() {
                         // Pathfinding échoué : définir l’action alternative
                         self.action_queue.remove(0);
@@ -150,7 +150,7 @@ impl Unit {
                     }
                 }
                 Some((ActionType::DIG, coords)) => {
-                    display_action(ActionType::DIG, *coords);
+                    //display_action(ActionType::DIG, *coords);
                     // Vérifie si l’unité est à portée pour creuser
                     if self.coords.distance_in_tiles(coords) > 1 {
                         // Ajouter une action MOVE jusqu'à la dernière case accessibl
@@ -166,7 +166,7 @@ impl Unit {
                     }
                 }
                 Some((ActionType::WANDER, coords)) => {
-                    display_action_queue(self.clone());
+                    //display_action_queue(self.clone());
                     let home = terrain.buildings.find_home(self.race, terrain);
 
                     match home {

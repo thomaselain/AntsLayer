@@ -18,11 +18,11 @@ pub trait FindHome {
     fn find_home(&self, race:RaceType,terrain: &Terrain) -> Option<Coords>;
 }
 
-impl FindHome for Vec<(RaceType, Building)> {
+impl FindHome for Vec<Building> {
     fn find_home(&self, race: RaceType, terrain: &Terrain) -> Option<Coords> {
-        for (r, b) in self {
-            if let Some(tb) = terrain.buildings.iter().find(|(_, b)| b.race == race) {
-                return Some(tb.1.coords);
+        for _b in self {
+            if let Some(tb) = terrain.buildings.iter().find(|b| b.race == race) {
+                return Some(tb.coords);
             }
         }
         None
