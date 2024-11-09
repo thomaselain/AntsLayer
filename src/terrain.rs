@@ -11,8 +11,8 @@ use crate::{
     units::RaceType,
 };
 
-pub const HEIGHT: usize = 100;
-pub const WIDTH: usize = 100;
+pub const HEIGHT: usize = 150;
+pub const WIDTH: usize = 150;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum MineralType {
@@ -67,7 +67,7 @@ impl Terrain {
                 },
                 Mineral {
                     r#type: TileType::Mineral(MineralType::DIRT),
-                    color: 0x2b180cff,
+                    color: 0x140c07ff,
                     automaton: Automaton {
                         can_replace: vec![
                             //TileType::Mineral(MineralType::ROCK),
@@ -85,7 +85,7 @@ impl Terrain {
                 },
                 Mineral {
                     r#type: TileType::Mineral(MineralType::IRON),
-                    color: 0xAAAAAAff,
+                    color: 0xa89172ff,
                     automaton: Automaton {
                         can_replace: vec![
                             TileType::Mineral(MineralType::ROCK),
@@ -97,7 +97,7 @@ impl Terrain {
                         iterations: 7,
                         perlin_scale: 0.09,
                         perlin_threshold: 0.01,
-                        occurence: 1.0,
+                        occurence: 0.8,
                         max_air_exposure: 2,
                     },
                 },

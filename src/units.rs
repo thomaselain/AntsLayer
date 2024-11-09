@@ -146,7 +146,7 @@ impl Unit {
                     if self.r#move(terrain, *coords).is_none() {
                         // Pathfinding échoué : définir l’action alternative
                         self.action_queue.remove(0);
-                        //   self.action_queue.push((ActionType::WANDER, self.coords));
+                           self.action_queue.push((ActionType::WANDER, self.coords));
                     }
                 }
                 Some((ActionType::DIG, coords)) => {
@@ -154,21 +154,19 @@ impl Unit {
                     // Vérifie si l’unité est à portée pour creuser
                     if self.coords.distance_in_tiles(coords) > 1 {
                         // Ajouter une action MOVE jusqu'à la dernière case accessibl
-                        //self.action_queue.remove(0); // Action DIG complétée
+                        self.action_queue.remove(0); // Action DIG complétée
                         self.action_queue.insert(0, (ActionType::MOVE, *coords));
                     } else {
                         // Prêt à creuser
                         let actions = self.dig(terrain, coords);
                         if !actions.is_none() {
-                            self.action_queue.insert(0, (ActionType::DIG, *coords));
+                        //    self.action_queue.push( (ActionType::DIG, *coords));
                             self.action_queue.append(&mut actions.unwrap());
                         }
                     }
                 }
                 Some((ActionType::WANDER, coords)) => {
                     display_action_queue(self.clone());
-                    self.action_queue.remove(0);
-                    return;
                     let home = terrain.buildings.find_home(self.race, terrain);
 
                     match home {
@@ -280,7 +278,7 @@ impl Unit {
             // Ajouter le chemin pour le creusage à partir de la dernière case walkable
             let actions = dig_path
                 .into_iter()
-                .skip(1) // On saute la position actuelle
+                .skip(2) // On saute la position actuelle
                 .map(|(x, y)| {
                     (
                         ActionType::DIG,

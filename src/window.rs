@@ -79,7 +79,7 @@ impl Buffer<BufferType> {
         for x in start_x..end_x {
             for y in start_y..end_y {
                 let color = match terrain.get_data(x, y) {
-                    Some(TileType::AIR) => 0x101010ff,
+                    Some(TileType::AIR) => 0x040201ff,
                     Some(TileType::WATER) => 0x0000FFFF,
                     Some(TileType::Mineral(_)) => {
                         let mineral = terrain

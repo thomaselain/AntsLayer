@@ -52,8 +52,6 @@ impl Terrain {
         }
         count
     }
-
-
 }
 impl Unit {
     fn get_movement_cost(&self, is_diagonal: bool, action: Option<ActionType>) -> i32 {
@@ -112,7 +110,7 @@ impl Unit {
                     (x.wrapping_sub(1), y + 1, true),
                     (x.wrapping_sub(1), y.wrapping_sub(1), true),
                 ];
-    
+
                 directions
                     .into_iter()
                     .filter_map(|(nx, ny, is_diagonal)| match action {
@@ -138,10 +136,7 @@ impl Unit {
                         }
                         None => {
                             if terrain.is_diggable(nx, ny) || terrain.is_walkable(nx, ny) {
-                                Some((
-                                    (nx, ny),
-                                    self.get_movement_cost(is_diagonal, None),
-                                ))
+                                Some(((nx, ny), self.get_movement_cost(is_diagonal, None)))
                             } else {
                                 None
                             }
@@ -157,7 +152,7 @@ impl Unit {
             },
             |&pos| pos == goal,
         )?;
-    
+
         let filtered_path = match action {
             None | Some(ActionType::MOVE) => {
                 // Filtrer pour obtenir les cases walkable uniquement
@@ -172,13 +167,18 @@ impl Unit {
                 last_walkable_path
             }
             Some(ActionType::DIG) => {
-                path.into_iter()
-                    .take_while(|&(x, y)| terrain.is_diggable(x, y))
-                    .collect()
+                let mut first_diggable_path = Vec::new();
+                for &(x, y) in path.iter() {
+                    if terrain.is_diggable(x, y) {
+                        first_diggable_path.push((x, y));
+                        break;
+                    } 
+                }
+                first_diggable_path
             }
             _ => return None,
         };
-    
+
         Some((filtered_path, cost))
     }
-    }
+}

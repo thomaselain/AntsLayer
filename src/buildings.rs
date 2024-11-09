@@ -20,7 +20,7 @@ pub trait FindHome {
 
 impl FindHome for Vec<(RaceType, Building)> {
     fn find_home(&self, race: RaceType, terrain: &Terrain) -> Option<Coords> {
-        for (_, _) in self {
+        for (r, b) in self {
             if let Some(tb) = terrain.buildings.iter().find(|(_, b)| b.race == race) {
                 return Some(tb.1.coords);
             }

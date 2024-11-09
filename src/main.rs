@@ -46,7 +46,7 @@ fn main() -> Result<(), String> {
     /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::with_capacity(30);
 
-    for _ in 0..1 {
+    for _ in 0..100 {
         let mut unit = Unit::new();
 
         unit.race = RaceType::ANT;
@@ -114,8 +114,7 @@ fn main() -> Result<(), String> {
                             u.action_queue.clear();
                             //if u.race == RaceType::ANT {
 
-                            u.action_queue.insert(
-                                0,
+                            u.action_queue.push(
                                 (
                                     ActionType::DIG,
                                     Coords {
