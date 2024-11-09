@@ -1,12 +1,15 @@
 mod pathfinding;
 
+use colored::Colorize;
+
+
 use rand::seq::SliceRandom;
 use rand::{self, Rng};
 
-use crate::buildings::{Building, FindHome};
+use crate::buildings::{Building, BuildingType, FindHome};
 use crate::coords::{self, Coords};
-use crate::terrain::TileType;
 use crate::terrain::{self, Terrain};
+use crate::terrain::{Mineral, MineralType, TileType};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RaceType {
@@ -17,7 +20,8 @@ pub enum RaceType {
 
 #[derive(Copy, Clone)]
 pub enum JobType {
-    MINER,
+    MINER(MineralType),
+    JOBLESS,
     FARMER,
     FIGHTER,
     BUILDER,
@@ -28,6 +32,7 @@ pub enum ActionType {
     WANDER,
     WAIT,
     MOVE,
+    HAUL,
     DIG,
     EAT,
     SLEEP,
@@ -48,13 +53,16 @@ pub struct Unit {
     last_action_timer: i32,
 }
 
-pub fn display_action_queue(unit: Unit) {
+pub fn display_action_queue(current_race: RaceType, unit: Unit) {
+    if current_race != unit.race {
+        return;
+    }
     print!("ACTION LIST : ");
     for action in unit.action_queue {
         print!(
             "{}",
             match action.0 {
-                ActionType::MOVE => "M",
+                ActionType::MOVE => "\eM",
                 ActionType::DIG => "D",
                 ActionType::WANDER => "W",
                 _ => " ",
@@ -90,7 +98,7 @@ impl Unit {
             y: (terrain::HEIGHT / 2) as i32,
         };
         let mut rng = rand::thread_rng();
-        let race = match rng.gen_range(0..=3) {
+        let race = match rng.gen_range(1..=3) {
             1 => RaceType::HUMAN,
             2 => RaceType::ANT,
             3 => RaceType::ALIEN,
@@ -98,11 +106,12 @@ impl Unit {
         };
         let mut rng = rand::thread_rng();
         let job = match rng.gen_range(1..=4) {
-            1 => JobType::MINER,
-            2 => JobType::BUILDER,
-            3 => JobType::FARMER,
-            4 => JobType::FIGHTER,
-            _ => JobType::MINER,
+            1 => JobType::MINER(MineralType::IRON),
+            2 => JobType::MINER(MineralType::GOLD),
+            3 => JobType::BUILDER,
+            4 => JobType::FARMER,
+            5 => JobType::FIGHTER,
+            _ => JobType::JOBLESS,
         };
         let race_type_str = match race {
             RaceType::ALIEN => "ALIEN",
@@ -139,39 +148,32 @@ impl Unit {
     pub fn think(&mut self, terrain: &mut Terrain, delta_time: i32) {
         self.last_action_timer += delta_time;
         if self.last_action_timer >= self.speed {
-            //display_action_queue(self.clone());
             match self.clone().action_queue.first() {
                 Some((ActionType::MOVE, coords)) => {
-                    //display_action(ActionType::MOVE, *coords);
                     if self.r#move(terrain, *coords).is_none() {
-                        // Pathfinding échoué : définir l’action alternative
                         self.action_queue.remove(0);
-                           self.action_queue.push((ActionType::WANDER, self.coords));
+                        self.action_queue.push((ActionType::WANDER, self.coords));
                     }
                 }
                 Some((ActionType::DIG, coords)) => {
-                    //display_action(ActionType::DIG, *coords);
-                    // Vérifie si l’unité est à portée pour creuser
                     if self.coords.distance_in_tiles(coords) > 1 {
-                        // Ajouter une action MOVE jusqu'à la dernière case accessibl
                         self.action_queue.remove(0); // Action DIG complétée
                         self.action_queue.insert(0, (ActionType::MOVE, *coords));
                     } else {
-                        // Prêt à creuser
                         let actions = self.dig(terrain, coords);
                         if !actions.is_none() {
-                        //    self.action_queue.push( (ActionType::DIG, *coords));
                             self.action_queue.append(&mut actions.unwrap());
                         }
                     }
                 }
                 Some((ActionType::WANDER, coords)) => {
-                    //display_action_queue(self.clone());
-                    let home = terrain.buildings.find_home(self.race, terrain);
+                    let home = terrain
+                        .buildings
+                        .find_building(self.race, self.job, terrain);
 
                     match home {
                         Some(coords) => {
-                            if self.coords.distance_to(&coords) > 10.0
+                            if self.coords.distance_in_tiles(&coords) >= 2
                                 && self.action_queue.len() == 1
                             {
                                 self.action_path = None;
@@ -188,16 +190,13 @@ impl Unit {
                                 self.action_queue.remove(0);
                             }
                         }
-                        None => {
-                            panic!("WHERE IS MY HOME ???")
-                        }
+                        None => {}
                     }
                 }
 
                 Some((ActionType::BUILD, _)) => {}
 
                 Some((ActionType::WAIT, _)) => {
-                    //    display_action(action.0, action.1);
                     self.action_queue.pop();
                     println!("Waiting ...");
                 }
@@ -255,12 +254,9 @@ impl Unit {
         let goal = coords.to_tuple();
 
         // Étape 2 : Si la dernière case walkable n'est pas la destination, commencer à creuser
-        let Some((mut dig_path, _cost)) = self.find_path(
-            self.coords.to_tuple(),
-            goal,
-            terrain.clone(),
-            None,
-        ) else {
+        let Some((mut dig_path, _cost)) =
+            self.find_path(self.coords.to_tuple(), goal, terrain.clone(), None)
+        else {
             return None;
         };
 

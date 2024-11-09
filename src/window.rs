@@ -4,7 +4,7 @@ use sdl2::{rect::Rect, render::WindowCanvas, video::Window, Sdl};
 use crate::{
     buildings::BuildingType,
     camera::Camera,
-    terrain::{Terrain, TileType},
+    terrain::{MineralType, Terrain, TileType},
     units::Unit,
 };
 pub const WIDTH: u32 = 1000;
@@ -90,8 +90,9 @@ impl Buffer<BufferType> {
                         mineral.color
                     }
                     Some(TileType::Building(t)) => match t {
-                        BuildingType::Hearth => 0xe36505FF,
-                        BuildingType::Stockpile => 0x064f28FF,
+                        BuildingType::Hearth => 0x999944ff,
+                        BuildingType::Stockpile(MineralType::IRON) => 0x064f28FF,
+                        _ => 0x364f28FF,
                     },
                     None => 0x00000000,
                 };
@@ -161,7 +162,7 @@ impl Renderer {
                 }
             }
         }
-
+/*  ////////// REVERSED FOR BUILDING DEV /////////////////
         if self.buildings.needs_update {
             for (i, &color) in self.buildings.buffer.iter().enumerate() {
                 if color != 0x00000000 {
@@ -177,6 +178,22 @@ impl Renderer {
                 }
             }
         }
+        */////////// ////////////////// /////////////////
+        if self.units.needs_update {
+            for (i, &color) in self.units.buffer.iter().enumerate() {
+                if color != 0x00000000 {
+                    combined_buffer[i] = color;
+                }
+            }
+        }
+        if self.buildings.needs_update {
+            for (i, &color) in self.buildings.buffer.iter().enumerate() {
+                if color != 0x00000000 {
+                    combined_buffer[i] = color;
+                }
+            }
+        }
+
 
         combined_buffer
     }
@@ -193,7 +210,6 @@ impl Renderer {
 
         let combined_buffers = self.combine_buffers();
         self.update_pixel_buffer(&combined_buffers, camera);
-        self.canvas.present();
     }
 
     fn update_pixel_buffer(&mut self, pixel_buffer: &[u32], camera: &Camera) {

@@ -1,4 +1,4 @@
-use std::ops::{AddAssign, SubAssign};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Coords {
@@ -32,4 +32,22 @@ impl SubAssign for Coords {
         self.x -= other.x;
         self.y -= other.y;
     }
+}
+impl Add for Coords {
+    fn add(self, other: Coords) -> Coords {
+        Coords {
+            x: other.x + self.x,
+            y: other.y + self.y,
+        }
+    }
+    type Output = Coords;
+}
+impl Sub for Coords {
+    fn sub(self, other: Coords) -> Coords {
+        Coords {
+            x: other.x - self.x,
+            y: other.y - self.y,
+        }
+    }
+    type Output = Coords;
 }

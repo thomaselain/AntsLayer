@@ -10,10 +10,20 @@ use buildings::FindHome;
 use camera::Camera;
 use coords::Coords;
 use terrain::{Terrain, TileType};
-use units::{ActionType, RaceType, Unit};
+use units::{display_action_queue, ActionType, JobType, RaceType, Unit};
 
-use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
-use std::time::Instant;
+use sdl2::{
+    event::Event,
+    keyboard::Keycode,
+    mouse::MouseState,
+    pixels::Color,
+    rect::{self, Rect},
+    render::Canvas,
+    sys::{SDL_RenderDrawRect, SDL_SetRenderDrawColor},
+    video::Window,
+    VideoSubsystem,
+};
+use std::{thread::sleep_ms, time::Instant};
 use window::{init_sdl2_window, Renderer};
 
 fn main() -> Result<(), String> {
@@ -47,9 +57,9 @@ fn main() -> Result<(), String> {
     /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::with_capacity(30);
 
-    for _ in 0..100 {
+    for _ in 0..300 {
         let mut unit = Unit::new();
-
+        //  unit.job = JobType::MINER;
         unit.action_queue.push((
             ActionType::MOVE,
             Coords {
@@ -183,12 +193,19 @@ fn main() -> Result<(), String> {
 
         for u in units_list.iter_mut() {
             u.think(&mut terrain, delta_time);
+            display_action_queue(current_race, u.clone());
         }
         renderer.units.needs_update = true;
 
         renderer.draw(&terrain, units_list.clone(), &camera);
-        renderer.canvas.set_draw_color(Color::RGB(255, 210, 0));
+
+        renderer.canvas.set_draw_color(match current_race {
+            RaceType::HUMAN => Color::BLUE,
+            RaceType::ANT => Color::RED,
+            RaceType::ALIEN => Color::GREEN,
+        });
+        renderer.canvas.fill_rect(Rect::new(0, 0, 100, 100))?;
+        renderer.canvas.present();
         // A draw a rectangle which almost fills our window with it !
-        let _ = renderer.canvas.fill_rect(Rect::new(10, 10, 780, 580));
     }
 }

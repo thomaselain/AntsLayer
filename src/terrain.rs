@@ -3,18 +3,18 @@ extern crate sdl2;
 
 use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
-
+use buildings::HOME_STARTING_SIZE;
 use crate::{
     automaton::Automaton,
-    buildings::{Building, BuildingType},
+    buildings::{self, Building, BuildingType},
     coords::Coords,
     units::RaceType,
 };
 
-pub const HEIGHT: usize = 500;
+pub const HEIGHT: usize = 75;
 pub const WIDTH: usize = HEIGHT;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum MineralType {
     IRON,
     GOLD,
@@ -39,6 +39,7 @@ pub struct Mineral {
 
 #[derive(Clone)]
 pub struct Terrain {
+    //pub items: Vec<Item>, TODO
     pub buildings: Vec<Building>,
     pub minerals: Vec<Mineral>,
     pub data: Vec<Vec<TileType>>,
@@ -47,6 +48,38 @@ pub struct Terrain {
 impl Terrain {
     pub fn new() -> Terrain {
         let tiles: Vec<Vec<TileType>> = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
+        let mut buildings = Vec::new();
+
+        buildings.push(Building::new(RaceType::ANT, BuildingType::Hearth));
+        buildings.push(Building::new(
+            RaceType::ANT,
+            BuildingType::Stockpile(MineralType::IRON),
+        ));
+        buildings.push(Building::new(
+            RaceType::ANT,
+            BuildingType::Stockpile(MineralType::GOLD),
+        ));
+
+        buildings.push(Building::new(RaceType::HUMAN, BuildingType::Hearth));
+        buildings.push(Building::new(
+            RaceType::HUMAN,
+            BuildingType::Stockpile(MineralType::IRON),
+        ));
+        buildings.push(Building::new(
+            RaceType::HUMAN,
+            BuildingType::Stockpile(MineralType::GOLD),
+        ));
+
+        buildings.push(Building::new(RaceType::ALIEN, BuildingType::Hearth));
+        buildings.push(Building::new(
+            RaceType::ALIEN,
+            BuildingType::Stockpile(MineralType::IRON),
+        ));
+        buildings.push(Building::new(
+            RaceType::ALIEN,
+            BuildingType::Stockpile(MineralType::GOLD),
+        ));
+
 
         Terrain {
             data: tiles,
@@ -119,41 +152,9 @@ impl Terrain {
                     },
                 },
             ],
-            buildings: vec![
-                (
-                    Building {
-                        hp: 100,
-                        coords: Coords { x: 10, y: 10 },
-                        building_type: BuildingType::Hearth,
-                        race: RaceType::HUMAN,
-                    }
-                ),
-                (
-                    Building {
-                        hp: 100,
-                        coords: Coords {
-                            x: WIDTH as i32 / 2,
-                            y: HEIGHT as i32 / 2,
-                        },
-                        building_type: BuildingType::Hearth,
-                        race: RaceType::ANT,
-                    }
-                ),
-                (
-                    Building {
-                        hp: 100,
-                        coords: Coords {
-                            x: WIDTH as i32 - 10,
-                            y: HEIGHT as i32 - 10,
-                        },
-                        building_type: BuildingType::Hearth,
-                        race: RaceType::ALIEN,
-                    }
-                ),
-            ],
+            buildings,
         }
     }
-
 
     pub fn generate_caves(&mut self, mineral: &Mineral) {
         let mut rng = rand::thread_rng();
@@ -205,7 +206,6 @@ impl Terrain {
         //  mineral.automaton.apply_rules(self, TileType::AIR);
     }
 
-
     fn clear_tiles(&mut self) {
         self.data = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
     }
@@ -217,11 +217,12 @@ impl Terrain {
             self.generate_caves(&m);
         }
         for b in self.buildings.clone() {
-            self.dig_radius(&b.coords, 50);
+            if b.building_type == BuildingType::Hearth {
+                // Dig around Hearth (Starting base)
+                self.dig_radius(&b.coords, buildings::HOME_STARTING_SIZE);
+            }
             self.data[b.coords.x as usize][b.coords.y as usize] =
                 TileType::Building(b.building_type);
-            self.data[b.coords.x as usize + 3][b.coords.y as usize] =
-                TileType::Building(BuildingType::Stockpile);
         }
     }
 
@@ -233,12 +234,12 @@ impl Terrain {
             for x in (cx - radius as i32)..=(cx + radius as i32) {
                 let dx = x - cx;
                 let dy = y - cy;
-               // if !(x == center.x && y == center.y) {
-                    if dx * dx + dy * dy <= radius_squared {
-                        if let Some(_) = self.get_data(x as usize, y as usize) {
-                            self.data[x as usize][y as usize] = TileType::AIR; // Dig
-                        }
+                // if !(x == center.x && y == center.y) {
+                if dx * dx + dy * dy <= radius_squared {
+                    if let Some(_) = self.get_data(x as usize, y as usize) {
+                        self.data[x as usize][y as usize] = TileType::AIR; // Dig
                     }
+                }
                 //}
             }
         }

@@ -16,6 +16,7 @@ impl Terrain {
 
     pub fn is_diggable(&self, x: usize, y: usize) -> bool {
         match self.get_data(x, y) {
+            Some(TileType::Mineral(MineralType::IRON)) => true,
             Some(TileType::Mineral(MineralType::ROCK)) => true,
             Some(TileType::Mineral(MineralType::DIRT)) => true,
             _ => false,
@@ -72,7 +73,7 @@ impl Unit {
                     return 10;
                 }
                 if is_diagonal {
-                    5
+                    10
                 } else {
                     1
                 }
@@ -84,7 +85,7 @@ impl Unit {
                 if is_diagonal {
                     1
                 } else {
-                    5
+                    10
                 }
             }
         }
