@@ -23,6 +23,7 @@ pub enum MineralType {
     ROCK,
     DIRT,
 }
+
 impl MineralType {
     pub fn find_closest(
         &self,
@@ -59,8 +60,15 @@ impl MineralType {
                 }
             }
         }
-
         None // No mineral found
+    }
+    pub fn is_collectable(self) -> bool {
+        match self {
+            Self::ROCK => false,
+            Self::IRON => true,
+            Self::GOLD => true,
+            Self::DIRT => false,
+        }
     }
 }
 
@@ -71,7 +79,26 @@ pub enum TileType {
     AIR,
     WATER,
 }
+impl TileType {
+    pub fn is_walkable(self) -> bool {
+        match self {
+            TileType::AIR => true,
+            TileType::WATER => true,
+            TileType::Building(_) => true,
+            _ => false,
+        }
+    }
 
+    pub fn is_digabble(self) -> bool {
+        match self {
+            TileType::Mineral(MineralType::IRON) => true,
+            TileType::Mineral(MineralType::GOLD) => true,
+            TileType::Mineral(MineralType::ROCK) => true,
+            TileType::Mineral(MineralType::DIRT) => true,
+            _ => false,
+        }
+    }
+}
 #[derive(Clone)]
 pub struct Mineral {
     pub r#type: TileType,
@@ -88,6 +115,20 @@ pub struct Terrain {
 }
 
 impl Terrain {
+    pub fn is_walkable(&mut self, x: usize, y: usize) -> bool {
+        if let Some(tile) = self.get_data(x, y) {
+            tile.is_walkable()
+        } else {
+            false
+        }
+    }
+    pub fn is_diggable(&mut self, x: usize, y: usize) -> bool {
+        if let Some(tile) = self.get_data(x, y) {
+            tile.is_digabble()
+        } else {
+            false
+        }
+    }
     pub fn new() -> Terrain {
         let tiles: Vec<Vec<TileType>> = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
         let mut buildings = Vec::new();

@@ -56,6 +56,7 @@ pub enum JobType {
     FIGHTER,
     BUILDER,
 }
+
 impl JobType {
     pub fn get_action(self, terrain: &Terrain, unit: &Unit) -> (ActionType, Coords) {
         match self {
@@ -86,6 +87,50 @@ pub enum ActionType {
     SLEEP,
     FIGHT,
     BUILD,
+}
+
+impl ActionType {
+    pub fn to_str(self) -> String {
+        match self {
+            ActionType::WANDER => "WANDER".to_string(),
+            ActionType::WAIT => "WAIT".to_string(),
+            ActionType::MOVE => "MOVE".to_string(),
+            ActionType::HAUL => "HAUL".to_string(),
+            ActionType::DIG => "DIG".to_string(),
+            ActionType::EAT => "EAT".to_string(),
+            ActionType::SLEEP => "SLEEP".to_string(),
+            ActionType::FIGHT => "FIGHT".to_string(),
+            ActionType::BUILD => "BUILD".to_string(),
+        }
+    }
+}
+
+pub trait ActionQueue {
+    fn do_now(&mut self, action: ActionType, coords: Coords);
+    fn do_later(&mut self, action: ActionType, coords: Coords);
+    fn remove_only(&mut self, action: Vec<ActionType>);
+    fn keep_only(&mut self, action: Vec<ActionType>);
+}
+
+impl ActionQueue for Vec<(ActionType, Coords)> {
+    fn do_now(&mut self, action: ActionType, coords: Coords) {
+        self.insert(0, (action, coords));
+    }
+    fn do_later(&mut self, actions: ActionType, coords: Coords) {
+        self.push((actions, coords));
+    }
+    //wip
+    fn remove_only(&mut self, actions: Vec<ActionType>) {
+        for to_remove in actions {
+            self.retain_mut(|(what, coords)| (*what, *coords) == (to_remove, *coords));
+        }
+    }
+    //wip
+    fn keep_only(&mut self, actions: Vec<ActionType>) {
+        for to_keep in actions {
+            self.retain_mut(|(what, coords)| (*what, *coords) != (to_keep, *coords));
+        }
+    }
 }
 impl ActionType {
     pub fn get_ascii(self) -> ColoredString {

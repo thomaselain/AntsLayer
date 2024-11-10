@@ -11,7 +11,7 @@ use camera::Camera;
 use colored::Colorize;
 use coords::Coords;
 use terrain::{Terrain, TileType};
-use units::{display_action_queue, ActionType, JobType, RaceType, Unit};
+use units::{display_action_queue, ActionQueue, ActionType, JobType, RaceType, Unit};
 
 use sdl2::{
     event::Event,
@@ -58,8 +58,10 @@ fn main() -> Result<(), String> {
     /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..500 {
+    for _ in 0..100 {
         let mut unit = Unit::new();
+        //unit.job = JobType::MINER(terrain::MineralType::IRON);
+        unit.action_queue.do_now(ActionType::WANDER, unit.coords);
         units_list.push(unit);
     }
     /////////////////////////////////////////////////////////
@@ -210,6 +212,8 @@ fn main() -> Result<(), String> {
 
         for u in units_list.iter_mut() {
             if u.last_action_timer == 0 && u.action_queue.len() > 0 && !u.action_path.is_none() {
+                //  BROKEN ... :(  u.action_queue.keep_only(vec![ActionType::MOVE, ActionType::WANDER, ActionType::DIG]);
+                //  BROKEN ... :( u.action_queue.remove_only(vec![ActionType::WANDER]);
                 display_action_queue(current_race, u.clone());
             }
             u.think(&mut terrain, delta_time);

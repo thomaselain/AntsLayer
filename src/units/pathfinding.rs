@@ -2,6 +2,7 @@ use pathfinding::prelude::astar;
 use std::collections::VecDeque;
 
 use crate::{
+    buildings::BuildingType,
     coords::Coords,
     terrain::{self, MineralType, Terrain, TileType},
 };
@@ -9,24 +10,6 @@ use crate::{
 use super::{ActionType, RaceType, Unit};
 
 impl Terrain {
-    pub fn is_walkable(&self, x: usize, y: usize) -> bool {
-        match self.get_data(x, y) {
-            Some(TileType::AIR) => true,
-            Some(TileType::WATER) => true,
-            Some(TileType::Building(_)) => true, // MAYBE NOT (But useful for future testings)
-            _ => false,
-        }
-    }
-
-    pub fn is_diggable(&self, x: usize, y: usize) -> bool {
-        match self.get_data(x, y) {
-            Some(TileType::Mineral(MineralType::IRON)) => true,
-            Some(TileType::Mineral(MineralType::GOLD)) => true,
-            Some(TileType::Mineral(MineralType::ROCK)) => true,
-            Some(TileType::Mineral(MineralType::DIRT)) => true,
-            _ => false,
-        }
-    }
     pub fn get_data(&self, x: usize, y: usize) -> Option<TileType> {
         if self.check_data(x, y) {
             Some(self.data[x][y])
@@ -95,7 +78,7 @@ impl Unit {
         &self,
         start: (usize, usize),
         goal: (usize, usize),
-        terrain: Terrain,
+        mut terrain: Terrain,
         action: Option<ActionType>,
     ) -> Option<(Vec<(usize, usize)>, i32)> {
         let (path, cost) = astar(
@@ -134,7 +117,7 @@ impl Unit {
                             if terrain.is_diggable(nx, ny) {
                                 Some(((nx, ny), self.get_movement_cost(is_diagonal) * 2))
                             } else if terrain.is_walkable(nx, ny) {
-                                Some(((nx, ny), self.get_movement_cost(is_diagonal)))
+                                Some(((nx, ny), self.get_movement_cost(is_diagonal) * 0))
                             } else {
                                 None
                             }

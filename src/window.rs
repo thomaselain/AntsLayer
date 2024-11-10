@@ -264,7 +264,7 @@ impl Renderer {
 
     pub fn render_text(&mut self, text: &str, x: i32, y: i32) -> Result<(), String> {
         // Charge la police OTF depuis le dossier 'fonts'
-        let font_data = std::fs::read("fonts/roboto-3/Roboto-Black.ttf")
+        let font_data = std::fs::read("fonts/roboto-3/RobotoCondensed-Regular.ttf")
             .map_err(|e| format!("Failed to read font file: {}", e))?;
         let font =
             Font::try_from_bytes(&font_data).ok_or_else(|| "Failed to load font".to_string())?;
