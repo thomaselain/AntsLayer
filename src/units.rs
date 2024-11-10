@@ -42,13 +42,13 @@ impl RaceType {
     pub fn get_thinking_speed(self) -> i32 {
         match self {
             RaceType::HUMAN => 150,
-            RaceType::ANT => 50,
+            RaceType::ANT => 25,
             RaceType::ALIEN => 75,
         }
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum JobType {
     MINER(MineralType),
     JOBLESS,
@@ -57,10 +57,18 @@ pub enum JobType {
     BUILDER,
 }
 impl JobType {
-    pub fn get_action(self, mut terrain: &Terrain, mut unit: &Unit) -> (ActionType, Coords) {
+    pub fn get_action(self, terrain: &Terrain, unit: &Unit) -> (ActionType, Coords) {
         match self {
             JobType::MINER(mineral_type) => {
-                (ActionType::DIG, mineral_type.find_closest(terrain, unit))
+                if let Some(closest) = mineral_type.find_closest(
+                    TileType::Mineral(mineral_type),
+                    terrain,
+                    unit.clone(),
+                ) {
+                    (ActionType::DIG, closest)
+                } else {
+                    (ActionType::WANDER, unit.coords)
+                }
             }
             _ => (ActionType::WANDER, unit.coords),
         }
@@ -148,12 +156,13 @@ impl Unit {
             _ => RaceType::ANT,
         };
         let mut rng = rand::thread_rng();
-        let job = match rng.gen_range(1..=4) {
+        let job = match rng.gen_range(0..=6) {
             1 => JobType::MINER(MineralType::IRON),
             2 => JobType::MINER(MineralType::GOLD),
-            3 => JobType::BUILDER,
-            4 => JobType::FARMER,
-            5 => JobType::FIGHTER,
+            3 => JobType::MINER(MineralType::ROCK),
+            4 => JobType::BUILDER,
+            5 => JobType::FARMER,
+            6 => JobType::FIGHTER,
             _ => JobType::JOBLESS,
         };
 
@@ -183,7 +192,7 @@ impl Unit {
             match self.clone().action_queue.first() {
                 Some((ActionType::MOVE, coords)) => {
                     if self.r#move(terrain, *coords).is_none() {
-                          self.action_queue.remove(0);
+                        self.action_queue.remove(0);
                         self.action_queue.push((ActionType::WANDER, self.coords));
                     }
                 }
@@ -220,6 +229,8 @@ impl Unit {
                                 );
                             } else {
                                 self.action_queue.remove(0);
+                                self.action_queue
+                                    .insert(0, self.job.get_action(&terrain, &self));
                             }
                         }
                         None => {}

@@ -1,4 +1,7 @@
 use rand::{self, Rng};
+use rusttype::{point, Font, PositionedGlyph, Scale};
+use sdl2::pixels::PixelFormatEnum;
+use sdl2::surface::Surface;
 use sdl2::{rect::Rect, render::WindowCanvas, video::Window, Sdl};
 
 use crate::{
@@ -80,8 +83,7 @@ impl Buffer<BufferType> {
             for y in start_y..end_y {
                 let color = match terrain.get_data(x, y) {
                     Some(TileType::AIR) => 0x040201ff,
-                    Some(TileType::Mineral(_))
-                    |Some(TileType::WATER) => {
+                    Some(TileType::Mineral(_)) | Some(TileType::WATER) => {
                         let mineral = terrain
                             .minerals
                             .iter()
@@ -162,7 +164,7 @@ impl Renderer {
                 }
             }
         }
-/*  ////////// REVERSED FOR BUILDING DEV /////////////////
+        /*  ////////// REVERSED FOR BUILDING DEV /////////////////
         if self.buildings.needs_update {
             for (i, &color) in self.buildings.buffer.iter().enumerate() {
                 if color != 0x00000000 {
@@ -193,7 +195,6 @@ impl Renderer {
                 }
             }
         }
-
 
         combined_buffer
     }
@@ -259,5 +260,86 @@ impl Renderer {
         let dest_rect = Rect::new(0, 0, WIDTH, HEIGHT);
 
         self.canvas.copy(&texture, None, dest_rect).unwrap();
+    }
+
+    pub fn render_text(&mut self, text: &str, x: i32, y: i32) -> Result<(), String> {
+        // Charge la police OTF depuis le dossier 'fonts'
+        let font_data = std::fs::read("fonts/roboto-3/Roboto-Black.ttf")
+            .map_err(|e| format!("Failed to read font file: {}", e))?;
+        let font =
+            Font::try_from_bytes(&font_data).ok_or_else(|| "Failed to load font".to_string())?;
+
+        // Configure la taille du texte
+        let scale = Scale::uniform(25.0);
+
+        // Calcule la largeur et la hauteur totale du texte
+        let mut glyphs = Vec::new();
+        let mut max_height = 100;
+        let mut max_width = 0;
+
+        for glyph in font.layout(text, scale, point(25.0, 25.0)) {
+            if let Some(bb) = glyph.pixel_bounding_box() {
+                max_height = max_height.max(bb.max.y);
+                max_width = max_width.max(bb.max.x);
+            }
+            glyphs.push(glyph);
+        }
+
+        // Crée une surface avec la bonne taille en RGBA8888
+        let mut surface = Surface::new(
+            max_width as u32,
+            max_height as u32,
+            PixelFormatEnum::RGBA8888,
+        )
+        .map_err(|e| format!("Failed to create surface: {}", e))?;
+
+        // Positionne et dessine chaque glyphe
+        let mut pixel_data = vec![0u8; (max_width * max_height * 4) as usize]; // Buffer pour les pixels (RGBA8888)
+
+        let mut x_offset = 0;
+        let y_offset = 0;
+
+        for glyph in glyphs.iter().rev() {
+            if let Some(bounding_box) = glyph.pixel_bounding_box() {
+                glyph.draw(|gx, gy, v| {
+                    let x = gx as i32 + bounding_box.min.x + x_offset;
+                    let y = gy as i32 + bounding_box.min.y + y_offset;
+                    if x >= 0 && y >= 0 && x < max_width && y < max_height {
+                        let pixel_index = ((y as usize) * max_width as usize + x as usize) * 4;
+                        let intensity = (v * 255.0) as u8; // Applique l'intensité pour l'alphabétisation
+                        pixel_data[pixel_index] = intensity; // Rouge
+                        pixel_data[pixel_index + 1] = intensity; // Vert
+                        pixel_data[pixel_index + 2] = intensity; // Bleu
+                        pixel_data[pixel_index + 3] = 255; // Alpha complet
+                    }
+                });
+                x_offset -= bounding_box.width() as i32; // Ajuste la position en X après chaque glyphe
+            }
+        }
+
+        // Mets à jour la surface avec les nouveaux pixels
+        surface.with_lock_mut(|buffer: &mut [u8]| {
+            buffer.copy_from_slice(&pixel_data);
+        });
+
+        // Crée une texture à partir de la surface
+        let texture_creator = self.canvas.texture_creator();
+        let texture = texture_creator
+            .create_texture_from_surface(&surface)
+            .map_err(|e| format!("Failed to create texture: {}", e))?;
+
+        // Dessine la texture à l'écran à la position spécifiée
+        self.canvas.copy(
+            &texture,
+            None,
+            Some(sdl2::rect::Rect::new(
+                x,
+                y,
+                max_width as u32,
+                max_height as u32,
+            )),
+        )?;
+
+        Ok(())
     }
 }

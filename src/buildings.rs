@@ -28,7 +28,7 @@ pub trait FindHome {
 impl Building {
     pub fn new(race_type: RaceType, building_type: BuildingType) -> Building {
         let mut rng = rand::thread_rng();
-        let offset:i32 = HOME_STARTING_SIZE as i32 / 2;
+        let offset: i32 = HOME_STARTING_SIZE as i32 / 2;
         let center_coords = match race_type {
             RaceType::ANT => Coords {
                 x: offset,

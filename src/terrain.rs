@@ -1,6 +1,8 @@
 extern crate noise;
 extern crate sdl2;
 
+use std::collections::VecDeque;
+
 use crate::{
     automaton::Automaton,
     buildings::{self, Building, BuildingType},
@@ -11,7 +13,7 @@ use buildings::HOME_STARTING_SIZE;
 use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
 
-pub const HEIGHT: usize = 200;
+pub const HEIGHT: usize = 75;
 pub const WIDTH: usize = HEIGHT;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -22,8 +24,43 @@ pub enum MineralType {
     DIRT,
 }
 impl MineralType {
-    pub fn find_closest(self, terrain: &Terrain, unit: &Unit) -> Coords {
-        unit.coords // WORK IN PROGRESS --- RETURNS NOTHING USEFUL FOR NOW
+    pub fn find_closest(
+        &self,
+        tile_type: TileType,
+        terrain: &Terrain,
+        unit: Unit,
+    ) -> Option<Coords> {
+        let start = unit.coords;
+        let mut visited = vec![vec![false; WIDTH]; HEIGHT];
+        let mut queue = VecDeque::new();
+
+        queue.push_back((start, 0));
+        visited[start.x as usize][start.y as usize] = true;
+
+        while let Some((coords, distance)) = queue.pop_front() {
+            // Check if the current tile is a mineral
+            if Some(tile_type) == terrain.get_data_from_coords(coords) {
+                return Some(coords);
+            }
+
+            // Add neighboring tiles to the queue
+            for dir in [(0, 1), (1, 0), (0, -1), (-1, 0)] {
+                let neighbor = Coords {
+                    x: coords.x + dir.0,
+                    y: coords.y + dir.1,
+                };
+
+                // Ensure the neighbor is within bounds and not yet visited
+                if terrain.check_data(neighbor.x as usize, neighbor.y as usize)
+                    && !visited[neighbor.x as usize][neighbor.y as usize]
+                {
+                    visited[neighbor.x as usize][neighbor.y as usize] = true;
+                    queue.push_back((neighbor, distance + 1));
+                }
+            }
+        }
+
+        None // No mineral found
     }
 }
 
@@ -59,6 +96,10 @@ impl Terrain {
         buildings.push(Building::new(
             RaceType::ANT,
             BuildingType::Stockpile(MineralType::IRON),
+        ));
+        buildings.push(Building::new(
+            RaceType::ANT,
+            BuildingType::Stockpile(MineralType::ROCK),
         ));
         buildings.push(Building::new(
             RaceType::ANT,
@@ -102,7 +143,6 @@ impl Terrain {
                         max_air_exposure: 5,
                     },
                 },
-
                 Mineral {
                     r#type: TileType::Mineral(MineralType::DIRT),
                     color: 0x140c07ff,
@@ -164,7 +204,7 @@ impl Terrain {
                         can_replace: vec![
                             TileType::AIR,
                             TileType::Mineral(MineralType::DIRT),
-                        //    TileType::Mineral(MineralType::ROCK),
+                            //    TileType::Mineral(MineralType::ROCK),
                             //    TileType::Mineral(MineralType::IRON),
                             //   TileType::Mineral(MineralType::GOLD),
                         ],
@@ -177,7 +217,6 @@ impl Terrain {
                         max_air_exposure: 5,
                     },
                 },
-
             ],
             buildings,
         }

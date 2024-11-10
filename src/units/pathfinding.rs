@@ -1,6 +1,10 @@
 use pathfinding::prelude::astar;
+use std::collections::VecDeque;
 
-use crate::terrain::{MineralType, Terrain, TileType};
+use crate::{
+    coords::Coords,
+    terrain::{self, MineralType, Terrain, TileType},
+};
 
 use super::{ActionType, RaceType, Unit};
 
@@ -17,6 +21,7 @@ impl Terrain {
     pub fn is_diggable(&self, x: usize, y: usize) -> bool {
         match self.get_data(x, y) {
             Some(TileType::Mineral(MineralType::IRON)) => true,
+            Some(TileType::Mineral(MineralType::GOLD)) => true,
             Some(TileType::Mineral(MineralType::ROCK)) => true,
             Some(TileType::Mineral(MineralType::DIRT)) => true,
             _ => false,
@@ -28,6 +33,10 @@ impl Terrain {
         } else {
             None
         }
+    }
+
+    pub fn get_data_from_coords(&self, coords: Coords) -> Option<TileType> {
+        self.get_data(coords.x as usize, coords.y as usize)
     }
 
     pub fn check_data(&self, x: usize, y: usize) -> bool {
@@ -109,26 +118,22 @@ impl Unit {
                     .filter_map(|(nx, ny, is_diagonal)| match action {
                         Some(ActionType::MOVE) => {
                             if terrain.is_walkable(nx, ny) {
-                                Some((
-                                    (nx, ny),
-                                    self.get_movement_cost(is_diagonal),
-                                ))
+                                Some(((nx, ny), self.get_movement_cost(is_diagonal)))
                             } else {
                                 None
                             }
                         }
                         Some(ActionType::DIG) => {
                             if terrain.is_diggable(nx, ny) {
-                                Some((
-                                    (nx, ny),
-                                    self.get_movement_cost(is_diagonal),
-                                ))
+                                Some(((nx, ny), self.get_movement_cost(is_diagonal)))
                             } else {
                                 None
                             }
                         }
                         None => {
-                            if terrain.is_diggable(nx, ny) || terrain.is_walkable(nx, ny) {
+                            if terrain.is_diggable(nx, ny) {
+                                Some(((nx, ny), self.get_movement_cost(is_diagonal) * 2))
+                            } else if terrain.is_walkable(nx, ny) {
                                 Some(((nx, ny), self.get_movement_cost(is_diagonal)))
                             } else {
                                 None
@@ -165,7 +170,7 @@ impl Unit {
                     if terrain.is_diggable(x, y) {
                         first_diggable_path.push((x, y));
                         break;
-                    } 
+                    }
                 }
                 first_diggable_path
             }

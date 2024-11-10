@@ -8,6 +8,7 @@ mod window;
 
 use buildings::FindHome;
 use camera::Camera;
+use colored::Colorize;
 use coords::Coords;
 use terrain::{Terrain, TileType};
 use units::{display_action_queue, ActionType, JobType, RaceType, Unit};
@@ -55,11 +56,10 @@ fn main() -> Result<(), String> {
     /////////////////////////////////////////////////////////
 
     /////////////////////// UNITS /////////////////////////////////////////////
-    let mut units_list: Vec<Unit> = Vec::with_capacity(30);
+    let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..50 {
+    for _ in 0..500 {
         let mut unit = Unit::new();
-        unit.action_queue.push(unit.job.get_action(&terrain, &unit));
         units_list.push(unit);
     }
     /////////////////////////////////////////////////////////
@@ -113,7 +113,9 @@ fn main() -> Result<(), String> {
                         renderer.all_need_update();
                     } else if mouse_btn == sdl2::mouse::MouseButton::Right {
                         for u in &mut units_list {
-                            if u.race == current_race {
+                            if u.race == current_race
+                                && u.job == JobType::MINER(terrain::MineralType::IRON)
+                            {
                                 u.action_queue.clear();
                                 u.action_queue.push((
                                     ActionType::DIG,
@@ -170,6 +172,17 @@ fn main() -> Result<(), String> {
                     continue;
                 }
                 Event::KeyDown {
+                    keycode: Some(Keycode::Space),
+                    ..
+                } => {
+                    for u in units_list.iter_mut() {
+                        if u.race == current_race {
+                            renderer.render_text("Dig", 0, 0)?;
+                            u.action_queue.insert(0, u.job.get_action(&terrain, &u));
+                        }
+                    }
+                }
+                Event::KeyDown {
                     keycode: Some(Keycode::A),
                     ..
                 } => current_race = RaceType::ANT,
@@ -186,22 +199,23 @@ fn main() -> Result<(), String> {
             }
         }
 
-        for u in units_list.iter_mut() {
-            u.think(&mut terrain, delta_time);
-            if u.last_action_timer == 0 && u.action_queue.len() > 0 && !u.action_path.is_none(){
-                display_action_queue(current_race, u.clone());
-            }
-        }
-        renderer.units.needs_update = true;
-
-        renderer.draw(&terrain, units_list.clone(), &camera);
-
         renderer.canvas.set_draw_color(match current_race {
             RaceType::HUMAN => Color::BLUE,
             RaceType::ANT => Color::RED,
             RaceType::ALIEN => Color::GREEN,
         });
-        renderer.canvas.fill_rect(Rect::new(0, 0, 100, 100))?;
+
+        renderer.draw(&terrain, units_list.clone(), &camera);
+        renderer.canvas.fill_rect(Rect::new(0, 0, 50, 50))?;
+
+        for u in units_list.iter_mut() {
+            if u.last_action_timer == 0 && u.action_queue.len() > 0 && !u.action_path.is_none() {
+                display_action_queue(current_race, u.clone());
+            }
+            u.think(&mut terrain, delta_time);
+        }
+        renderer.units.needs_update = true;
+
         renderer.canvas.present();
         // A draw a rectangle which almost fills our window with it !
     }
