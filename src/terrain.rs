@@ -13,7 +13,7 @@ use buildings::HOME_STARTING_SIZE;
 use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
 
-pub const HEIGHT: usize = 75;
+pub const HEIGHT: usize = 100;
 pub const WIDTH: usize = HEIGHT;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -89,12 +89,12 @@ impl TileType {
         }
     }
 
-    pub fn is_digabble(self) -> bool {
+    pub fn is_diggable(self) -> bool {
         match self {
             TileType::Mineral(MineralType::IRON) => true,
             TileType::Mineral(MineralType::GOLD) => true,
             TileType::Mineral(MineralType::ROCK) => true,
-            TileType::Mineral(MineralType::DIRT) => true,
+            TileType::Mineral(MineralType::DIRT) => false,
             _ => false,
         }
     }
@@ -124,7 +124,7 @@ impl Terrain {
     }
     pub fn is_diggable(&mut self, x: usize, y: usize) -> bool {
         if let Some(tile) = self.get_data(x, y) {
-            tile.is_digabble()
+            tile.is_diggable()
         } else {
             false
         }
@@ -209,7 +209,7 @@ impl Terrain {
                     automaton: Automaton {
                         can_replace: vec![
                             TileType::Mineral(MineralType::ROCK),
-                            // TileType::Mineral(MineralType::DIRT),
+                                TileType::Mineral(MineralType::DIRT), //NO
                             //TileType::AIR,
                         ],
                         birth_limit: 2,

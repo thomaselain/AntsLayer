@@ -58,9 +58,10 @@ fn main() -> Result<(), String> {
     /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..100 {
+    for _ in 0..300 {
         let mut unit = Unit::new();
-        //unit.job = JobType::MINER(terrain::MineralType::IRON);
+        unit.race = RaceType::ANT;
+        unit.job = JobType::MINER(terrain::MineralType::ROCK);
         unit.action_queue.do_now(ActionType::WANDER, unit.coords);
         units_list.push(unit);
     }
@@ -97,16 +98,13 @@ fn main() -> Result<(), String> {
                     if mouse_btn == sdl2::mouse::MouseButton::Left {
                         for u in &mut units_list {
                             if u.race == current_race {
-                                u.action_queue.clear();
-                                u.action_queue.insert(
-                                    0,
-                                    (
-                                        ActionType::MOVE,
-                                        Coords {
-                                            x: (x as f32 * camera.zoom) as i32,
-                                            y: (y as f32 * camera.zoom) as i32,
-                                        },
-                                    ),
+                                   u.action_queue.clear();
+                                u.action_queue.do_now(
+                                    ActionType::MOVE,
+                                    Coords {
+                                        x: (x as f32 * camera.zoom) as i32,
+                                        y: (y as f32 * camera.zoom) as i32,
+                                    },
                                 );
                             }
                         }
@@ -116,16 +114,16 @@ fn main() -> Result<(), String> {
                     } else if mouse_btn == sdl2::mouse::MouseButton::Right {
                         for u in &mut units_list {
                             if u.race == current_race
-                                && u.job == JobType::MINER(terrain::MineralType::IRON)
+                            //            && u.job == JobType::MINER(terrain::MineralType::IRON)
                             {
-                                u.action_queue.clear();
-                                u.action_queue.push((
+                                //  u.action_queue.clear();
+                                u.action_queue.do_now(
                                     ActionType::DIG,
                                     Coords {
                                         x: (x as f32 * camera.zoom) as i32,
                                         y: (y as f32 * camera.zoom) as i32,
                                     },
-                                ));
+                                );
                             }
                         }
                     }
@@ -211,7 +209,7 @@ fn main() -> Result<(), String> {
         renderer.canvas.fill_rect(Rect::new(0, 0, 50, 50))?;
 
         for u in units_list.iter_mut() {
-            if u.last_action_timer == 0 && u.action_queue.len() > 0 && !u.action_path.is_none() {
+            if u.last_action_timer == 0 && u.action_queue.len() > 0 {
                 //  BROKEN ... :(  u.action_queue.keep_only(vec![ActionType::MOVE, ActionType::WANDER, ActionType::DIG]);
                 //  BROKEN ... :( u.action_queue.remove_only(vec![ActionType::WANDER]);
                 display_action_queue(current_race, u.clone());

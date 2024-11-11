@@ -31,12 +31,12 @@ impl Building {
         let offset: i32 = HOME_STARTING_SIZE as i32 / 2;
         let center_coords = match race_type {
             RaceType::ANT => Coords {
-                x: offset,
-                y: offset,
-            },
-            RaceType::HUMAN => Coords {
                 x: WIDTH as i32 / 2,
                 y: HEIGHT as i32 / 2,
+            },
+            RaceType::HUMAN => Coords {
+                x: offset,
+                y: offset,
             },
             RaceType::ALIEN => Coords {
                 x: WIDTH as i32 - offset,

@@ -1,5 +1,5 @@
 use pathfinding::prelude::astar;
-use std::collections::VecDeque;
+use std::{collections::VecDeque, ops::Mul};
 
 use crate::{
     buildings::BuildingType,
@@ -7,7 +7,51 @@ use crate::{
     terrain::{self, MineralType, Terrain, TileType},
 };
 
-use super::{ActionType, RaceType, Unit};
+use super::{ActionType, JobType, RaceType, Unit};
+
+fn get_movement_cost(
+    unit: Unit,
+    is_diagonal: bool,
+    terrain: &Terrain,
+    action: Option<ActionType>,
+    coords: Coords,
+) -> i32 {
+    // return unit.race.diagonal_cost(is_diagonal);
+    unit.race.diagonal_cost(is_diagonal)+
+    if let Some(tile) = terrain.get_data_from_coords(coords) {
+        match (tile, action, unit.job) {
+            (_, None, _) => {
+                if tile.is_diggable() {
+                    0
+                } else if tile.is_walkable() {
+                    unit.race.diagonal_cost(is_diagonal)
+                } else {
+                    0
+                }
+            } // Ghost pathfinding
+            (_, Some(ActionType::DIG), _) => {
+                if tile.is_diggable() {
+                    0
+                } else {
+                    10
+                }
+            }
+            (_, Some(ActionType::MOVE), _) => {
+                if tile.is_walkable() {
+                    0
+                } else {
+                    10
+                }
+            }
+            (_, _, _) => {
+                1
+            }
+        }
+    } else {
+        // Invalid tile
+        100
+    }
+}
 
 impl Terrain {
     pub fn get_data(&self, x: usize, y: usize) -> Option<TileType> {
@@ -48,32 +92,6 @@ impl Terrain {
     }
 }
 impl Unit {
-    fn get_movement_cost(&self, is_diagonal: bool) -> i32 {
-        match self.race {
-            RaceType::ANT => {
-                if is_diagonal {
-                    10
-                } else {
-                    0
-                }
-            }
-            RaceType::HUMAN => {
-                if is_diagonal {
-                    10
-                } else {
-                    10
-                }
-            }
-            RaceType::ALIEN => {
-                if is_diagonal {
-                    0
-                } else {
-                    10
-                }
-            }
-        }
-    }
-
     pub fn find_path(
         &self,
         start: (usize, usize),
@@ -99,30 +117,26 @@ impl Unit {
                 directions
                     .into_iter()
                     .filter_map(|(nx, ny, is_diagonal)| match action {
-                        Some(ActionType::MOVE) => {
-                            if terrain.is_walkable(nx, ny) {
-                                Some(((nx, ny), self.get_movement_cost(is_diagonal)))
+                        Some(action) => {
+                            if terrain.check_data(nx, ny) {
+                                Some((
+                                    (nx, ny),
+                                    get_movement_cost(
+                                        self.clone(),
+                                        is_diagonal,
+                                        &terrain,
+                                        Some(action),
+                                        Coords {
+                                            x: nx as i32,
+                                            y: ny as i32,
+                                        },
+                                    ),
+                                ))
                             } else {
                                 None
                             }
                         }
-                        Some(ActionType::DIG) => {
-                            if terrain.is_diggable(nx, ny) {
-                                Some(((nx, ny), self.get_movement_cost(is_diagonal)))
-                            } else {
-                                None
-                            }
-                        }
-                        None => {
-                            if terrain.is_diggable(nx, ny) {
-                                Some(((nx, ny), self.get_movement_cost(is_diagonal) * 2))
-                            } else if terrain.is_walkable(nx, ny) {
-                                Some(((nx, ny), self.get_movement_cost(is_diagonal) * 0))
-                            } else {
-                                None
-                            }
-                        }
-                        _ => None,
+                        _ => Some(((nx, ny), 0)),
                     })
                     .collect::<Vec<_>>()
             },

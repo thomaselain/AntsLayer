@@ -1,5 +1,7 @@
 mod pathfinding;
 
+use std::ops::Add;
+
 use colored::{ColoredString, Colorize};
 
 use rand::seq::SliceRandom;
@@ -46,6 +48,32 @@ impl RaceType {
             RaceType::ALIEN => 75,
         }
     }
+    fn diagonal_cost(self, is_diagonal: bool) -> i32 {
+        match self {
+            RaceType::HUMAN => {
+                if is_diagonal {
+                    0
+                } else {
+                    0
+                }
+            }
+            RaceType::ANT => {
+                if is_diagonal {
+                    0
+                } else {
+                    0
+                }
+            }
+            RaceType::ALIEN => {
+                if is_diagonal {
+                    0
+                } else {
+                    0
+                }
+            }
+        }
+    }
+    
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -259,7 +287,7 @@ impl Unit {
 
                     match home {
                         Some(coords) => {
-                            if self.coords.distance_in_tiles(&coords) >= 2
+                            if self.coords.distance_in_tiles(&coords) > 15
                                 && self.action_queue.len() == 1
                             {
                                 self.action_path = None;
