@@ -6,11 +6,9 @@ mod terrain;
 mod units;
 mod window;
 
-use buildings::FindHome;
 use camera::Camera;
-use colored::Colorize;
 use coords::Coords;
-use terrain::{Terrain, TileType};
+use terrain::Terrain;
 use units::{display_action_queue, ActionQueue, ActionType, JobType, RaceType, Unit};
 
 use sdl2::{
@@ -18,13 +16,9 @@ use sdl2::{
     keyboard::Keycode,
     mouse::MouseState,
     pixels::Color,
-    rect::{self, Rect},
-    render::Canvas,
-    sys::{SDL_RenderDrawRect, SDL_SetRenderDrawColor},
-    video::Window,
-    VideoSubsystem,
+    rect::Rect,
 };
-use std::{thread::sleep_ms, time::Instant};
+use std::time::Instant;
 use window::{init_sdl2_window, Renderer};
 
 fn main() -> Result<(), String> {
@@ -58,10 +52,10 @@ fn main() -> Result<(), String> {
     /////////////////////// UNITS /////////////////////////////////////////////
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..300 {
+    for _ in 0..100 {
         let mut unit = Unit::new();
-        unit.race = RaceType::ANT;
-        unit.job = JobType::MINER(terrain::MineralType::ROCK);
+       //      unit.race = RaceType::HUMAN;
+       // unit.job = JobType::MINER(terrain::MineralType::IRON);
         unit.action_queue.do_now(ActionType::WANDER, unit.coords);
         units_list.push(unit);
     }
@@ -98,7 +92,7 @@ fn main() -> Result<(), String> {
                     if mouse_btn == sdl2::mouse::MouseButton::Left {
                         for u in &mut units_list {
                             if u.race == current_race {
-                                   u.action_queue.clear();
+                                u.action_queue.clear();
                                 u.action_queue.do_now(
                                     ActionType::MOVE,
                                     Coords {

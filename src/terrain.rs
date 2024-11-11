@@ -9,11 +9,10 @@ use crate::{
     coords::Coords,
     units::{RaceType, Unit},
 };
-use buildings::HOME_STARTING_SIZE;
 use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
 
-pub const HEIGHT: usize = 100;
+pub const HEIGHT: usize = 500;
 pub const WIDTH: usize = HEIGHT;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -62,7 +61,7 @@ impl MineralType {
         }
         None // No mineral found
     }
-    pub fn is_collectable(self) -> bool {
+    pub fn _is_collectable(self) -> bool {
         match self {
             Self::ROCK => false,
             Self::IRON => true,
@@ -80,6 +79,9 @@ pub enum TileType {
     WATER,
 }
 impl TileType {
+    /// AIR
+    /// WATER
+    /// Any Building
     pub fn is_walkable(self) -> bool {
         match self {
             TileType::AIR => true,
@@ -88,7 +90,7 @@ impl TileType {
             _ => false,
         }
     }
-
+    /// Any Mineral
     pub fn is_diggable(self) -> bool {
         match self {
             TileType::Mineral(MineralType::IRON) => true,
@@ -99,6 +101,7 @@ impl TileType {
         }
     }
 }
+
 #[derive(Clone)]
 pub struct Mineral {
     pub r#type: TileType,
@@ -107,14 +110,17 @@ pub struct Mineral {
 }
 
 #[derive(Clone)]
+/// Main structure for terrain manipulation and data storage
+/// Each mineral in minerals have an automaton with set rules for generation in generate_caves()
+/// data contains all map data
 pub struct Terrain {
-    //pub items: Vec<Item>, TODO
     pub buildings: Vec<Building>,
     pub minerals: Vec<Mineral>,
     pub data: Vec<Vec<TileType>>,
 }
 
 impl Terrain {
+    /// True if terrain.get_data(x, y) is walkable (see TileType.is_walkable)
     pub fn is_walkable(&mut self, x: usize, y: usize) -> bool {
         if let Some(tile) = self.get_data(x, y) {
             tile.is_walkable()
@@ -122,6 +128,8 @@ impl Terrain {
             false
         }
     }
+
+    /// True if terrain.get_data(x, y) is walkable (see TileType.is_diggable)
     pub fn is_diggable(&mut self, x: usize, y: usize) -> bool {
         if let Some(tile) = self.get_data(x, y) {
             tile.is_diggable()
@@ -129,6 +137,9 @@ impl Terrain {
             false
         }
     }
+
+    /// Terrain creation
+    /// Needs cleaning (move buildings creation somewhere else)
     pub fn new() -> Terrain {
         let tiles: Vec<Vec<TileType>> = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
         let mut buildings = Vec::new();
@@ -154,6 +165,11 @@ impl Terrain {
         ));
         buildings.push(Building::new(
             RaceType::HUMAN,
+            BuildingType::Stockpile(MineralType::ROCK),
+        ));
+
+        buildings.push(Building::new(
+            RaceType::HUMAN,
             BuildingType::Stockpile(MineralType::GOLD),
         ));
 
@@ -162,6 +178,11 @@ impl Terrain {
             RaceType::ALIEN,
             BuildingType::Stockpile(MineralType::IRON),
         ));
+        buildings.push(Building::new(
+            RaceType::ALIEN,
+            BuildingType::Stockpile(MineralType::ROCK),
+        ));
+
         buildings.push(Building::new(
             RaceType::ALIEN,
             BuildingType::Stockpile(MineralType::GOLD),
@@ -209,8 +230,8 @@ impl Terrain {
                     automaton: Automaton {
                         can_replace: vec![
                             TileType::Mineral(MineralType::ROCK),
-                                TileType::Mineral(MineralType::DIRT), //NO
-                            //TileType::AIR,
+                            TileType::Mineral(MineralType::DIRT), //NO
+                                                                  //TileType::AIR,
                         ],
                         birth_limit: 2,
                         death_limit: 5,
@@ -263,6 +284,7 @@ impl Terrain {
         }
     }
 
+    /// Use mineral.automaton to modify Perlin noise generated map
     pub fn generate_caves(&mut self, mineral: &Mineral) {
         let mut rng = rand::thread_rng();
         let noise: Perlin = Perlin::new(rng.gen());
@@ -307,6 +329,12 @@ impl Terrain {
     fn clear_tiles(&mut self) {
         self.data = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
     }
+
+    /// Main terrain generation
+    /// 
+    /// - Fill with AIR
+    /// - Add minerals
+    /// - Add Buildings
     pub fn generate(&mut self) {
         let minerals_copy: Vec<Mineral> = self.minerals.clone();
 
@@ -324,6 +352,8 @@ impl Terrain {
         }
     }
 
+    /// Dig a circle of radius at center
+    /// Replaces with TileType::AIR
     pub fn dig_radius(&mut self, center: &Coords, radius: u32) {
         let (cx, cy) = (center.x as i32, center.y as i32);
         let radius_squared = (radius * radius) as i32;

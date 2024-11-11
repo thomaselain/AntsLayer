@@ -1,17 +1,14 @@
 mod pathfinding;
 
-use std::ops::Add;
-
 use colored::{ColoredString, Colorize};
 
 use rand::seq::SliceRandom;
 use rand::{self, Rng};
-use sdl2::pixels::Color;
 
-use crate::buildings::{Building, BuildingType, FindHome};
-use crate::coords::{self, Coords};
+use crate::buildings::FindBuilding;
+use crate::coords::Coords;
 use crate::terrain::{self, Terrain};
-use crate::terrain::{Mineral, MineralType, TileType};
+use crate::terrain::{MineralType, TileType};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RaceType {
@@ -19,6 +16,8 @@ pub enum RaceType {
     ANT,
     ALIEN,
 }
+
+/// methods mainly for debug purposes
 impl RaceType {
     pub fn to_colored_string(self) -> ColoredString {
         match self {
@@ -41,39 +40,59 @@ impl RaceType {
             RaceType::HUMAN => 0x0000ffff,
         }
     }
+    /// The lower the value, the higher unit thinks
+    /// ANTS   : Slow thinking speed
+    /// HUMANS : Quick thinking speed
+    /// ALIENS : Medium thinking speed
     pub fn get_thinking_speed(self) -> i32 {
         match self {
-            RaceType::HUMAN => 150,
-            RaceType::ANT => 25,
-            RaceType::ALIEN => 75,
+            RaceType::HUMAN => 1000,
+            RaceType::ANT => 250,
+            RaceType::ALIEN => 150,
         }
     }
+
+    /// The lower the value, the higher unit moves
+    /// ANTS   : Quick moving speed
+    /// HUMANS : Slow moving speed
+    /// ALIENS : Medium moving speed
+    pub fn get_moving_speed(self) -> i32 {
+        match self {
+            RaceType::HUMAN => 100,
+            RaceType::ANT => 200,
+            RaceType::ALIEN => 100,
+        }
+    }
+
+    /// The lower the value, the higher the cost
+    /// ANTS   : prefer straight lines
+    /// HUMANS : don't care
+    /// ALIENS : prefer diagonals
     fn diagonal_cost(self, is_diagonal: bool) -> i32 {
         match self {
             RaceType::HUMAN => {
                 if is_diagonal {
-                    0
+                    1
                 } else {
-                    0
+                    1
                 }
             }
             RaceType::ANT => {
                 if is_diagonal {
-                    0
+                    2
                 } else {
-                    0
+                    1
                 }
             }
             RaceType::ALIEN => {
                 if is_diagonal {
-                    0
+                    1
                 } else {
-                    0
+                    2
                 }
             }
         }
     }
-    
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -87,6 +106,11 @@ pub enum JobType {
 
 impl JobType {
     pub fn get_action(self, terrain: &Terrain, unit: &Unit) -> (ActionType, Coords) {
+        let dest = if let Some(dest) = terrain.buildings.find_building(unit.race, self, terrain) {
+            dest
+        } else {
+            unit.coords
+        };
         match self {
             JobType::MINER(mineral_type) => {
                 if let Some(closest) = mineral_type.find_closest(
@@ -96,10 +120,17 @@ impl JobType {
                 ) {
                     (ActionType::DIG, closest)
                 } else {
-                    (ActionType::WANDER, unit.coords)
+                    (ActionType::WANDER, dest)
                 }
             }
-            _ => (ActionType::WANDER, unit.coords),
+            _ => (ActionType::WANDER, dest),
+        }
+    }
+
+    pub fn get_miner_target(self) -> Option<MineralType> {
+        match self {
+            JobType::MINER(mineral_type) => Some(mineral_type),
+            _ => None,
         }
     }
 }
@@ -141,25 +172,29 @@ pub trait ActionQueue {
 }
 
 impl ActionQueue for Vec<(ActionType, Coords)> {
+    /// Add action at the beginning of self.actiono_queue
     fn do_now(&mut self, action: ActionType, coords: Coords) {
         self.insert(0, (action, coords));
     }
+    /// Add action at the end of self.actiono_queue
     fn do_later(&mut self, actions: ActionType, coords: Coords) {
         self.push((actions, coords));
     }
-    //wip
+    /// Remove actions in self.action_queue that match any action in actions
     fn remove_only(&mut self, actions: Vec<ActionType>) {
         for to_remove in actions {
             self.retain_mut(|(what, coords)| (*what, *coords) == (to_remove, *coords));
         }
     }
-    //wip
+    /// Remove actions in self.action_queue that match no action in actions
     fn keep_only(&mut self, actions: Vec<ActionType>) {
         for to_keep in actions {
             self.retain_mut(|(what, coords)| (*what, *coords) != (to_keep, *coords));
         }
     }
 }
+
+/// Cute display in terminal :)
 impl ActionType {
     pub fn get_ascii(self) -> ColoredString {
         match self {
@@ -172,7 +207,6 @@ impl ActionType {
     }
 }
 
-#[doc = "Unit.speed is thinking speed (in milliseconds) not moving speed"]
 #[derive(Clone)]
 pub struct Unit {
     pub color: u32,
@@ -181,8 +215,10 @@ pub struct Unit {
     pub coords: Coords,
     pub action_queue: Vec<(ActionType, Coords)>,
     pub action_path: Option<(Vec<(usize, usize)>, i32)>,
-    pub speed: i32,
+    pub thinking_speed: i32,
+    pub moving_speed: i32,
     pub last_action_timer: i32,
+    pub last_move_timer: i32,
 }
 
 pub fn display_action_queue(current_race: RaceType, unit: Unit) {
@@ -229,13 +265,13 @@ impl Unit {
             _ => RaceType::ANT,
         };
         let mut rng = rand::thread_rng();
-        let job = match rng.gen_range(0..=6) {
+        let job = match rng.gen_range(0..=3) {
             1 => JobType::MINER(MineralType::IRON),
             2 => JobType::MINER(MineralType::GOLD),
             3 => JobType::MINER(MineralType::ROCK),
-            4 => JobType::BUILDER,
-            5 => JobType::FARMER,
-            6 => JobType::FIGHTER,
+            //         4 => JobType::BUILDER,
+            //         5 => JobType::FARMER,
+            //         6 => JobType::FIGHTER,
             _ => JobType::JOBLESS,
         };
 
@@ -253,46 +289,57 @@ impl Unit {
             coords,
             action_queue: vec![],
             action_path: None,
-            last_action_timer: 0,
-            speed: race.get_thinking_speed(),
+            last_action_timer: race.get_thinking_speed(),
+            last_move_timer: race.get_moving_speed(),
+            thinking_speed: race.get_thinking_speed(),
+            moving_speed: race.get_moving_speed(),
         }
     }
 
     /// Decide what to do next
     pub fn think(&mut self, terrain: &mut Terrain, delta_time: i32) {
         self.last_action_timer += delta_time;
-        if self.last_action_timer >= self.speed {
-            match self.clone().action_queue.first() {
-                Some((ActionType::MOVE, coords)) => {
+        self.last_move_timer += delta_time;
+        match self.clone().action_queue.first() {
+            Some((ActionType::MOVE, coords)) => {
+                if self.last_move_timer >= self.moving_speed {
                     if self.r#move(terrain, *coords).is_none() {
                         self.action_queue.remove(0);
                         self.action_queue.push((ActionType::WANDER, self.coords));
                     }
+                    self.last_move_timer = 0;
                 }
-                Some((ActionType::DIG, coords)) => {
+            }
+            Some((ActionType::DIG, coords)) => {
+                if self.last_action_timer >= self.moving_speed {
                     if self.coords.distance_in_tiles(coords) > 1 {
-                        self.action_queue.insert(0, (ActionType::MOVE, *coords));
+                        // self.action_queue.clear();
+                        self.action_queue.do_now(ActionType::MOVE, *coords);
                     } else {
                         let actions = self.dig(terrain, coords);
-                        if !actions.is_none() {
-                            self.action_queue.remove(0); // Action DIG complétée
+                        if !actions.is_none() && !actions.clone().unwrap().len() > 1 {
+                            //   self.action_queue.remove(0);
                             self.action_queue.append(&mut actions.unwrap());
                         }
                     }
+                    self.last_action_timer = 0;
                 }
-                Some((ActionType::WANDER, coords)) => {
-                    let home = terrain
-                        .buildings
-                        .find_building(self.race, self.job, terrain);
+            }
+            Some((ActionType::WANDER, _)) => {
+                let home = terrain
+                    .buildings
+                    .find_building(self.race, self.job, terrain);
 
-                    match home {
-                        Some(coords) => {
-                            if self.coords.distance_in_tiles(&coords) > 15
+                match home {
+                    Some(coords) => {
+                        if self.last_action_timer >= self.thinking_speed {
+                            if self.coords.distance_in_tiles(&coords) > 5
                                 && self.action_queue.len() == 1
                             {
                                 self.action_path = None;
-                                self.action_queue.push((ActionType::MOVE, coords));
-                            } else if self.action_queue.len() == 1 {
+                                self.action_queue.remove(0);
+                                self.action_queue.do_now(ActionType::MOVE, coords);
+                            } else if self.action_queue.len() < 2 {
                                 self.r#move(
                                     terrain,
                                     Coords {
@@ -306,22 +353,24 @@ impl Unit {
                                     .insert(0, self.job.get_action(&terrain, &self));
                             }
                         }
-                        None => {}
                     }
+                    None => {}
                 }
-
-                Some((ActionType::BUILD, _)) => {}
-
-                Some((ActionType::WAIT, _)) => {
-                    self.action_queue.pop();
-                    println!("Waiting ...");
-                }
-                Some((_, _)) => {}
-                None => {}
             }
-            self.last_action_timer = 0;
+
+            Some((ActionType::BUILD, _)) => {}
+
+            Some((ActionType::WAIT, _)) => {
+                self.action_queue.pop();
+                println!("Waiting ...");
+            }
+
+            Some((_, _)) => {
+            }
+            None => {}
         }
     }
+
     //move
     pub fn r#move(&mut self, terrain: &mut Terrain, m: Coords) -> Option<()> {
         let start = self.coords.to_tuple();
@@ -366,47 +415,61 @@ impl Unit {
         terrain: &mut Terrain,
         coords: &Coords,
     ) -> Option<Vec<(ActionType, Coords)>> {
-        let start = self.coords.to_tuple();
-        let goal = coords.to_tuple();
-
-        // Étape 2 : Si la dernière case walkable n'est pas la destination, commencer à creuser
-        let Some((mut dig_path, _cost)) =
-            self.find_path(self.coords.to_tuple(), goal, terrain.clone(), None)
-        else {
-            return None;
+        let goal = coords;
+        let start = if let Some(start) = terrain
+            .buildings
+            .find_building(self.race, self.job, terrain)
+        {
+            start
+        } else {
+            self.coords
         };
 
-        if !dig_path.is_empty() {
-            if self.coords.distance_in_tiles(&Coords {
-                x: dig_path.first_mut().unwrap().0 as i32,
-                y: dig_path.first_mut().unwrap().1 as i32,
-            }) < 2
-            {
-                terrain.dig_radius(coords, 0);
-                println!("Digging at {:?}", coords);
+        if let Some((mut dig_path, _)) =
+            self.find_path(start.to_tuple(), goal.to_tuple(), terrain.clone(), None)
+        {
+            if !dig_path.is_empty() {
+                let next_pos = Coords {
+                    x: dig_path.first_mut().unwrap().0 as i32,
+                    y: dig_path.first_mut().unwrap().1 as i32,
+                };
+                if let Some(tile) = terrain.get_data_from_coords(*goal) {
+                    if tile.is_diggable() {
+                        if start.distance_in_tiles(&next_pos) < 2 {
+                            //self.action_queue.do_now(ActionType::DIG, next_pos);
+                            // Si assez proche pour creuser
+                            terrain.dig_radius(&goal, 0);
+                            println!("Digging at {:?}", next_pos);
+                        }
+                    } else {
+                        self.action_queue.remove(0);
+                        // Ajouter le chemin pour le creusage à partir de la dernière case walkable
+                        return Some(
+                            vec![(
+                                dig_path
+                                    .into_iter()
+                                    .last() // On saute la position actuelle
+                                    .map(|(x, y)| {
+                                        (
+                                            ActionType::DIG,
+                                            Coords {
+                                                x: x as i32,
+                                                y: y as i32,
+                                            },
+                                        )
+                                    })
+                                    .unwrap()
+                                    .0,
+                                next_pos,
+                            )], //  .collect::<Vec<_>>(),
+                        );
+                    }
+                }
             }
-
-            // Ajouter le chemin pour le creusage à partir de la dernière case walkable
-            let actions = dig_path
-                .into_iter()
-                .skip(2) // On saute la position actuelle
-                .map(|(x, y)| {
-                    (
-                        ActionType::DIG,
-                        Coords {
-                            x: x as i32,
-                            y: y as i32,
-                        },
-                    )
-                })
-                .collect::<Vec<_>>();
-            // Si assez proche pour creuser
-
-            return Some(actions);
         }
-
-        None // Aucun chemin trouvé
+        None
     }
+
     pub fn build(&self) {
         todo!("unit.build")
     }

@@ -1,29 +1,28 @@
-pub const HOME_STARTING_SIZE: u32 = 20;
+use rand::{self, Rng};
 
 use crate::{
     coords::Coords,
-    terrain::{Mineral, MineralType, Terrain, TileType, HEIGHT, WIDTH},
+    terrain::{MineralType, Terrain, HEIGHT, WIDTH},
     units::{JobType, RaceType},
 };
-use rand::{self, Rng};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum BuildingType {
     Hearth,
+    /// A stockpile is used by Units that have a matching job(MineralType)
     Stockpile(MineralType),
 }
 
+/// At terrain generation, a circle is dug around its race's Hearth
+pub const HOME_STARTING_SIZE: u32 = 20;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Building {
+    /// 0 < hp < 100
     pub hp: u32,
     pub coords: Coords,
     pub building_type: BuildingType,
     pub race: RaceType,
-}
-
-pub trait FindHome {
-    fn find_building(&self, race_type: RaceType, job: JobType, terrain: &Terrain)
-        -> Option<Coords>;
 }
 impl Building {
     pub fn new(race_type: RaceType, building_type: BuildingType) -> Building {
@@ -60,7 +59,17 @@ impl Building {
         }
     }
 }
-impl FindHome for Vec<Building> {
+
+
+pub trait FindBuilding {
+    fn find_building(&self, race_type: RaceType, job: JobType, terrain: &Terrain)
+        -> Option<Coords>;
+}
+
+/// impl Vec<Building> to use on terrain.buildings
+impl FindBuilding for Vec<Building> {
+    /// Return Some(coords) if a matching Building was found
+    /// Return none otherwise
     fn find_building(
         &self,
         race_type: RaceType,
@@ -81,5 +90,3 @@ impl FindHome for Vec<Building> {
         }
     }
 }
-
-impl Building {}

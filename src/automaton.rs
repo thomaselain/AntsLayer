@@ -8,18 +8,29 @@ use crate::{
 #[derive(Clone)]
 // Structure Automaton associée à chaque mineral
 pub struct Automaton {
+    /// List of TileType's that this mineral can replace
     pub can_replace: Vec<TileType>,
-    pub birth_limit: usize,
-    pub death_limit: usize,
-    pub iterations: usize,
-    pub perlin_scale: f64,
-    pub perlin_threshold: f64,
-    pub occurence: f64,
+    /// Maximum neighbors of TileType::AIR for the tile to survive
     pub max_air_exposure: usize,
+    /// Minimum neighbors for a tile to be created
+    pub birth_limit: usize,
+    /// Maximum neighbors for a tile to survive
+    pub death_limit: usize,
+    /// How many times we loop through the automaton
+    pub iterations: usize,
+    /// Perlin noise zoom level
+    pub perlin_scale: f64,
+    /// Threshold for Perlin noise
+    /// Between 0.0 and 1.0
+    /// represents how "high" the noise can go
+    pub perlin_threshold: f64,
+    /// Percentage we keep from generated Perlin (from -1.0 to 1.0)
+    /// Set to negative to reverse Perlin generation (you then probably must tweak some stuff in automaton settings)
+    pub occurence: f64,
 }
 
 impl Automaton {
-    // Exemple d'application d'une règle spécifique
+    /// Automaton rules
     pub fn apply_rules(&self, terrain: &mut Terrain, mineral_type: TileType) {
         for _ in 0..self.iterations {
             let mut new_data = terrain.data.clone();
