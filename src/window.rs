@@ -4,12 +4,9 @@ use sdl2::pixels::PixelFormatEnum;
 use sdl2::surface::Surface;
 use sdl2::{rect::Rect, render::WindowCanvas, video::Window, Sdl};
 
-use crate::{
-    buildings::BuildingType,
-    camera::Camera,
-    terrain::{MineralType, Terrain, TileType},
-    units::Unit,
-};
+use crate::minerals::{Mineral, MineralType};
+use crate::terrain::{Terrain, Tile, TileType};
+use crate::{buildings::BuildingType, camera::Camera, units::Unit};
 pub const WIDTH: u32 = 1000;
 pub const HEIGHT: u32 = 1000;
 
@@ -63,7 +60,7 @@ impl Buffer<BufferType> {
     }
     pub fn draw_units(&mut self, units: &[Unit]) {
         if !self.needs_update {
-            //return;
+            return;
         }
         self.buffer.fill(0);
         for u in units {
@@ -81,23 +78,23 @@ impl Buffer<BufferType> {
 
         for x in start_x..end_x {
             for y in start_y..end_y {
-                let color = match terrain.get_data(x, y) {
-                    Some(TileType::AIR) => 0x040201ff,
-                    Some(TileType::Mineral(_)) | Some(TileType::WATER) => {
-                        let mineral = terrain
-                            .minerals
-                            .iter()
-                            .find(|m| terrain.data[x][y] == m.r#type)
-                            .unwrap();
-                        mineral.color
+                let mut color = MineralType::ROCK.color() & 0xff;
+
+                match terrain.get_tile(x, y) {
+                    Some(tile) => {
+                        match tile {
+                            Tile(_, Some(Mineral(mineral_type)), _) => {
+                                color |= mineral_type.color();
+                            }
+                            _ => {}
+                        }
+                        // println!("{:X?}",mineral_type.0.color());
                     }
-                    Some(TileType::Building(t)) => match t {
-                        BuildingType::Hearth => 0x999944ff,
-                        BuildingType::Stockpile(MineralType::IRON) => 0x064f28FF,
-                        _ => 0x364f28FF,
-                    },
-                    None => 0x00000000,
+                    None => {
+                        color = 0x00000000;
+                    }
                 };
+
                 self.draw_tile(x, y, color);
             }
         }
@@ -160,11 +157,10 @@ impl Renderer {
         if self.terrain.needs_update {
             for (i, &color) in self.terrain.buffer.iter().enumerate() {
                 if color != 0x00000000 {
-                    combined_buffer[i] = color;
+                    combined_buffer[i] |= color;
                 }
             }
         }
-        /*  ////////// REVERSED FOR BUILDING DEV /////////////////
         if self.buildings.needs_update {
             for (i, &color) in self.buildings.buffer.iter().enumerate() {
                 if color != 0x00000000 {
@@ -175,21 +171,6 @@ impl Renderer {
 
         if self.units.needs_update {
             for (i, &color) in self.units.buffer.iter().enumerate() {
-                if color != 0x00000000 {
-                    combined_buffer[i] = color;
-                }
-            }
-        }
-        */////////// ////////////////// /////////////////
-        if self.units.needs_update {
-            for (i, &color) in self.units.buffer.iter().enumerate() {
-                if color != 0x00000000 {
-                    combined_buffer[i] = color;
-                }
-            }
-        }
-        if self.buildings.needs_update {
-            for (i, &color) in self.buildings.buffer.iter().enumerate() {
                 if color != 0x00000000 {
                     combined_buffer[i] = color;
                 }
@@ -199,15 +180,15 @@ impl Renderer {
         combined_buffer
     }
 
-    pub fn draw(&mut self, terrain: &Terrain, units: Vec<Unit>, camera: &Camera) {
+    pub fn draw(&mut self, terrain: Terrain, units: Vec<Unit>, camera: &Camera) {
         /*        // RESIZING (todo : dupe it for each buffer)
                 if self.pixel_buffer.len() != (viewport_width * viewport_height) as usize {
                     self.pixel_buffer = vec![0; (viewport_width * viewport_height) as usize];
                     // Recréer le buffer
                 }
         */
-        self.terrain.draw_terrain(&terrain, *camera);
         self.units.draw_units(&units);
+        self.terrain.draw_terrain(&terrain, *camera);
 
         let combined_buffers = self.combine_buffers();
         self.update_pixel_buffer(&combined_buffers, camera);

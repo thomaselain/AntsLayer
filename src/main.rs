@@ -2,22 +2,20 @@ mod automaton;
 mod buildings;
 mod camera;
 mod coords;
+//mod team;
+mod minerals;
 mod terrain;
 mod units;
 mod window;
 
 use camera::Camera;
 use coords::Coords;
+use minerals::MineralType;
+//use team::Team;
 use terrain::Terrain;
 use units::{display_action_queue, ActionQueue, ActionType, JobType, RaceType, Unit};
 
-use sdl2::{
-    event::Event,
-    keyboard::Keycode,
-    mouse::MouseState,
-    pixels::Color,
-    rect::Rect,
-};
+use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
 use std::time::Instant;
 use window::{init_sdl2_window, Renderer};
 
@@ -50,12 +48,17 @@ fn main() -> Result<(), String> {
     /////////////////////////////////////////////////////////
 
     /////////////////////// UNITS /////////////////////////////////////////////
+ //   let teams = vec![
+ //       Team::new(RaceType::ANT),
+ //       Team::new(RaceType::HUMAN),
+ //       Team::new(RaceType::ALIEN),
+ //   ];
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..100 {
+    for _ in 0..300 {
         let mut unit = Unit::new();
-       //      unit.race = RaceType::HUMAN;
-       // unit.job = JobType::MINER(terrain::MineralType::IRON);
+        unit.race = RaceType::ANT;
+        unit.job = JobType::MINER(MineralType::MOSS);
         unit.action_queue.do_now(ActionType::WANDER, unit.coords);
         units_list.push(unit);
     }
@@ -67,7 +70,7 @@ fn main() -> Result<(), String> {
         let delta_time = current_time.duration_since(last_time).as_millis() as i32;
         last_time = current_time;
         renderer.canvas.set_draw_color(Color::RGBA(0, 0, 0, 0));
-        renderer.canvas.clear();
+      //  renderer.canvas.clear();
 
         let mouse_state = MouseState::new(&event_pump);
 
@@ -162,7 +165,7 @@ fn main() -> Result<(), String> {
                     terrain = Terrain::new();
                     terrain.generate();
                     renderer.all_need_update();
-                    renderer.draw(&terrain, units_list.clone(), &camera);
+                    renderer.draw(terrain.clone(), units_list.clone(), &camera);
                     continue;
                 }
                 Event::KeyDown {
@@ -199,18 +202,24 @@ fn main() -> Result<(), String> {
             RaceType::ALIEN => Color::GREEN,
         });
 
-        renderer.draw(&terrain, units_list.clone(), &camera);
+        renderer.draw(terrain.clone(), units_list.clone(), &camera);
         renderer.canvas.fill_rect(Rect::new(0, 0, 50, 50))?;
 
         for u in units_list.iter_mut() {
             if u.last_action_timer == 0 && u.action_queue.len() > 0 {
                 //  BROKEN ... :(  u.action_queue.keep_only(vec![ActionType::MOVE, ActionType::WANDER, ActionType::DIG]);
                 //  BROKEN ... :( u.action_queue.remove_only(vec![ActionType::WANDER]);
-                display_action_queue(current_race, u.clone());
-            }
+                //
+                //
+                // if u.inventory.0.len() > 0 {
+                //     println!("{:?}", u.inventory.clone().to_ascii());
+                // }
+                //
+            display_action_queue(current_race, u.clone());
+        }
             u.think(&mut terrain, delta_time);
         }
-        renderer.units.needs_update = true;
+        //renderer.units.needs_update = true;
 
         renderer.canvas.present();
         // A draw a rectangle which almost fills our window with it !

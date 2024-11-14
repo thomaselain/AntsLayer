@@ -1,13 +1,18 @@
 extern crate automata;
 
+use noise::Min;
+
 use crate::{
-    terrain::{Terrain, TileType},
+    minerals::{self, MineralType},
+    terrain::{Terrain, TerrainType, Tile, TileType},
     window::{HEIGHT, WIDTH},
 };
 
-#[derive(Clone)]
 // Structure Automaton associée à chaque mineral
+#[derive(Clone, PartialEq, Debug)]
 pub struct Automaton {
+    /// Automatons associated MineralType
+    pub mineral_type: MineralType,
     /// List of TileType's that this mineral can replace
     pub can_replace: Vec<TileType>,
     /// Maximum neighbors of TileType::AIR for the tile to survive
@@ -30,33 +35,70 @@ pub struct Automaton {
 }
 
 impl Automaton {
+    pub fn new(mineral_type: MineralType) -> Automaton {
+        Automaton {
+            mineral_type,
+            can_replace: mineral_type.can_replace(),
+            max_air_exposure: mineral_type.max_air_exposure(),
+            birth_limit: mineral_type.birth_limit(),
+            death_limit: mineral_type.death_limit(),
+            iterations: mineral_type.iterations(),
+            perlin_scale: mineral_type.perlin_scale(),
+            perlin_threshold: mineral_type.perlin_threshold(),
+            occurence: mineral_type.occurence(),
+        }
+    }
+
     /// Automaton rules
-    pub fn apply_rules(&self, terrain: &mut Terrain, mineral_type: TileType) {
+    pub fn apply_rules(&self, terrain: &mut Terrain) {
         for _ in 0..self.iterations {
             let mut new_data = terrain.data.clone();
             for x in 1..(WIDTH as usize - 1) {
                 for y in 1..(HEIGHT as usize - 1) {
                     let mut can_replace: bool = false;
-                    for _ in &self.can_replace {
-                        if terrain.get_data(x, y) == Some(mineral_type) {
+                    let mut current_tile: Tile;
+                    if let Some(curr) = terrain.get_tile(x, y) {
+                        current_tile = curr;
+                    } else {
+                        continue;
+                    }
+                    for c_r in &self.can_replace {
+                        if terrain.get_tile(x, y).unwrap().to_tile_type().1 == *c_r {
                             can_replace = true;
                         }
                     }
 
-                    let count_same = terrain.count_same_neighbors(x, y, mineral_type);
-                    let count_air = terrain.count_same_neighbors(x, y, TileType::AIR);
+                    let count_same =
+                        current_tile.count_neighbors(terrain.clone(), current_tile, x, y);
+                    let count_air = current_tile.count_neighbors(
+                        terrain.clone(),
+                        Tile {
+                            0: Some(TerrainType::AIR),
+                            1: current_tile.1,
+                            2: current_tile.2,
+                        },
+                        x,
+                        y,
+                    );
+
                     if can_replace {
-                        if terrain.get_data(x, y) == Some(mineral_type) && can_replace {
-                            if count_same < self.death_limit {
-                                new_data[x][y] = TileType::AIR;
-                            }
-                        } else if terrain.get_data(x, y) == Some(TileType::AIR)
-                            && count_air <= self.max_air_exposure
-                        {
-                            // loop self.priority_list to find out if we replace
-                            if count_same > self.birth_limit {
-                                new_data[x][y] = mineral_type;
-                            }
+                        if count_same < self.death_limit {
+                            new_data[x][y] = Tile {
+                                0: Some(TerrainType::AIR),
+                                1: current_tile.1,
+                                2: current_tile.2,
+                            };
+                        }
+                    } else if current_tile.0 == Some(TerrainType::AIR)
+                        && count_air <= self.max_air_exposure
+                    {
+                        // loop self.priority_list to find out if we replace
+                        if count_same > self.birth_limit {
+                            new_data[x][y] = Tile {
+                                0: None,
+                                1: current_tile.1,
+                                2: current_tile.2,
+                            };
                         }
                     }
                 }

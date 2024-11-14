@@ -1,11 +1,40 @@
 use pathfinding::prelude::astar;
 
 use crate::{
+    buildings::Building,
     coords::Coords,
-    terrain::{Terrain, TileType},
+    minerals::{Mineral, MineralType},
+    terrain::{Terrain, TerrainType, Tile, TileType},
 };
 
 use super::{ActionType, Unit};
+
+impl Tile {
+    /// AIR
+    /// WATER
+    /// Any Building
+    pub fn is_walkable(self) -> bool {
+        match self {
+            Tile(Some(TerrainType::AIR), None, _) => true,
+            Tile(Some(TerrainType::WATER), None, _) => true,
+            Tile(_, Some(Mineral(MineralType::MOSS)), _) => true,
+            Tile(_, _, Some(Building { .. })) => true,
+            _ => false,
+        }
+    }
+    /// Any Mineral
+    pub fn is_diggable(self) -> bool {
+        match self {
+            Tile(_, Some(Mineral(MineralType::DIRT)), _) => true,
+            Tile(_, Some(Mineral(MineralType::ROCK)), _) => true,
+            Tile(_, Some(Mineral(MineralType::IRON)), _) => true,
+            Tile(_, Some(Mineral(MineralType::GOLD)), _) => true,
+            Tile(_, Some(Mineral(MineralType::MOSS)), _) => true,
+
+            _ => false,
+        }
+    }
+}
 
 /// APPLY MOVEMENT COST RULES
 /// returns i32 depending on unit's race, path preference etc
@@ -18,7 +47,7 @@ fn get_movement_cost(
 ) -> i32 {
     // return unit.race.diagonal_cost(is_diagonal);
     unit.race.diagonal_cost(is_diagonal)
-        + if let Some(tile) = terrain.get_data_from_coords(coords) {
+        + if let Some(tile) = terrain.get_tiles_from_coords(coords) {
             match (tile, action, unit.job) {
                 // Ghost pathfinding
                 (_, None, _) => {
@@ -55,8 +84,20 @@ fn get_movement_cost(
 }
 
 impl Terrain {
+    /// True if in terrain range
+    pub fn check_data(&self, x: usize, y: usize) -> bool {
+        if x < self.data.len() && y < self.data[x].len() {
+            match self.data[x][y] {
+                Tile(None, None, None) => false,
+                _ => true,
+            }
+        } else {
+            false
+        }
+    }
+
     /// return Some(self.data[x][y]) with overflow checks
-    pub fn get_data(&self, x: usize, y: usize) -> Option<TileType> {
+    pub fn get_tile(&self, x: usize, y: usize) -> Option<Tile> {
         if self.check_data(x, y) {
             Some(self.data[x][y])
         } else {
@@ -65,43 +106,33 @@ impl Terrain {
     }
 
     /// return Some(self.data[x][y]) with overflow checks
-    pub fn get_data_from_coords(&self, coords: Coords) -> Option<TileType> {
-        self.get_data(coords.x as usize, coords.y as usize)
+    pub fn get_tiles_from_coords(&self, coords: Coords) -> Option<Tile> {
+        self.get_tile(coords.x as usize, coords.y as usize)
     }
 
-    /// True if in terrain range
-    pub fn check_data(&self, x: usize, y: usize) -> bool {
-        if x < self.data.len() && y < self.data[x].len() {
-            true
+    /// True if terrain.get_data(x, y) is walkable (see TileType.is_walkable)
+    pub fn is_walkable(&mut self, x: usize, y: usize) -> bool {
+        if let Some(tile) = self.get_tile(x, y) {
+            tile.is_walkable()
         } else {
             false
         }
     }
 
-    /// Counts tiles around (x,y) that have the same type as tile_type
-    pub fn count_same_neighbors(&mut self, x: usize, y: usize, tile_type: TileType) -> usize {
-        let mut count = 0;
-
-        for dx in -1..=1 {
-            for dy in -1..=1 {
-                if dx == 0 && dy == 0 {
-                    continue;
-                }
-                let nx = x as isize + dx;
-                let ny = y as isize + dy;
-                if self.get_data(nx as usize, ny as usize) == Some(tile_type) {
-                    count += 1;
-                }
-            }
+    /// True if terrain.get_data(x, y) is walkable (see TileType.is_diggable)
+    pub fn is_diggable(&mut self, x: usize, y: usize) -> bool {
+        if let Some(tile) = self.get_tile(x, y) {
+            tile.is_diggable()
+        } else {
+            false
         }
-        count
     }
 }
 
 impl Unit {
-    /// 
+    ///
     /// TO DO : Stop pathfinding  when a limit is reached to improve performance
-    /// 
+    ///
     /// Find shortest path depending on race rules
     /// - see get_movement_cost()
     pub fn find_path(
@@ -183,7 +214,7 @@ impl Unit {
 
                     // Only keep diggable tiles
                     if terrain.is_diggable(x, y) && !target.is_none() {
-                        self.job.get_action(&terrain, self).0; 
+                        self.job.get_action(&terrain, self).0;
                         first_diggable_path.push((x, y));
                         // Keep going until tileType changes
                         break;

@@ -1,112 +1,168 @@
 extern crate noise;
 extern crate sdl2;
 
-use std::collections::VecDeque;
-
 use crate::{
     automaton::Automaton,
     buildings::{self, Building, BuildingType},
     coords::Coords,
-    units::{RaceType, Unit},
+    minerals::{Mineral, MineralType},
+    units::{Item, RaceType},
 };
+
 use noise::{NoiseFn, Perlin};
 use rand::{self, Rng};
 
-pub const HEIGHT: usize = 500;
+pub const HEIGHT: usize = 300;
 pub const WIDTH: usize = HEIGHT;
+pub const AIR: Tile = Tile(Some(TerrainType::AIR), None, None);
+pub const WATER: Tile = Tile(Some(TerrainType::WATER), None, None);
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum MineralType {
-    IRON,
-    GOLD,
-    ROCK,
-    DIRT,
-}
-
-impl MineralType {
-    pub fn find_closest(
-        &self,
-        tile_type: TileType,
-        terrain: &Terrain,
-        unit: Unit,
-    ) -> Option<Coords> {
-        let start = unit.coords;
-        let mut visited = vec![vec![false; WIDTH]; HEIGHT];
-        let mut queue = VecDeque::new();
-
-        queue.push_back((start, 0));
-        visited[start.x as usize][start.y as usize] = true;
-
-        while let Some((coords, distance)) = queue.pop_front() {
-            // Check if the current tile is a mineral
-            if Some(tile_type) == terrain.get_data_from_coords(coords) {
-                return Some(coords);
-            }
-
-            // Add neighboring tiles to the queue
-            for dir in [(0, 1), (1, 0), (0, -1), (-1, 0)] {
-                let neighbor = Coords {
-                    x: coords.x + dir.0,
-                    y: coords.y + dir.1,
-                };
-
-                // Ensure the neighbor is within bounds and not yet visited
-                if terrain.check_data(neighbor.x as usize, neighbor.y as usize)
-                    && !visited[neighbor.x as usize][neighbor.y as usize]
-                {
-                    visited[neighbor.x as usize][neighbor.y as usize] = true;
-                    queue.push_back((neighbor, distance + 1));
-                }
-            }
-        }
-        None // No mineral found
-    }
-    pub fn _is_collectable(self) -> bool {
-        match self {
-            Self::ROCK => false,
-            Self::IRON => true,
-            Self::GOLD => true,
-            Self::DIRT => false,
-        }
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TileType {
-    Building(BuildingType),
     Mineral(MineralType),
+    Building(BuildingType),
+    TerrainType(TerrainType),
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum TerrainType {
     AIR,
     WATER,
 }
-impl TileType {
-    /// AIR
-    /// WATER
-    /// Any Building
-    pub fn is_walkable(self) -> bool {
+
+impl TerrainType {
+    pub fn color(self) -> u32 {
         match self {
-            TileType::AIR => true,
-            TileType::WATER => true,
-            TileType::Building(_) => true,
-            _ => false,
-        }
-    }
-    /// Any Mineral
-    pub fn is_diggable(self) -> bool {
-        match self {
-            TileType::Mineral(MineralType::IRON) => true,
-            TileType::Mineral(MineralType::GOLD) => true,
-            TileType::Mineral(MineralType::ROCK) => true,
-            TileType::Mineral(MineralType::DIRT) => false,
-            _ => false,
+            TerrainType::AIR => 0x040201ff,
+            TerrainType::WATER => 0x334499ff,
         }
     }
 }
 
-#[derive(Clone)]
-pub struct Mineral {
-    pub r#type: TileType,
-    pub automaton: Automaton,
-    pub color: u32,
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Tile(
+    pub Option<TerrainType>,
+    pub Option<Mineral>,
+    pub Option<Building>,
+);
+
+impl Tile {
+    //                 .
+    //DANGEROUS ZONE  /|\
+    // DONT USE :)   /_o_\
+    //
+    pub fn buildings(self) -> Building {
+        self.2.unwrap()
+    }
+    pub fn to_tile_type(&mut self) -> (TileType, TileType, TileType) {
+        let mut new_tile = (
+            TileType::TerrainType(TerrainType::AIR),
+            TileType::Mineral(MineralType::MOSS),
+            TileType::Building(BuildingType::Hearth),
+        );
+
+        match self {
+            Tile(Some(terrain), _, _) => new_tile.0 = TileType::TerrainType(*terrain),
+            Tile(_, Some(mineral), _) => new_tile.1 = TileType::Mineral(mineral.0),
+            Tile(_, _, Some(building)) => new_tile.2 = TileType::Building(building.0),
+            _ => {
+                todo!("Empty tiles conversion")
+            }
+        }
+        new_tile
+    }
+    pub fn get_terrain(self) -> Option<TerrainType> {
+        self.0
+    }
+    pub fn get_minerals(self) -> Option<Mineral> {
+        self.1
+    }
+    pub fn get_buildings(self) -> Option<Building> {
+        self.2
+    }
+    pub fn add_single(&mut self, add: TileType) {
+        match add {
+            TileType::TerrainType(terrain_type) => {
+                self.0 = Some(terrain_type);
+            }
+            TileType::Mineral(mineral_type) => {
+                self.1 = Some(Mineral(mineral_type));
+            }
+            TileType::Building(building_type) => match self.2 {
+                Some(building) => {
+                    self.2 = Some(Building(building_type, building.1));
+                }
+                None => todo!("What is this building ???"),
+            },
+        }
+    }
+    pub fn add(mut self, add: Tile) {
+        match self {
+            Tile(None, _, _) => self.0 = add.0,
+            Tile(_, None, _) => self.1 = add.1,
+            Tile(_, _, None) => self.2 = add.2,
+            _ => {}
+        };
+    }
+
+    /// Counts tiles around (x,y) that have the same type as tile_type
+    pub fn count_neighbors(&mut self, terrain: Terrain, tile: Tile, x: usize, y: usize) -> usize {
+        let mut count = 0;
+
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                if dx == 0 && dy == 0 {
+                    continue;
+                }
+                let nx = x as isize + dx;
+                let ny = y as isize + dy;
+                match terrain.get_tile(nx as usize, ny as usize) {
+                    Some(Tile(_, Some(mineral), _)) => {
+                        if mineral == Mineral(tile.1.unwrap().0) {
+                            count += 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        count
+    }
+}
+
+impl TileType {
+    pub fn to_ascii(self) -> String {
+        match self {
+            TileType::Mineral(mineral_type) => mineral_type.to_ascii(),
+            _ => " ".to_string(),
+        }
+    }
+    /// Can be harvested
+    /// ROCK - for
+    /// IRON - for
+    /// GOLD - for
+    /// MOSS - for breeding
+    pub fn is_collectable(self) -> bool {
+        match self {
+            TileType::Mineral(MineralType::ROCK) => false,
+            TileType::Mineral(MineralType::IRON) => false,
+            TileType::Mineral(MineralType::GOLD) => false,
+            TileType::Mineral(MineralType::MOSS) => true,
+            _ => false,
+        }
+    }
+    pub fn into_mineral(self) -> Option<Mineral>{
+match self {
+    TileType::Mineral(mineral_type) => Some(Mineral(mineral_type)),
+    _ => None,
+}    }
+    pub fn into_item(self) -> Option<Item> {
+        if self.is_collectable() {
+            Some(Item::Mineral(self))
+        } else {
+            return None;
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -114,242 +170,160 @@ pub struct Mineral {
 /// Each mineral in minerals have an automaton with set rules for generation in generate_caves()
 /// data contains all map data
 pub struct Terrain {
-    pub buildings: Vec<Building>,
-    pub minerals: Vec<Mineral>,
-    pub data: Vec<Vec<TileType>>,
+    //pub buildings: Vec<Building>,
+    //pub minerals: Vec<Mineral>,
+    pub data: Vec<Vec<Tile>>,
+    pub automatons: Vec<Automaton>,
 }
 
 impl Terrain {
-    /// True if terrain.get_data(x, y) is walkable (see TileType.is_walkable)
-    pub fn is_walkable(&mut self, x: usize, y: usize) -> bool {
-        if let Some(tile) = self.get_data(x, y) {
-            tile.is_walkable()
-        } else {
-            false
-        }
-    }
-
-    /// True if terrain.get_data(x, y) is walkable (see TileType.is_diggable)
-    pub fn is_diggable(&mut self, x: usize, y: usize) -> bool {
-        if let Some(tile) = self.get_data(x, y) {
-            tile.is_diggable()
-        } else {
-            false
-        }
-    }
-
     /// Terrain creation
     /// Needs cleaning (move buildings creation somewhere else)
     pub fn new() -> Terrain {
-        let tiles: Vec<Vec<TileType>> = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
+        let tiles: Vec<Vec<Tile>> = vec![vec![AIR; WIDTH as usize]; HEIGHT as usize];
         let mut buildings = Vec::new();
+        let automatons = Vec::new();
 
-        buildings.push(Building::new(RaceType::ANT, BuildingType::Hearth));
-        buildings.push(Building::new(
-            RaceType::ANT,
+        // ANT //
+        buildings.push(Building(BuildingType::Hearth, RaceType::ANT));
+        buildings.push(Building(
             BuildingType::Stockpile(MineralType::IRON),
-        ));
-        buildings.push(Building::new(
             RaceType::ANT,
-            BuildingType::Stockpile(MineralType::ROCK),
         ));
-        buildings.push(Building::new(
+        buildings.push(Building(
+            BuildingType::Stockpile(MineralType::ROCK),
             RaceType::ANT,
+        ));
+        buildings.push(Building(
             BuildingType::Stockpile(MineralType::GOLD),
+            RaceType::ANT,
+        ));
+        buildings.push(Building(
+            BuildingType::Stockpile(MineralType::MOSS),
+            RaceType::ANT,
         ));
 
-        buildings.push(Building::new(RaceType::HUMAN, BuildingType::Hearth));
-        buildings.push(Building::new(
-            RaceType::HUMAN,
+        // HUMAN //
+        buildings.push(Building(BuildingType::Hearth, RaceType::HUMAN));
+        buildings.push(Building(
             BuildingType::Stockpile(MineralType::IRON),
-        ));
-        buildings.push(Building::new(
             RaceType::HUMAN,
+        ));
+        buildings.push(Building(
             BuildingType::Stockpile(MineralType::ROCK),
-        ));
-
-        buildings.push(Building::new(
             RaceType::HUMAN,
+        ));
+        buildings.push(Building(
             BuildingType::Stockpile(MineralType::GOLD),
+            RaceType::HUMAN,
+        ));
+        buildings.push(Building(
+            BuildingType::Stockpile(MineralType::MOSS),
+            RaceType::HUMAN,
         ));
 
-        buildings.push(Building::new(RaceType::ALIEN, BuildingType::Hearth));
-        buildings.push(Building::new(
-            RaceType::ALIEN,
+        // ALIEN //
+        buildings.push(Building(BuildingType::Hearth, RaceType::ALIEN));
+        buildings.push(Building(
             BuildingType::Stockpile(MineralType::IRON),
-        ));
-        buildings.push(Building::new(
             RaceType::ALIEN,
+        ));
+        buildings.push(Building(
             BuildingType::Stockpile(MineralType::ROCK),
-        ));
-
-        buildings.push(Building::new(
             RaceType::ALIEN,
+        ));
+        buildings.push(Building(
             BuildingType::Stockpile(MineralType::GOLD),
+            RaceType::ALIEN,
+        ));
+        buildings.push(Building(
+            BuildingType::Stockpile(MineralType::MOSS),
+            RaceType::ALIEN,
         ));
 
         Terrain {
             data: tiles,
-            minerals: vec![
-                Mineral {
-                    r#type: TileType::Mineral(MineralType::ROCK),
-                    color: 0x303030FF,
-                    automaton: Automaton {
-                        can_replace: vec![TileType::AIR, TileType::Mineral(MineralType::DIRT)],
-                        birth_limit: 5,
-                        death_limit: 5,
-                        iterations: 0,
-                        perlin_scale: 0.05,
-                        perlin_threshold: 0.05,
-                        occurence: 1.0,
-                        max_air_exposure: 5,
-                    },
-                },
-                Mineral {
-                    r#type: TileType::Mineral(MineralType::DIRT),
-                    color: 0x140c07ff,
-                    automaton: Automaton {
-                        can_replace: vec![
-                            //TileType::Mineral(MineralType::ROCK),
-                            // TileType::Mineral(MineralType::DIRT),
-                            TileType::AIR,
-                            TileType::WATER,
-                        ],
-                        birth_limit: 5,
-                        death_limit: 6,
-                        iterations: 0,
-                        perlin_scale: 0.045,
-                        perlin_threshold: 0.37,
-                        occurence: 1.0,
-                        max_air_exposure: 5,
-                    },
-                },
-                Mineral {
-                    r#type: TileType::Mineral(MineralType::IRON),
-                    color: 0xa89172ff,
-                    automaton: Automaton {
-                        can_replace: vec![
-                            TileType::Mineral(MineralType::ROCK),
-                            TileType::Mineral(MineralType::DIRT), //NO
-                                                                  //TileType::AIR,
-                        ],
-                        birth_limit: 2,
-                        death_limit: 5,
-                        iterations: 7,
-                        perlin_scale: 0.09,
-                        perlin_threshold: 0.01,
-                        occurence: 0.8,
-                        max_air_exposure: 2,
-                    },
-                },
-                Mineral {
-                    r#type: TileType::Mineral(MineralType::GOLD),
-                    color: 0xffff1cff,
-                    automaton: Automaton {
-                        can_replace: vec![
-                            TileType::Mineral(MineralType::ROCK),
-                            // TileType::Mineral(MineralType::DIRT),
-                        ],
-                        birth_limit: 8,
-                        death_limit: 4,
-                        iterations: 5,
-                        perlin_scale: 0.03,
-                        perlin_threshold: 0.9,
-                        occurence: -1.0,
-                        max_air_exposure: 8,
-                    },
-                },
-                Mineral {
-                    r#type: TileType::WATER,
-                    color: 0x334499ff,
-                    automaton: Automaton {
-                        can_replace: vec![
-                            TileType::AIR,
-                            TileType::Mineral(MineralType::DIRT),
-                            //    TileType::Mineral(MineralType::ROCK),
-                            //    TileType::Mineral(MineralType::IRON),
-                            //   TileType::Mineral(MineralType::GOLD),
-                        ],
-                        birth_limit: 1,
-                        death_limit: 5,
-                        iterations: 10,
-                        perlin_scale: 0.06,
-                        perlin_threshold: 0.1,
-                        occurence: -1.0,
-                        max_air_exposure: 5,
-                    },
-                },
-            ],
-            buildings,
+            automatons,
         }
     }
 
     /// Use mineral.automaton to modify Perlin noise generated map
-    pub fn generate_caves(&mut self, mineral: &Mineral) {
+    pub fn generate_caves(&mut self, automaton: Automaton) {
         let mut rng = rand::thread_rng();
         let noise: Perlin = Perlin::new(rng.gen());
-        println!("Color = {:#X}", mineral.color); // Ajout pour le debug
-        if mineral.automaton.occurence == 0.0 {
+        println!("Color = {:#X}", automaton.mineral_type.color()); // Ajout pour le debug
+        if automaton.mineral_type.occurence() == 0.0 {
             return;
         } // Set to 0.0 to skip (for testing)
 
         for x in 0..WIDTH as usize {
             for y in 0..HEIGHT as usize {
-                let tile = self.get_data(x, y);
-                let mut can_replace: bool = false;
+                let tile = if let Some(t) = self.get_tile(x, y) {
+                    t
+                } else {
+                    continue;
+                };
 
-                for t in &mineral.automaton.can_replace {
-                    if tile.unwrap() == *t {
-                        can_replace = true;
-                    }
-                }
                 let noise_value = noise.get([
-                    x as f64 * mineral.automaton.perlin_scale,
-                    y as f64 * mineral.automaton.perlin_scale,
+                    x as f64 * automaton.mineral_type.perlin_scale(),
+                    y as f64 * automaton.mineral_type.perlin_scale(),
                 ]);
-                if can_replace {
-                    match tile {
-                        Some(_) => {
-                            if noise_value
-                                < mineral.automaton.perlin_threshold * mineral.automaton.occurence
-                            {
-                                self.data[x][y] = mineral.r#type;
-                            }
-                        }
-                        None => panic!("oupsi"),
+
+                if noise_value
+                    < automaton.mineral_type.perlin_threshold() * automaton.mineral_type.occurence()
+                {
+                    for c_r in &automaton.mineral_type.can_replace() {
+                        self.data[x][y] = Tile(
+                            self.data[x][y].0,
+                            c_r.into_mineral(),
+                            self.data[x][y].2,
+                        );
+                        continue;
                     }
                 }
+
+                //match tile {
+                //    Tile(_, _, _) => {
+                //        for c_r in &automaton.mineral_type.can_replace() {
+                //            println!("salut ! {:?} ", automaton.mineral_type.can_replace());
+                //            println!("????????");
+                //            println!("oh");
+                //    }
+                //    _ => {}
+                //}
             }
         }
-        // Application des règles de l'automate cellulaire
-        mineral.automaton.apply_rules(self, mineral.r#type);
-        //  mineral.automaton.apply_rules(self, TileType::AIR);
+        automaton.apply_rules(self);
     }
 
     fn clear_tiles(&mut self) {
-        self.data = vec![vec![TileType::AIR; WIDTH as usize]; HEIGHT as usize];
+        self.data = vec![vec![AIR; WIDTH as usize]; HEIGHT as usize];
     }
 
     /// Main terrain generation
-    /// 
+    ///
     /// - Fill with AIR
     /// - Add minerals
     /// - Add Buildings
     pub fn generate(&mut self) {
-        let minerals_copy: Vec<Mineral> = self.minerals.clone();
-
+        // Fill with AIR
         self.clear_tiles();
-        for m in minerals_copy {
-            self.generate_caves(&m);
-        }
-        for b in self.buildings.clone() {
-            if b.building_type == BuildingType::Hearth {
-                // Dig around Hearth (Starting base)
-                self.dig_radius(&b.coords, buildings::HOME_STARTING_SIZE);
-            }
-            self.data[b.coords.x as usize][b.coords.y as usize] =
-                TileType::Building(b.building_type);
-        }
+
+        // Generate terrain layer by layer
+        // self.generate_caves(Automaton::new(MineralType::IRON));
+        self.generate_caves(Automaton::new(MineralType::ROCK));
+        self.generate_caves(Automaton::new(MineralType::GOLD));
+        self.generate_caves(Automaton::new(MineralType::DIRT));
+        self.generate_caves(Automaton::new(MineralType::MOSS));
+
+        // // Add buildings
+        // for b in self.buildings.clone() {
+        //     if b.building_type == TileType::Building(BuildingType::Hearth) {
+        //         // Dig around Hearth (Starting base)
+        //         self.dig_radius(&b.coords, buildings::HOME_STARTING_SIZE);
+        //     }
+        //     self.data[b.coords.x as usize][b.coords.y as usize].add(Tile(None, None, Some(b)));
+        // }
     }
 
     /// Dig a circle of radius at center
@@ -364,8 +338,8 @@ impl Terrain {
                 let dy = y - cy;
                 // if !(x == center.x && y == center.y) {
                 if dx * dx + dy * dy <= radius_squared {
-                    if let Some(_) = self.get_data(x as usize, y as usize) {
-                        self.data[x as usize][y as usize] = TileType::AIR; // Dig
+                    if let Some(_) = self.get_tile(x as usize, y as usize) {
+                        self.data[x as usize][y as usize] = AIR; // Dig
                     }
                 }
                 //}
