@@ -1,12 +1,10 @@
 use std::collections::VecDeque;
 
-use crate::{
-    automaton::Automaton,
-    buildings::{self, Building, BuildingType},
-    coords::Coords,
-    terrain::{self, Terrain, TerrainType, Tile, TileType, HEIGHT, WIDTH},
-    units::{Item, RaceType, Unit},
-};
+use coords::Coords;
+
+use crate::{map::terrain::TerrainType, units::Unit};
+
+use super::{Map, Tile, TileType, HEIGHT, WIDTH};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum MineralType {
@@ -27,6 +25,9 @@ impl Mineral {
 }
 
 impl MineralType {
+    pub fn to_tile_type(self) -> TileType {
+        TileType::Mineral(self)
+    }
     pub fn can_replace(self) -> Vec<TileType> {
         match self {
             MineralType::IRON => {
@@ -39,8 +40,8 @@ impl MineralType {
                 vec![
                     TileType::TerrainType(TerrainType::AIR),
                     TileType::Mineral(MineralType::IRON),
+                    TileType::Mineral(MineralType::ROCK),
                 ]
-    
             }
             MineralType::ROCK => {
                 vec![
@@ -53,9 +54,7 @@ impl MineralType {
                 vec![TileType::TerrainType(TerrainType::AIR)]
             }
             MineralType::MOSS => {
-                vec![
-                    TileType::TerrainType(TerrainType::WATER),
-                ]
+                vec![TileType::TerrainType(TerrainType::WATER)]
             }
         }
     }
@@ -108,8 +107,8 @@ impl MineralType {
         match self {
             MineralType::IRON => 0.8,
             MineralType::GOLD => -1.0,
-            MineralType::ROCK => 1.0,
-            MineralType::MOSS => 1.0,
+            MineralType::ROCK => 0.5,
+            MineralType::MOSS => 0.5,
             MineralType::DIRT => 1.0,
         }
     }
@@ -142,32 +141,29 @@ impl MineralType {
         }
     }
 
-    pub fn find_closest(&self, tile: Tile, terrain: &Terrain, unit: Unit) -> Option<Coords> {
+    pub fn find_closest(&self, tile: Tile, map: &Map, unit: Unit) -> Option<Coords> {
         let start = unit.coords;
         let mut visited = vec![vec![false; WIDTH]; HEIGHT];
         let mut queue = VecDeque::new();
 
         queue.push_back((start, 0));
-        visited[start.x as usize][start.y as usize] = true;
+        visited[start.x() as usize][start.y() as usize] = true;
 
         while let Some((coords, distance)) = queue.pop_front() {
             // Check if the current tile is a mineral
-            if Some(tile) == terrain.get_tiles_from_coords(coords) {
+            if Ok(tile) == map.get_tile_from_coords(coords) {
                 return Some(coords);
             }
 
             // Add neighboring tiles to the queue
             for dir in [(0, 1), (1, 0), (0, -1), (-1, 0)] {
-                let neighbor = Coords {
-                    x: coords.x + dir.0,
-                    y: coords.y + dir.1,
-                };
+                let neighbor = Coords(coords.x() + dir.0, coords.y() + dir.1);
 
                 // Ensure the neighbor is within bounds and not yet visited
-                if terrain.check_data(neighbor.x as usize, neighbor.y as usize)
-                    && !visited[neighbor.x as usize][neighbor.y as usize]
+                if map.check_data(neighbor.x() as usize, neighbor.y() as usize)
+                    && !visited[neighbor.x() as usize][neighbor.y() as usize]
                 {
-                    visited[neighbor.x as usize][neighbor.y as usize] = true;
+                    visited[neighbor.x() as usize][neighbor.y() as usize] = true;
                     queue.push_back((neighbor, distance + 1));
                 }
             }

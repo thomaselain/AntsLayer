@@ -1,19 +1,18 @@
-mod automaton;
-mod buildings;
 mod camera;
-mod coords;
+mod map;
 //mod team;
-mod minerals;
-mod terrain;
 mod units;
 mod window;
 
 use camera::Camera;
 use coords::Coords;
-use minerals::MineralType;
 //use team::Team;
-use terrain::Terrain;
-use units::{display_action_queue, ActionQueue, ActionType, JobType, RaceType, Unit};
+
+use map::{
+    minerals::{MineralType},
+    Map, TileType,
+};
+use units::{display_action_queue, jobs::JobType, ActionQueue, ActionType, RaceType, Unit};
 
 use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
 use std::time::Instant;
@@ -25,7 +24,7 @@ fn main() -> Result<(), String> {
     let mut prev_mouse_x = 0;
     let mut prev_mouse_y = 0;
 
-    let mut camera = Camera::new(window::WIDTH, window::HEIGHT);
+    let mut camera = Camera::new(window::WIDTH as u32, window::HEIGHT as u32);
     let (sdl_context, win) = init_sdl2_window();
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut renderer: Renderer = Renderer::new(
@@ -33,36 +32,22 @@ fn main() -> Result<(), String> {
         window::WIDTH as usize,
         window::HEIGHT as usize,
     );
-
-    /////////////////////// TERRAIN ///////////////////////////////////////////
     let mut last_time = Instant::now();
 
-    let mut terrain = Terrain::new();
-    terrain.generate();
-    /////////////////////////////////////////////////////////
+    let mut map = Map::new();
+    map.generate()
+        .expect("Map generation failed for some reason");
 
-    /////////////////////// BUILDINGS //////////////////////////////////////////
-    //
-    //
-    //
-    /////////////////////////////////////////////////////////
-
-    /////////////////////// UNITS /////////////////////////////////////////////
- //   let teams = vec![
- //       Team::new(RaceType::ANT),
- //       Team::new(RaceType::HUMAN),
- //       Team::new(RaceType::ALIEN),
- //   ];
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..300 {
+    for _ in 0..100 {
         let mut unit = Unit::new();
         unit.race = RaceType::ANT;
-        unit.job = JobType::MINER(MineralType::MOSS);
+        unit.job = JobType::MINER(TileType::Mineral(MineralType::MOSS));
         unit.action_queue.do_now(ActionType::WANDER, unit.coords);
         units_list.push(unit);
     }
-    /////////////////////////////////////////////////////////
+
     renderer.all_need_update();
 
     '_main: loop {
@@ -70,7 +55,7 @@ fn main() -> Result<(), String> {
         let delta_time = current_time.duration_since(last_time).as_millis() as i32;
         last_time = current_time;
         renderer.canvas.set_draw_color(Color::RGBA(0, 0, 0, 0));
-      //  renderer.canvas.clear();
+        //  renderer.canvas.clear();
 
         let mouse_state = MouseState::new(&event_pump);
 
@@ -98,10 +83,10 @@ fn main() -> Result<(), String> {
                                 u.action_queue.clear();
                                 u.action_queue.do_now(
                                     ActionType::MOVE,
-                                    Coords {
-                                        x: (x as f32 * camera.zoom) as i32,
-                                        y: (y as f32 * camera.zoom) as i32,
-                                    },
+                                    Coords(
+                                        (x as f32 * camera.zoom) as i32,
+                                        (y as f32 * camera.zoom) as i32,
+                                    ),
                                 );
                             }
                         }
@@ -116,10 +101,10 @@ fn main() -> Result<(), String> {
                                 //  u.action_queue.clear();
                                 u.action_queue.do_now(
                                     ActionType::DIG,
-                                    Coords {
-                                        x: (x as f32 * camera.zoom) as i32,
-                                        y: (y as f32 * camera.zoom) as i32,
-                                    },
+                                    Coords(
+                                        (x as f32 * camera.zoom) as i32,
+                                        (y as f32 * camera.zoom) as i32,
+                                    ),
                                 );
                             }
                         }
@@ -136,8 +121,8 @@ fn main() -> Result<(), String> {
                         let delta_y = mouse_y - prev_mouse_y;
                         let delta_x = mouse_x - prev_mouse_x;
 
-                        camera.position.x = camera.position.x - delta_x as i32;
-                        camera.position.y = camera.position.y - delta_y as i32;
+                        camera.position.0 = camera.position.x() - delta_x as i32;
+                        camera.position.1 = camera.position.y() - delta_y as i32;
 
                         prev_mouse_x = mouse_x;
                         prev_mouse_y = mouse_y;
@@ -162,10 +147,11 @@ fn main() -> Result<(), String> {
                     keycode: Some(Keycode::R),
                     ..
                 } => {
-                    terrain = Terrain::new();
-                    terrain.generate();
+                    map = Map::new();
+                    map.generate()
+                        .expect("Map generation failed for some reason");
                     renderer.all_need_update();
-                    renderer.draw(terrain.clone(), units_list.clone(), &camera);
+                    renderer.draw(map.clone(), units_list.clone(), &camera);
                     continue;
                 }
                 Event::KeyDown {
@@ -175,7 +161,6 @@ fn main() -> Result<(), String> {
                     for u in units_list.iter_mut() {
                         if u.race == current_race {
                             renderer.render_text("Dig", 0, 0)?;
-                            u.action_queue.insert(0, u.job.get_action(&terrain, &u));
                         }
                     }
                 }
@@ -202,7 +187,7 @@ fn main() -> Result<(), String> {
             RaceType::ALIEN => Color::GREEN,
         });
 
-        renderer.draw(terrain.clone(), units_list.clone(), &camera);
+        renderer.draw(map.clone(), units_list.clone(), &camera);
         renderer.canvas.fill_rect(Rect::new(0, 0, 50, 50))?;
 
         for u in units_list.iter_mut() {
@@ -215,11 +200,11 @@ fn main() -> Result<(), String> {
                 //     println!("{:?}", u.inventory.clone().to_ascii());
                 // }
                 //
-            display_action_queue(current_race, u.clone());
+                display_action_queue(current_race, u.clone());
+            }
+            u.think(&mut map, delta_time);
         }
-            u.think(&mut terrain, delta_time);
-        }
-        //renderer.units.needs_update = true;
+        //renderer.all_need_update();
 
         renderer.canvas.present();
         // A draw a rectangle which almost fills our window with it !

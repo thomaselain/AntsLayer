@@ -14,6 +14,7 @@ version = "0.1.0"
 dependencies = [
  "automata",
  "colored",
+ "coords",
  "gl",
  "gl_constants",
  "gl_loader",
@@ -78,6 +79,10 @@ dependencies = [
  "lazy_static",
  "windows-sys",
 ]
+
+[[package]]
+name = "coords"
+version = "0.1.0"
 
 [[package]]
 name = "deprecate-until"

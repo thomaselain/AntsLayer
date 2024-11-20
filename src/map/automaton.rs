@@ -1,12 +1,6 @@
+use super::{minerals::MineralType, terrain::TerrainType, Map, Tile, TileType, HEIGHT, WIDTH};
+
 extern crate automata;
-
-use noise::Min;
-
-use crate::{
-    minerals::{self, MineralType},
-    terrain::{Terrain, TerrainType, Tile, TileType},
-    window::{HEIGHT, WIDTH},
-};
 
 // Structure Automaton associée à chaque mineral
 #[derive(Clone, PartialEq, Debug)]
@@ -50,28 +44,27 @@ impl Automaton {
     }
 
     /// Automaton rules
-    pub fn apply_rules(&self, terrain: &mut Terrain) {
+    pub fn apply_rules(&self, map: &mut Map) {
         for _ in 0..self.iterations {
-            let mut new_data = terrain.data.clone();
+            let mut new_data = map.data.clone();
             for x in 1..(WIDTH as usize - 1) {
                 for y in 1..(HEIGHT as usize - 1) {
                     let mut can_replace: bool = false;
                     let mut current_tile: Tile;
-                    if let Some(curr) = terrain.get_tile(x, y) {
+                    if let Ok(curr) = map.get_tile(x, y) {
                         current_tile = curr;
                     } else {
                         continue;
                     }
                     for c_r in &self.can_replace {
-                        if terrain.get_tile(x, y).unwrap().to_tile_type().1 == *c_r {
+                        if map.get_tile(x, y).unwrap().to_tile_type().1 == Some(*c_r) {
                             can_replace = true;
                         }
                     }
 
-                    let count_same =
-                        current_tile.count_neighbors(terrain.clone(), current_tile, x, y);
+                    let count_same = current_tile.count_neighbors(map.clone(), current_tile, x, y);
                     let count_air = current_tile.count_neighbors(
-                        terrain.clone(),
+                        map.clone(),
                         Tile {
                             0: Some(TerrainType::AIR),
                             1: current_tile.1,
@@ -103,7 +96,7 @@ impl Automaton {
                     }
                 }
             }
-            terrain.data = new_data;
+            map.data = new_data;
         }
     }
 }

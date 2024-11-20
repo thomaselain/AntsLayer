@@ -1,14 +1,14 @@
 use rand::{self, Rng};
-use rusttype::{point, Font, PositionedGlyph, Scale};
+use rusttype::{point, Font, Scale};
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::surface::Surface;
 use sdl2::{rect::Rect, render::WindowCanvas, video::Window, Sdl};
 
-use crate::minerals::{Mineral, MineralType};
-use crate::terrain::{Terrain, Tile, TileType};
-use crate::{buildings::BuildingType, camera::Camera, units::Unit};
-pub const WIDTH: u32 = 1000;
-pub const HEIGHT: u32 = 1000;
+use crate::map::minerals::{Mineral, MineralType};
+use crate::map::{Map, Tile};
+use crate::{camera::Camera, units::Unit};
+pub const WIDTH: u32 = 600;
+pub const HEIGHT: u32 = 600;
 
 pub fn init_sdl2_window() -> (sdl2::Sdl, Window) {
     // Initialiser SDL2
@@ -51,8 +51,8 @@ impl Buffer<BufferType> {
 
 impl Buffer<BufferType> {
     pub fn draw_unit(&mut self, u: &Unit) {
-        let x: usize = u.coords.x as usize;
-        let y: usize = u.coords.y as usize;
+        let x: usize = u.coords.x() as usize;
+        let y: usize = u.coords.y() as usize;
 
         if x < WIDTH as usize && y < HEIGHT as usize {
             self.draw_tile(x, y, u.color);
@@ -68,12 +68,12 @@ impl Buffer<BufferType> {
         }
     }
 
-    pub fn draw_terrain(&mut self, terrain: &Terrain, camera: Camera) {
-        let start_x = (camera.position.x as f32 / camera.zoom).max(0.0) as usize;
-        let start_y = (camera.position.y as f32 / camera.zoom).max(0.0) as usize;
-        let end_x = ((camera.position.x as f32 + camera.screen_width as f32) * camera.zoom)
+    pub fn draw_terrain(&mut self, terrain: &Map, camera: Camera) {
+        let start_x = (camera.position.x() as f32 / camera.zoom).max(0.0) as usize;
+        let start_y = (camera.position.y() as f32 / camera.zoom).max(0.0) as usize;
+        let end_x = ((camera.position.x() as f32 + camera.screen_width as f32) * camera.zoom)
             .min(WIDTH as f32) as usize;
-        let end_y = ((camera.position.y as f32 + camera.screen_height as f32) * camera.zoom)
+        let end_y = ((camera.position.y() as f32 + camera.screen_height as f32) * camera.zoom)
             .min(HEIGHT as f32) as usize;
 
         for x in start_x..end_x {
@@ -81,18 +81,20 @@ impl Buffer<BufferType> {
                 let mut color = MineralType::ROCK.color() & 0xff;
 
                 match terrain.get_tile(x, y) {
-                    Some(tile) => {
-                        match tile {
-                            Tile(_, Some(Mineral(mineral_type)), _) => {
-                                color |= mineral_type.color();
-                            }
-                            _ => {}
+                    Ok(tile) => match tile {
+                        Tile(_, Some(Mineral(mineral_type)), _) => {
+                            color = mineral_type.color();
                         }
-                        // println!("{:X?}",mineral_type.0.color());
-                    }
-                    None => {
-                        color = 0x00000000;
-                    }
+                        Tile(_, _, Some(buildable)) => {
+                            buildable.building_type().color();
+                        }
+                        // Could not find a tile ?
+                        // Don't panic!(), just display a black pixel :)
+                        _ => {
+                            color = 0x00000000;
+                        }
+                    },
+                    Err(coords) => panic!("Could not access tile at {:?} when drawing terrain", coords),
                 };
 
                 self.draw_tile(x, y, color);
@@ -157,7 +159,7 @@ impl Renderer {
         if self.terrain.needs_update {
             for (i, &color) in self.terrain.buffer.iter().enumerate() {
                 if color != 0x00000000 {
-                    combined_buffer[i] |= color;
+                    combined_buffer[i] = color;
                 }
             }
         }
@@ -180,16 +182,16 @@ impl Renderer {
         combined_buffer
     }
 
-    pub fn draw(&mut self, terrain: Terrain, units: Vec<Unit>, camera: &Camera) {
+    pub fn draw(&mut self, terrain: Map, units: Vec<Unit>, camera: &Camera) {
         /*        // RESIZING (todo : dupe it for each buffer)
                 if self.pixel_buffer.len() != (viewport_width * viewport_height) as usize {
                     self.pixel_buffer = vec![0; (viewport_width * viewport_height) as usize];
                     // Recréer le buffer
                 }
         */
-        self.units.draw_units(&units);
         self.terrain.draw_terrain(&terrain, *camera);
 
+        self.units.draw_units(&units);
         let combined_buffers = self.combine_buffers();
         self.update_pixel_buffer(&combined_buffers, camera);
     }
@@ -215,8 +217,10 @@ impl Renderer {
             .with_lock(None, |buffer: &mut [u8], _pitch: usize| {
                 for x in 0..viewport_width as usize - 1 {
                     for y in 0..viewport_height as usize - 1 {
-                        let src_x = ((camera.position.x as f32 * camera.zoom) + x as f32) as usize;
-                        let src_y = ((camera.position.y as f32 * camera.zoom) + y as f32) as usize;
+                        let src_x =
+                            ((camera.position.x() as f32 * camera.zoom) + x as f32) as usize;
+                        let src_y =
+                            ((camera.position.y() as f32 * camera.zoom) + y as f32) as usize;
 
                         if src_x < WIDTH as usize
                             && src_y < HEIGHT as usize
