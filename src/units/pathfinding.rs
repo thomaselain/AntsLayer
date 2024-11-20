@@ -5,6 +5,7 @@ use pathfinding::prelude::astar;
 
 use super::{ActionType, Unit};
 use crate::map::{
+    buildings::BuildingType,
     minerals::{Mineral, MineralType},
     terrain::TerrainType,
     Map, Tile, TileType, HEIGHT, WIDTH,
@@ -35,7 +36,6 @@ impl Tile {
             _ => false,
         }
     }
- 
 }
 
 /// APPLY MOVEMENT COST RULES
@@ -94,7 +94,8 @@ impl Map {
             false
         }
     }
-    pub fn find_closest(&self, coords: Coords, tile_type: &TileType) -> Option<Coords> {
+
+    pub fn find_closest(&self, coords: Coords, tile_type: TileType) -> Result<Coords, TileType> {
         let start = coords;
         let mut visited = vec![vec![false; WIDTH]; HEIGHT];
         let mut queue = VecDeque::new();
@@ -109,11 +110,68 @@ impl Map {
                 let neighbor = coords + Coords(dir.0, dir.1);
 
                 // Check if the current tile is the Tile we are looking for
-                let curr_tile = self.get_tile_from_coords(neighbor);
-                println!("{:?}", curr_tile);
-                if curr_tile.is_ok() && curr_tile.unwrap().has(*tile_type) {
-                    println!("{:?} found at {:?}", tile_type, curr_tile);
-                    return Some(neighbor);
+                if let Err(coords) = self.get_tile_from_coords(neighbor) {
+                    println!("Pathfinding stoped at {:?}", coords);
+                    return Ok(start);
+                };
+
+                println!("{:?}", neighbor);
+
+                // Ensure the neighbor is within bounds and not yet visited
+                if self.check_data(neighbor.x() as usize, neighbor.y() as usize)
+                    && !visited[neighbor.x() as usize][neighbor.y() as usize]
+                {
+                    visited[neighbor.x() as usize][neighbor.y() as usize] = true;
+                    queue.push_back((neighbor, distance + 1));
+                }
+            }
+        }
+
+        Err(tile_type) // No tile found
+    }
+
+    pub fn find_closest_building(
+        &self,
+        coords: Coords,
+        building_type: BuildingType,
+    ) -> Result<Coords, ()> {
+        let start = coords;
+        let mut visited = vec![vec![false; WIDTH]; HEIGHT];
+        let mut queue = VecDeque::new();
+        let mut curr_tile: Result<Tile, Coords>;
+
+        queue.push_back((start, 0));
+        visited[start.x() as usize][start.y() as usize] = true;
+        //   println!("--- Looking for : {:?} ", tile_type);
+
+        while let Some((coords, distance)) = queue.pop_front() {
+            // Add neighboring tiles to the queue
+            for dir in [(0, 1), (1, 0), (0, -1), (-1, 0)] {
+                let neighbor: Coords = coords + Coords(dir.0, dir.1);
+
+                // Check if the current tile is the Tile we are looking for
+                curr_tile = self.get_tile_from_coords(neighbor);
+
+                //println!("{:?}", curr_tile);
+
+                // CACA degueu buekr :((((()))))
+                if curr_tile.is_ok() {
+                    if curr_tile.ok().unwrap().get_buildable().is_ok() {
+                        if curr_tile
+                            .ok()
+                            .unwrap()
+                            .get_buildable()
+                            .ok()
+                            .unwrap()
+                            .building_type()
+                            == building_type
+                        {
+                            //    println!("{:?} found at {:?}", building_type, curr_tile);
+                            return Ok(neighbor);
+                        } else {
+                            Err::<Coords, ()>(())?;
+                        }
+                    }
                 }
 
                 // Ensure the neighbor is within bounds and not yet visited
@@ -126,7 +184,7 @@ impl Map {
             }
         }
 
-        None // No tile found
+        Err(()) // No tile found
     }
 }
 
@@ -195,7 +253,7 @@ impl Unit {
                 let mut last_walkable_path = Vec::new();
                 // Only keep walkable tiles
                 for &(x, y) in path.iter() {
-                    if terrain.is_walkable(Coords(x.try_into().unwrap(), y.try_into().unwrap())) {
+                    if terrain.is_walkable(Coords(x as i32, y as i32)) {
                         last_walkable_path.push((x, y));
                     } else {
                         // Stop when a non walkable tile is reached

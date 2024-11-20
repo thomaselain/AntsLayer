@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 mod camera;
 mod map;
 //mod team;
@@ -8,10 +9,7 @@ use camera::Camera;
 use coords::Coords;
 //use team::Team;
 
-use map::{
-    minerals::{MineralType},
-    Map, TileType,
-};
+use map::{minerals::MineralType, Map, TileType};
 use units::{display_action_queue, jobs::JobType, ActionQueue, ActionType, RaceType, Unit};
 
 use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
@@ -40,10 +38,10 @@ fn main() -> Result<(), String> {
 
     let mut units_list: Vec<Unit> = Vec::new();
 
-    for _ in 0..100 {
+    for _ in 0..1 {
         let mut unit = Unit::new();
         unit.race = RaceType::ANT;
-        unit.job = JobType::MINER(TileType::Mineral(MineralType::MOSS));
+        unit.job = JobType::MINER(TileType::Mineral(MineralType::ROCK));
         unit.action_queue.do_now(ActionType::WANDER, unit.coords);
         units_list.push(unit);
     }
@@ -98,7 +96,7 @@ fn main() -> Result<(), String> {
                             if u.race == current_race
                             //            && u.job == JobType::MINER(terrain::MineralType::IRON)
                             {
-                                //  u.action_queue.clear();
+                                // u.action_queue.clear();
                                 u.action_queue.do_now(
                                     ActionType::DIG,
                                     Coords(
@@ -160,7 +158,17 @@ fn main() -> Result<(), String> {
                 } => {
                     for u in units_list.iter_mut() {
                         if u.race == current_race {
-                            renderer.render_text("Dig", 0, 0)?;
+                            // renderer.render_text("Dig", 0, 0)?;
+                            println!("DIG");
+                            let tile_type = u.job.get_miner_target().expect("...").to_tile_type();
+
+                            let x = map.find_closest(u.coords, tile_type);
+                            let coords = x.ok();
+                            let coords = coords.expect("...");
+
+                            u.action_queue
+                                .do_next(ActionType::DIG, coords);
+                            //u.action_queue.do_next(ActionType::HAUL, u.coords);
                         }
                     }
                 }
@@ -196,13 +204,9 @@ fn main() -> Result<(), String> {
                 //  BROKEN ... :( u.action_queue.remove_only(vec![ActionType::WANDER]);
                 //
                 //
-                // if u.inventory.0.len() > 0 {
-                //     println!("{:?}", u.inventory.clone().to_ascii());
-                // }
-                //
-                display_action_queue(current_race, u.clone());
             }
-            u.think(&mut map, delta_time);
+            display_action_queue(current_race, u.clone());
+            u.think(&mut map, delta_time).ok();
         }
         //renderer.all_need_update();
 

@@ -5,10 +5,11 @@ use sdl2::surface::Surface;
 use sdl2::{rect::Rect, render::WindowCanvas, video::Window, Sdl};
 
 use crate::map::minerals::{Mineral, MineralType};
+use crate::map::terrain::TerrainType;
 use crate::map::{Map, Tile};
 use crate::{camera::Camera, units::Unit};
-pub const WIDTH: u32 = 600;
-pub const HEIGHT: u32 = 600;
+pub const WIDTH: u32 = 900;
+pub const HEIGHT: u32 = 900;
 
 pub fn init_sdl2_window() -> (sdl2::Sdl, Window) {
     // Initialiser SDL2
@@ -78,23 +79,24 @@ impl Buffer<BufferType> {
 
         for x in start_x..end_x {
             for y in start_y..end_y {
-                let mut color = MineralType::ROCK.color() & 0xff;
+                let mut color = MineralType::ROCK.color();
 
                 match terrain.get_tile(x, y) {
                     Ok(tile) => match tile {
-                        Tile(_, Some(Mineral(mineral_type)), _) => {
+                        Tile(None, Some(Mineral(mineral_type)), None) => {
                             color = mineral_type.color();
                         }
-                        Tile(_, _, Some(buildable)) => {
-                            buildable.building_type().color();
+                        Tile(Some(TerrainType::AIR), None, Some(buildable)) => {
+                            color = buildable.building_type().color();
                         }
-                        // Could not find a tile ?
-                        // Don't panic!(), just display a black pixel :)
                         _ => {
                             color = 0x00000000;
                         }
                     },
-                    Err(coords) => panic!("Could not access tile at {:?} when drawing terrain", coords),
+                    // Could not find a tile ?
+                    // Don't panic!(), just display a black pixel :)
+                    // // Err(coords) => panic!("Could not access tile at {:?} when drawing terrain", coords),
+                    _ => color = 0x00000000,
                 };
 
                 self.draw_tile(x, y, color);
@@ -111,9 +113,8 @@ impl Buffer<BufferType> {
 pub struct Renderer {
     pub canvas: WindowCanvas,
     texture_creator: sdl2::render::TextureCreator<sdl2::video::WindowContext>,
-    pub terrain: Buffer<BufferType>,
+    pub map: Buffer<BufferType>,
     pub units: Buffer<BufferType>,
-    pub buildings: Buffer<BufferType>,
 }
 
 impl Renderer {
@@ -124,15 +125,10 @@ impl Renderer {
         Self {
             canvas,
             texture_creator,
-            terrain: Buffer::<BufferType> {
+            map: Buffer::<BufferType> {
                 buffer: vec![0; width * height],
                 needs_update: true,
                 typ: BufferType::Terrain,
-            },
-            buildings: Buffer::<BufferType> {
-                buffer: vec![0; width * height],
-                needs_update: true,
-                typ: BufferType::Buildings,
             },
             units: Buffer::<BufferType> {
                 buffer: vec![0; width * height],
@@ -148,25 +144,17 @@ impl Renderer {
         }
     */
     pub fn all_need_update(&mut self) {
-        self.terrain.needs_update = true;
-        self.buildings.needs_update = true;
+        self.map.needs_update = true;
         self.units.needs_update = true;
     }
 
     fn combine_buffers(&self) -> Vec<u32> {
         let mut combined_buffer = vec![0x00000000; WIDTH as usize * HEIGHT as usize];
 
-        if self.terrain.needs_update {
-            for (i, &color) in self.terrain.buffer.iter().enumerate() {
+        if self.map.needs_update {
+            for (i, &color) in self.map.buffer.iter().enumerate() {
                 if color != 0x00000000 {
-                    combined_buffer[i] = color;
-                }
-            }
-        }
-        if self.buildings.needs_update {
-            for (i, &color) in self.buildings.buffer.iter().enumerate() {
-                if color != 0x00000000 {
-                    combined_buffer[i] = color;
+                    combined_buffer[i] |= color;
                 }
             }
         }
@@ -174,7 +162,7 @@ impl Renderer {
         if self.units.needs_update {
             for (i, &color) in self.units.buffer.iter().enumerate() {
                 if color != 0x00000000 {
-                    combined_buffer[i] = color;
+                    combined_buffer[i] |= color;
                 }
             }
         }
@@ -189,7 +177,7 @@ impl Renderer {
                     // Recréer le buffer
                 }
         */
-        self.terrain.draw_terrain(&terrain, *camera);
+        self.map.draw_terrain(&terrain, *camera);
 
         self.units.draw_units(&units);
         let combined_buffers = self.combine_buffers();

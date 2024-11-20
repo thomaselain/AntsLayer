@@ -6,7 +6,7 @@ pub(crate) mod terrain;
 mod map_creation;
 
 use automaton::Automaton;
-use buildings::{Buildable, BuildingType};
+use buildings::{Buildable, Building, BuildingType, Content, Stockpile};
 use coords::Coords;
 use minerals::{Mineral, MineralType};
 use noise::{NoiseFn, Perlin};
@@ -18,7 +18,7 @@ use crate::units::{Item, RaceType};
 pub const AIR: Tile = Tile(Some(TerrainType::AIR), None, None);
 pub const WATER: Tile = Tile(Some(TerrainType::WATER), None, None);
 
-pub const HEIGHT: usize = 100;
+pub const HEIGHT: usize = 150;
 pub const WIDTH: usize = HEIGHT;
 
 #[derive(Clone)]
@@ -89,21 +89,34 @@ impl Map {
         self.generate_caves(Automaton::new(MineralType::DIRT));
         //self.generate_caves(Automaton::new(MineralType::MOSS));
 
-        let hearth: Tile = Tile::new();
+        self.build_starting_zone(RaceType::ANT)
+            .expect("Could not place ANT Starting zone");
+        self.build_starting_zone(RaceType::HUMAN)
+            .expect("Could not place HUMAN Starting zone");
+        self.build_starting_zone(RaceType::ALIEN)
+            .expect("Could not place ALIEN Starting zone");
 
-        self.build_hearth(RaceType::ANT)
-            .expect("Could not place ANT Hearth");
-        self.build_hearth(RaceType::ANT)
-            .expect("Could not place ANT Hearth");
-        self.build_hearth(RaceType::ANT)
-            .expect("Could not place ANT Hearth");
-
+    
         Ok(())
     }
 
+
+    fn build(
+        &mut self,
+        building: Building<Buildable<RaceType>>,
+    ) -> Result<Tile, Coords> {
+        let mut curr_tile = self
+            .get_tile_from_coords(building.coords)
+            .ok()
+            .expect("Invalid building coords");
+
+        self.set_tile(building.coords, Some(curr_tile.add_single(building.to_tile_type())))?;
+
+        self.get_tile_from_coords(building.coords   )
+    }
     /// Dig a circle of radius at center
     /// Replaces with TileType::AIR
-    pub fn dig_radius(&mut self, center: &Coords, radius: u32) ->Result<(), Coords> {
+    pub fn dig_radius(&mut self, center: &Coords, radius: u32) -> Result<(), Coords> {
         let (cx, cy) = (center.x() as i32, center.y() as i32);
         let radius_squared = (radius * radius) as i32;
 
@@ -181,10 +194,10 @@ impl TileType {
             _ => false,
         }
     }
-    pub fn get_mineral_type(self) -> Option<MineralType> {
+    pub fn get_mineral_type(self) -> Result<MineralType, Self> {
         match self {
-            TileType::Mineral(mineral_type) => Some(mineral_type),
-            _ => None,
+            TileType::Mineral(mineral_type) => Ok(mineral_type),
+            _ => Err(self),
         }
     }
     pub fn get_building_type(self) -> Option<BuildingType> {
@@ -287,6 +300,12 @@ impl Tile {
     pub fn get_mineral(self) -> Result<Mineral, Tile> {
         match self.1 {
             Some(mineral) => Ok(mineral),
+            _ => Err(self),
+        }
+    }
+    pub fn get_mineral_type(self) ->Result<MineralType, Tile>{
+        match self.get_mineral() {
+            a_mineral => Ok(a_mineral.ok().expect("Should be a mineral").0),
             _ => Err(self),
         }
     }

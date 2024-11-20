@@ -1,14 +1,16 @@
 use coords::Coords;
 
-use crate::units::{RaceType, HOME_STARTING_SIZE};
+use crate::units::{RaceType, Unit, HOME_STARTING_SIZE};
 
 use super::{minerals::MineralType, Map, Tile, TileType};
 
 impl Map {
-    pub fn build_hearth(&mut self, race_type: RaceType) -> Result<Buildable<RaceType>, Coords> {
+    pub fn build_starting_zone(
+        &mut self,
+        race_type: RaceType,
+    ) -> Result<Buildable<RaceType>, Coords> {
         self.dig_radius(&race_type.starting_coords(), HOME_STARTING_SIZE)?;
 
-        
         let new_tile = self.set_tile(
             race_type.starting_coords(),
             Some(Tile(
@@ -20,6 +22,45 @@ impl Map {
                 })),
             )),
         )?;
+
+        let stockpile: Building<Buildable<RaceType>> = Building {
+            buildable: Buildable::Stockpile(Stockpile {
+                mineral_type: MineralType::MOSS,
+                content: Content(0, 0),
+            }),
+            coords: race_type.starting_coords() + Coords(0, 5),
+            race_type,
+        };
+
+        self.build(stockpile)?;
+        let stockpile: Building<Buildable<RaceType>> = Building {
+            buildable: Buildable::Stockpile(Stockpile {
+                mineral_type: MineralType::ROCK,
+                content: Content(0, 0),
+            }),
+            coords: race_type.starting_coords() + Coords(5, 0),
+            race_type,
+        };
+        self.build(stockpile)?;
+        let stockpile: Building<Buildable<RaceType>> = Building {
+            buildable: Buildable::Stockpile(Stockpile {
+                mineral_type: MineralType::DIRT,
+                content: Content(0, 0),
+            }),
+            coords: race_type.starting_coords() + Coords(0, -5),
+            race_type,
+        };
+        self.build(stockpile)?;
+        let stockpile: Building<Buildable<RaceType>> = Building {
+            buildable: Buildable::Stockpile(Stockpile {
+                mineral_type: MineralType::GOLD,
+                content: Content(0, 0),
+            }),
+            coords: race_type.starting_coords() + Coords(-5, 0),
+            race_type,
+        };
+        self.build(stockpile)?;
+
         Ok(new_tile.get_buildable().ok().expect("...?"))
     }
 }
@@ -55,16 +96,11 @@ impl Buildable<RaceType> {
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Building<Buildable> {
     pub buildable: Buildable,
+    pub coords: Coords,
     pub race_type: RaceType,
 }
 impl Building<Buildable<RaceType>> {
-    pub fn color(self) -> u32 {
-        match self.buildable {
-            Buildable::Hearth(_) => 0xccaa44ff,
-            Buildable::Stockpile(_) => 0x064f28ff,
-        }
-    }
-    pub fn stockpile(self) -> Stockpile<MineralType> {
+    pub fn stockpile(&self) -> Stockpile<MineralType> {
         match self.buildable {
             Buildable::Stockpile(s) => s,
             _ => panic!("No stockpile in this Building"),
@@ -113,9 +149,16 @@ pub enum BuildingType {
 }
 impl BuildingType {
     pub fn color(self) -> u32 {
+        0xff0ff00;
         match self {
-            BuildingType::Hearth => 0x999944ff,
-            BuildingType::Stockpile(s) => 0x064f28ff,
+            BuildingType::Hearth => 0xccaa44ff,
+            BuildingType::Stockpile(mineral_type) => match mineral_type {
+                MineralType::MOSS => 0x064f28ff,
+                MineralType::DIRT => 0x000030ff,
+                MineralType::ROCK => 0x0a0a0aff,
+                MineralType::GOLD => 0x505030ff,
+                _ => 0xff00ffff,
+            },
         }
     }
 }
@@ -154,5 +197,11 @@ where
 impl Hearth<RaceType> {
     fn eq(self, other: Hearth<RaceType>) -> bool {
         self.race_type == other.race_type
+    }
+}
+
+impl Unit {
+    pub fn find_closest_building(self, map: Map, building_type: BuildingType) -> Result<Building<Buildable<RaceType>>, BuildingType> {
+        Err(building_type)
     }
 }

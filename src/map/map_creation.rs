@@ -21,9 +21,9 @@ fn generate() -> Result<(), Coords> {
 fn create_hearths() -> Result<(), Coords> {
     let mut map = Map::new();
 
-    map.build_hearth(crate::units::RaceType::ANT)?;
-    map.build_hearth(crate::units::RaceType::HUMAN)?;
-    map.build_hearth(crate::units::RaceType::ALIEN)?;
+    map.build_starting_zone(crate::units::RaceType::ANT)?;
+    map.build_starting_zone(crate::units::RaceType::HUMAN)?;
+    map.build_starting_zone(crate::units::RaceType::ALIEN)?;
 
     Ok(())
 }
@@ -33,11 +33,11 @@ fn create_stockpiles() -> Result<(), Coords> {
     let stock: Building<Buildable<RaceType>> = Building {
         buildable: Buildable::Stockpile(Stockpile {
             mineral_type: MineralType::MOSS,
-
             content: Content(0, 0),
         }),
 
         race_type: RaceType::ANT,
+        coords:Coords(10,10),
     };
 
     assert_eq!(stock.stockpile().content.stored_amount(), 0);

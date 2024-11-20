@@ -54,7 +54,10 @@ impl MineralType {
                 vec![TileType::TerrainType(TerrainType::AIR)]
             }
             MineralType::MOSS => {
-                vec![TileType::TerrainType(TerrainType::WATER)]
+                vec![
+                    TileType::TerrainType(TerrainType::WATER),
+                    TileType::TerrainType(TerrainType::AIR),
+                ]
             }
         }
     }

@@ -6,11 +6,12 @@ use rand::{self, Rng};
 
 use coords::Coords;
 
-use crate::map::minerals::MineralType;
-use crate::map::{Map, TileType, HEIGHT, WIDTH};
+use crate::map::buildings::{Buildable, BuildingType, Stockpile};
+use crate::map::minerals::{Mineral, MineralType};
+use crate::map::{self, Map, Tile, TileType, HEIGHT, WIDTH};
 pub mod jobs;
 mod pathfinding;
-pub const HOME_STARTING_SIZE: u32 = 35;
+pub const HOME_STARTING_SIZE: u32 = 25;
 
 #[derive(Clone)]
 pub struct Unit {
@@ -76,20 +77,22 @@ impl RaceType {
             RaceType::HUMAN => 0x0000ffff,
         }
     }
-
+    pub fn patience(self) -> usize {
+        match self {
+            RaceType::HUMAN => 10,
+            RaceType::ANT => 10,
+            RaceType::ALIEN => 10,
+        }
+    }
     /// Amount of Items a Unit can carry
     pub fn get_carry_capacity(self) -> i32 {
         match self {
-            RaceType::HUMAN => 1,
-            RaceType::ANT => 1,
-            RaceType::ALIEN => 1,
+            RaceType::HUMAN => 5,
+            RaceType::ANT => 5,
+            RaceType::ALIEN => 5,
         }
     }
 
-    /// The lower the value, the higher unit thinks
-    /// ANTS   : Slow thinking speed
-    /// HUMANS : Quick thinking speed
-    /// ALIENS : Medium thinking speed
     pub fn get_thinking_speed(self) -> i32 {
         match self {
             RaceType::HUMAN => 1000,
@@ -98,10 +101,6 @@ impl RaceType {
         }
     }
 
-    /// The lower the value, the higher unit moves
-    /// ANTS   : Quick moving speed
-    /// HUMANS : Slow moving speed
-    /// ALIENS : Medium moving speed
     pub fn get_moving_speed(self) -> i32 {
         match self {
             RaceType::HUMAN => 100,
@@ -110,10 +109,6 @@ impl RaceType {
         }
     }
 
-    /// The lower the value, the higher the cost
-    /// ANTS   : prefer straight lines
-    /// HUMANS : don't care
-    /// ALIENS : prefer diagonals
     fn diagonal_cost(self, is_diagonal: bool) -> i32 {
         match self {
             RaceType::HUMAN => {
@@ -141,34 +136,23 @@ impl RaceType {
     }
 }
 
-/// JobTypes for units
-/// MINER(mineral)        -  Mines assigned mineral, then brings it to matching stockpile
-/// FARMER                -  Same as MINER(MineralType::MOSS)
-/// FIGHTER               -   ... Fights ?
-/// BUILDER(BuildingType) -  Brings building mats from stockpiles to building spot, then builds the building
-/// JOBLESS               -  Wanders around Hearth
-
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Item {
     Mineral(TileType),
 }
-
-#[derive(Clone, PartialEq, Eq)]
+impl Item {
+    fn mineral(self) -> Result<Item, ()> {
+        match self {
+            Item::Mineral(tile_type) => Ok(self),
+            _ => Err(()),
+        }
+    }
+}
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Inventory(pub Vec<Item>);
 impl Inventory {
     pub fn new(capacity: u32) -> Inventory {
         Inventory(Vec::with_capacity(capacity as usize))
-    }
-    pub fn to_ascii(self) {
-        print!("Inventory : ");
-        for i in self.0 {
-            match i {
-                Item::Mineral(t) => {
-                    print!("{:?}/", t.to_ascii());
-                }
-            }
-        }
-        println!(")")
     }
     pub fn add(&mut self, item: Item) {
         self.0.push(item);
@@ -183,6 +167,12 @@ impl Inventory {
             index += 1;
         }
         Err(())
+    }
+    pub fn any_mineral(self) -> Result<Item, Self> {
+        for item in self.0.clone() {
+            item.mineral().ok();
+        }
+        Err(self)
     }
 }
 
@@ -216,6 +206,8 @@ impl ActionType {
 }
 
 pub trait ActionQueue {
+    fn cancel_first(&mut self) -> Result<(), ()>;
+    fn do_next(&mut self, action: ActionType, coords: Coords);
     /// Add action at the beginning of self.actiono_queue
     fn do_now(&mut self, action: ActionType, coords: Coords);
     /// Add action at the end of self.actiono_queue
@@ -227,8 +219,22 @@ pub trait ActionQueue {
 }
 
 impl ActionQueue for Vec<(ActionType, Coords)> {
+    fn cancel_first(&mut self) -> Result<(), ()> {
+        if self.len() == 0 {
+            Err(())
+        } else {
+            self.remove(0);
+            Ok(())
+        }
+    }
+    fn do_next(&mut self, action: ActionType, coords: Coords) {
+        self.insert(0, (action, coords));
+    }
+
+    #[allow(unused_must_use)]
     /// Add action at the beginning of self.actiono_queue
     fn do_now(&mut self, action: ActionType, coords: Coords) {
+        self.cancel_first();
         self.insert(0, (action, coords));
     }
     /// Add action at the end of self.actiono_queue
@@ -308,11 +314,12 @@ impl Unit {
             _ => RaceType::ANT,
         };
         let mut rng = rand::thread_rng();
-        let job = match rng.gen_range(0..=3) {
+        let job = match rng.gen_range(0..=4) {
             1 => JobType::MINER(TileType::Mineral(MineralType::ROCK)),
             2 => JobType::MINER(TileType::Mineral(MineralType::IRON)),
             3 => JobType::MINER(TileType::Mineral(MineralType::MOSS)),
-            //         4 => JobType::BUILDER,
+            4 => JobType::MINER(TileType::Mineral(MineralType::DIRT)),
+            5 => JobType::BUILDER,
             //         5 => JobType::FARMER,
             //         6 => JobType::FIGHTER,
             _ => JobType::JOBLESS,
@@ -341,7 +348,11 @@ impl Unit {
     }
 
     // Decide what to do next
-    pub fn think(&mut self, terrain: &mut Map, delta_time: i32) {
+    pub fn think(
+        &mut self,
+        map: &mut Map,
+        delta_time: i32,
+    ) -> Result<(ActionType, Coords), Coords> {
         self.last_action_timer += delta_time;
         self.last_move_timer += delta_time;
 
@@ -350,26 +361,46 @@ impl Unit {
             // MOVE Action
             (_, Some((ActionType::MOVE, coords))) => {
                 if self.last_move_timer >= self.moving_speed {
-                    if self.r#move(terrain, *coords).is_none() {
-                        self.action_queue.remove(0);
+                    if self.r#move(map, *coords).is_none() {
+                        self.action_queue.clear();
                         self.action_queue.push((ActionType::WANDER, self.coords));
                     }
                     self.last_move_timer = 0;
                 }
             }
+            //                  ////////////////////////////
+            //                  // Default miner behavior //
+            //                  ////////////////////////////
+            //
+            //                     first item in inventory
+            //                         is a mineral ?
+            //              |                                   |
+            //              |                                   |
+            //             Yes                                  No
+            //              |                                   |
+            //        Haul to the closest                   Do nothing
+            //   Stockpile of your first item             for this match
+            //
+            //
+
             // DIG action only Miners can do
             // adds MOVE actions until mineral is reached
             // Starts digging (behavior is kind of random, sometimes they dig deep, sometimes not idk...)
-            (JobType::MINER(mineral), Some((ActionType::DIG, coords))) => {
+            (JobType::MINER(tile_type), Some((ActionType::DIG, coords))) => {
                 if self.last_action_timer >= self.moving_speed {
-                    if self.coords.distance_in_tiles(coords) > 1 {
-                        // self.action_queue.clear();
-                        self.action_queue.do_now(ActionType::MOVE, *coords);
+                    // Check for minerals to haul in inventory
+                    let item = self.inventory.clone().any_mineral();
+                    if item.is_ok() {
+                        self.inventory
+                            .add(item.expect("Could not add item to inventory"));
+                        self.action_queue.do_later(ActionType::HAUL, self.coords);
                     } else {
-                        let actions = self.dig(terrain, coords);
-                        if !actions.is_none() && !actions.clone().unwrap().len() > 1 {
-                            //   self.action_queue.remove(0);
-                            self.action_queue.append(&mut actions.unwrap());
+                        if self.coords.distance_in_tiles(coords) > 1 {
+                         self.action_queue.clear();
+                            self.action_queue.do_now(ActionType::MOVE, *coords);
+                        } else {
+                            let mut actions = self.dig(map, coords)?;
+                            self.action_queue.append(&mut actions);
                         }
                     }
                     self.last_action_timer = 0;
@@ -378,22 +409,23 @@ impl Unit {
             // Idle around self.race's Hearth or Stockpile, depending on units job
             (_, Some((ActionType::WANDER, coords))) => {
                 if self.last_action_timer >= self.thinking_speed {
-                    if self.coords.distance_in_tiles(&coords) > 5 && self.action_queue.len() == 1 {
+                    if self.coords.distance_in_tiles(&coords) > HOME_STARTING_SIZE as i32
+                        && self.action_queue.len() == 1
+                    {
                         self.action_path = None;
                         self.action_queue.remove(0);
                         self.action_queue.do_now(ActionType::MOVE, *coords);
                     } else if self.action_queue.len() < 2 {
                         self.r#move(
-                            terrain,
+                            map,
                             Coords(
                                 self.coords.x() + random_direction(),
                                 self.coords.y() + random_direction(),
                             ),
                         );
                     } else {
-                        self.action_queue.remove(0);
-                        //       self.action_queue
-                        //           .insert(0, self.job.get_action(&terrain, &self));
+                        //self.action_queue.remove(0);
+                        //self.action_queue.do_now(ActionType::HAUL, self.coords);
                     }
                 }
             }
@@ -409,18 +441,42 @@ impl Unit {
             }
 
             // ??? Should not reach yet
-            (_, Some((ActionType::HAUL, coords))) => {
-                //      let building = terrain.get_building_at(*coords, );
-                //
-                //    match building {
-                //        Some(TileType::Building(BuildingType::Stockpile(t))) => {}
-                //        _ => {}
-                //    }
-                //
-                println!("Hauling ... ");
+            (JobType::MINER(tile_type), Some((ActionType::HAUL, _))) => {
+                if self.last_action_timer >= self.thinking_speed {
+                    //println!("Hauling ... ");
+                    // Look for a stockpile
+                    //
+                    //
+                    //
+                    //
+                    let mut count: usize = self.race.patience();
+                    'patience: loop {
+                        // Attempt to find a stockpile to go to
+                        let stockpile = map.find_closest_building(
+                            self.coords,
+                            BuildingType::Stockpile(
+                                self.job.get_miner_target().ok().expect("Should be mineral"),
+                            ),
+                        );
+                        if stockpile.is_ok() {
+                           // self.action_queue.remove(0);
+                            self.action_queue
+                                .do_now(ActionType::MOVE, stockpile.ok().unwrap());
+                            break 'patience;
+                        }
+                        if count == 0 {
+                            break 'patience;
+                        } else {
+                            count -= 1;
+                        }
+                    }
+                }
             }
-            (_, _) => {}
+            (_, _) => {
+                return Err(self.coords);
+            }
         }
+        Ok(*self.action_queue.first().expect("Empty queue"))
     }
 
     // //Moves unit in grid and updates its path if a new one is found
@@ -458,45 +514,40 @@ impl Unit {
     }
 
     // Find a path to goal and dig the closest tile
-    pub fn dig(&mut self, terrain: &mut Map, coords: &Coords) -> Option<Vec<(ActionType, Coords)>> {
+    pub fn dig(
+        &mut self,
+        terrain: &mut Map,
+        coords: &Coords,
+    ) -> Result<Vec<(ActionType, Coords)>, Coords> {
         let goal = coords;
 
-        //  // If a Stockpile with matching TileType is found, start path from here
-        //  // Else start from Unit
-        //  let start = if let Some(start) = terrain
-        //      .buildings
-        //      .find_building(self.race, self.job, terrain)
-        //  {
-        //      start
-        //  } else {
-        //      self.coords
-        //  };
         let start = self.coords;
         if let Some((mut dig_path, _)) =
-            self.find_path(start.to_tuple(), goal.to_tuple(), terrain.clone(), None)
+            self.find_path(start.to_tuple(), goal.to_tuple(), terrain.clone(), Some(ActionType::DIG))
         {
             if !dig_path.is_empty() {
                 let next_pos = Coords(
                     dig_path.first_mut().unwrap().0 as i32,
                     dig_path.first_mut().unwrap().1 as i32,
                 );
-                if let Ok(mut tile) = terrain.get_tile_from_coords(*goal) {
+                if let Ok(tile) = terrain.get_tile_from_coords(*goal) {
                     if tile.is_diggable() {
                         // Si assez proche pour creuser
-                        if start.distance_in_tiles(&next_pos) < 2 {
+                        if start.distance_in_tiles(&next_pos) < 2
+                            && tile
+                                .get_mineral()
+                                .ok()
+                                .expect("digabble but not collectable ? hmmmm ...")
+                                .0
+                                == self.job.get_miner_target().ok().unwrap()
+                        {
                             //self.action_queue.do_now(ActionType::DIG, next_pos);
-                            terrain.dig_radius(&goal, 0);
-
-                            let tile = tile.to_tile_type();
-                            //   if tile.1.is_collectable() {
-                            //       self.inventory.add(Item::Mineral(tile.1.expect("proout")));
-                            //   }
-                            println!("Digging at {:?}", next_pos);
+                            terrain.dig_radius(&goal, 0)?;
                         }
                     } else {
                         self.action_queue.remove(0);
                         // Ajouter le chemin pour le creusage à partir de la dernière case walkable
-                        return Some(
+                        return Ok(
                             vec![(
                                 dig_path
                                     .into_iter()
@@ -511,7 +562,7 @@ impl Unit {
                 }
             }
         }
-        None
+        Err(self.coords)
     }
 
     pub fn build(&self) {
