@@ -51,13 +51,13 @@ impl Automaton {
                 for y in 1..(HEIGHT as usize - 1) {
                     let mut can_replace: bool = false;
                     let mut current_tile: Tile;
-                    if let Ok(curr) = map.get_tile(x, y) {
+                    if let Ok((curr, coords)) = map.get_tile(x, y) {
                         current_tile = curr;
                     } else {
                         continue;
                     }
                     for c_r in &self.can_replace {
-                        if map.get_tile(x, y).unwrap().to_tile_type().1 == Some(*c_r) {
+                        if map.get_tile(x, y).unwrap().0.to_tile_type().1 == Some(*c_r) {
                             can_replace = true;
                         }
                     }

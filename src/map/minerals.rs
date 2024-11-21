@@ -154,7 +154,7 @@ impl MineralType {
 
         while let Some((coords, distance)) = queue.pop_front() {
             // Check if the current tile is a mineral
-            if Ok(tile) == map.get_tile_from_coords(coords) {
+            if Ok((tile, coords)) == map.get_tile_from_coords(coords) {
                 return Some(coords);
             }
 

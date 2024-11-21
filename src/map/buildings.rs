@@ -73,6 +73,7 @@ where
 {
     Hearth(Hearth<R>),
     Stockpile(Stockpile<MineralType>),
+   // Incubator(Incubator<R>)
 }
 
 impl Buildable<RaceType> {
@@ -143,6 +144,7 @@ impl StockpileContent {
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum BuildingType {
+    // Incubator,
     Hearth,
     /// A stockpile is used by Units that have a matching job(MineralType)
     Stockpile(MineralType),
@@ -152,6 +154,10 @@ impl BuildingType {
         0xff0ff00;
         match self {
             BuildingType::Hearth => 0xccaa44ff,
+           // BuildingType::Incubator => 0xccaa44ff,
+           // Le seul batiment qu'on peut placer précisément
+           //   - influe ou les unités décident de construire ?
+           // BuildingType::Wall
             BuildingType::Stockpile(mineral_type) => match mineral_type {
                 MineralType::MOSS => 0x064f28ff,
                 MineralType::DIRT => 0x000030ff,
@@ -197,11 +203,5 @@ where
 impl Hearth<RaceType> {
     fn eq(self, other: Hearth<RaceType>) -> bool {
         self.race_type == other.race_type
-    }
-}
-
-impl Unit {
-    pub fn find_closest_building(self, map: Map, building_type: BuildingType) -> Result<Building<Buildable<RaceType>>, BuildingType> {
-        Err(building_type)
     }
 }

@@ -18,7 +18,7 @@ use crate::units::{Item, RaceType};
 pub const AIR: Tile = Tile(Some(TerrainType::AIR), None, None);
 pub const WATER: Tile = Tile(Some(TerrainType::WATER), None, None);
 
-pub const HEIGHT: usize = 150;
+pub const HEIGHT: usize = 100;
 pub const WIDTH: usize = HEIGHT;
 
 #[derive(Clone)]
@@ -51,7 +51,7 @@ impl Map {
                 let mut can_replace: bool = false;
 
                 for c_r in &automaton.can_replace {
-                    if tile == Ok(c_r.as_tile()) {
+                    if tile == Ok((c_r.as_tile(), Coords(x as i32, y as i32))) {
                         can_replace = true;
                     }
                 }
@@ -83,11 +83,11 @@ impl Map {
         self.clear_tiles();
 
         // Generate terrain layer by layer
-        // self.generate_caves(Automaton::new(MineralType::IRON));
+        self.generate_caves(Automaton::new(MineralType::IRON));
         self.generate_caves(Automaton::new(MineralType::ROCK));
         self.generate_caves(Automaton::new(MineralType::GOLD));
         self.generate_caves(Automaton::new(MineralType::DIRT));
-        //self.generate_caves(Automaton::new(MineralType::MOSS));
+        self.generate_caves(Automaton::new(MineralType::MOSS));
 
         self.build_starting_zone(RaceType::ANT)
             .expect("Could not place ANT Starting zone");
@@ -96,23 +96,21 @@ impl Map {
         self.build_starting_zone(RaceType::ALIEN)
             .expect("Could not place ALIEN Starting zone");
 
-    
         Ok(())
     }
 
-
-    fn build(
-        &mut self,
-        building: Building<Buildable<RaceType>>,
-    ) -> Result<Tile, Coords> {
+    fn build(&mut self, building: Building<Buildable<RaceType>>) -> Result<(Tile, Coords), Coords> {
         let mut curr_tile = self
             .get_tile_from_coords(building.coords)
             .ok()
             .expect("Invalid building coords");
 
-        self.set_tile(building.coords, Some(curr_tile.add_single(building.to_tile_type())))?;
+        self.set_tile(
+            building.coords,
+            Some(curr_tile.0.add_single(building.to_tile_type())),
+        )?;
 
-        self.get_tile_from_coords(building.coords   )
+        self.get_tile_from_coords(building.coords)
     }
     /// Dig a circle of radius at center
     /// Replaces with TileType::AIR
@@ -158,19 +156,19 @@ impl Map {
 
     /// True if terrain.get_data(x, y) is walkable (see TileType.is_walkable)
     pub fn is_walkable(&self, coords: Coords) -> bool {
-        if let Ok(tile) = self.get_tile_from_coords(coords) {
+        if let Ok((tile, _)) = self.get_tile_from_coords(coords) {
             tile.is_walkable()
         } else {
             false
         }
     }
-    pub fn get_tile_from_coords(&self, coords: Coords) -> Result<Tile, Coords> {
+    pub fn get_tile_from_coords(&self, coords: Coords) -> Result<(Tile, Coords), Coords> {
         self.get_tile(coords.x() as usize, coords.y() as usize)
     }
 
-    pub fn get_tile(&self, x: usize, y: usize) -> Result<Tile, Coords> {
+    pub fn get_tile(&self, x: usize, y: usize) -> Result<(Tile, Coords), Coords> {
         if self.check_data(x, y) {
-            Ok(self.data[x][y])
+            Ok((self.data[x][y], Coords(x as i32, y as i32)))
         } else {
             Err(Coords(x as i32, y as i32))
         }
@@ -250,30 +248,36 @@ impl Tile {
         }
         false
     }
-    pub fn has(self, other: TileType) -> bool {
-        // Terrain comparaison
-        if self.0.is_some() && self.0.unwrap().to_tile_type() == other {
-            true;
-        }
+    pub fn has(self, other: TileType) -> Result<Tile, ()> {
         // Mineral comparaison
-        if self.1.is_some() && self.1.unwrap().0.to_tile_type() == other {
-            true;
-        }
-        // Building comparaison
-        if self.2.is_some() && other.get_building_type().is_some() {
-            if self.2.unwrap().to_tile_type() == other {
-                true;
-            } else if self.get_buildable().unwrap().building_type()
-                == other.get_building_type().unwrap()
-            {
-                true;
+        if let Ok(terrain) = self.get_terrain() {
+            let tile_type = terrain.to_tile_type();
+            if tile_type == other {
+                return Ok(tile_type.as_tile());
             }
         }
-        false
+
+        // Terrain comparaison
+        if let Ok(mineral) = self.get_mineral() {
+            let tile_type = mineral.0.to_tile_type();
+            if tile_type == other {
+                return Ok(tile_type.as_tile());
+            }
+        }
+
+        // Building comparaison
+        if let Ok(building) = self.get_buildable() {
+            let tile_type = building.to_tile_type();
+            if tile_type == other {
+                return Ok(tile_type.as_tile());
+            }
+        }
+
+        Err(())
     }
 
-    pub fn is_some(self) -> bool {
-        if self.0.is_some() && self.1.is_some() && self.2.is_some() {
+    pub fn has_some(self) -> bool {
+        if self.0.is_some() || self.1.is_some() || self.2.is_some() {
             true;
         }
         false
@@ -303,7 +307,7 @@ impl Tile {
             _ => Err(self),
         }
     }
-    pub fn get_mineral_type(self) ->Result<MineralType, Tile>{
+    pub fn get_mineral_type(self) -> Result<MineralType, Tile> {
         match self.get_mineral() {
             a_mineral => Ok(a_mineral.ok().expect("Should be a mineral").0),
             _ => Err(self),
@@ -351,7 +355,7 @@ impl Tile {
                 let nx = x as isize + dx;
                 let ny = y as isize + dy;
                 match terrain.get_tile(nx as usize, ny as usize) {
-                    Ok(Tile(_, Some(mineral), _)) => {
+                    Ok((Tile(_, Some(mineral), _), _)) => {
                         if mineral == Mineral(tile.1.unwrap().0) {
                             count += 1;
                         }

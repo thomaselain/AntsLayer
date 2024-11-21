@@ -19,6 +19,8 @@ impl Tile {
         match self {
             Tile(Some(TerrainType::AIR), None, _) => true,
             Tile(Some(TerrainType::WATER), None, _) => true,
+            /// Si c'est un mineral c'est pas walkable, sinon oui
+            /// Choisir a la génération du terrain
             Tile(_, Some(Mineral(MineralType::MOSS)), _) => true,
             Tile(_, _, Some(_)) => true,
             _ => false,
@@ -49,7 +51,7 @@ fn get_movement_cost(
 ) -> i32 {
     // return unit.race.diagonal_cost(is_diagonal);
     unit.race.diagonal_cost(is_diagonal)
-        + if let Ok(tile) = terrain.get_tile_from_coords(coords) {
+        + if let Ok((tile, _)) = terrain.get_tile_from_coords(coords) {
             match (tile, action, unit.job) {
                 // Ghost pathfinding
                 (_, None, _) => {
@@ -58,7 +60,7 @@ fn get_movement_cost(
                     } else if tile.is_walkable() {
                         0
                     } else {
-                        10
+                        0
                     }
                 }
                 // Pathfinding through minerals
@@ -88,7 +90,7 @@ fn get_movement_cost(
 impl Map {
     /// True if terrain.get_data(x, y) is diggable (see TileType.is_diggable)
     pub fn is_diggable(&mut self, x: usize, y: usize) -> bool {
-        if let Ok(tile) = self.get_tile(x, y) {
+        if let Ok((tile, _)) = self.get_tile(x, y) {
             tile.is_diggable()
         } else {
             false
@@ -108,14 +110,13 @@ impl Map {
             // Add neighboring tiles to the queue
             for dir in [(0, 1), (1, 0), (0, -1), (-1, 0)] {
                 let neighbor = coords + Coords(dir.0, dir.1);
+                let tile = self.get_tile_from_coords(neighbor);
 
-                // Check if the current tile is the Tile we are looking for
-                if let Err(coords) = self.get_tile_from_coords(neighbor) {
-                    println!("Pathfinding stoped at {:?}", coords);
-                    return Ok(start);
-                };
-
-                println!("{:?}", neighbor);
+                //  println!("{:?}", tile);
+                if tile.is_ok_and(|(t, c)| t.has(tile_type).is_ok()) {
+                    // println!("///////////// return ////////////");
+                    return Ok(tile.unwrap().1);
+                }
 
                 // Ensure the neighbor is within bounds and not yet visited
                 if self.check_data(neighbor.x() as usize, neighbor.y() as usize)
@@ -138,7 +139,6 @@ impl Map {
         let start = coords;
         let mut visited = vec![vec![false; WIDTH]; HEIGHT];
         let mut queue = VecDeque::new();
-        let mut curr_tile: Result<Tile, Coords>;
 
         queue.push_back((start, 0));
         visited[start.x() as usize][start.y() as usize] = true;
@@ -150,27 +150,18 @@ impl Map {
                 let neighbor: Coords = coords + Coords(dir.0, dir.1);
 
                 // Check if the current tile is the Tile we are looking for
-                curr_tile = self.get_tile_from_coords(neighbor);
+                let Ok((curr_tile, coords)) = self.get_tile_from_coords(neighbor) else {
+                    return Err(());
+                };
 
                 //println!("{:?}", curr_tile);
 
-                // CACA degueu buekr :((((()))))
-                if curr_tile.is_ok() {
-                    if curr_tile.ok().unwrap().get_buildable().is_ok() {
-                        if curr_tile
-                            .ok()
-                            .unwrap()
-                            .get_buildable()
-                            .ok()
-                            .unwrap()
-                            .building_type()
-                            == building_type
-                        {
-                            //    println!("{:?} found at {:?}", building_type, curr_tile);
-                            return Ok(neighbor);
-                        } else {
-                            Err::<Coords, ()>(())?;
-                        }
+                if curr_tile.get_buildable().is_ok() {
+                    if curr_tile.get_buildable().ok().unwrap().building_type() == building_type {
+                        //    println!("{:?} found at {:?}", building_type, curr_tile);
+                        return Ok(neighbor);
+                    } else {
+                        Err::<Coords, ()>(())?;
                     }
                 }
 
@@ -198,7 +189,7 @@ impl Unit {
         &self,
         start: (usize, usize),
         goal: (usize, usize),
-        mut terrain: Map,
+        mut map: Map,
         action: Option<ActionType>,
     ) -> Option<(Vec<(usize, usize)>, i32)> {
         let (path, cost) = astar(
@@ -218,17 +209,17 @@ impl Unit {
                 directions
                     .into_iter()
                     .filter_map(|(nx, ny, is_diagonal)| match action {
-                        Some(action) => {
-                            // Avoir empty tiles entirely
-                            if terrain.check_data(nx, ny) {
+                        Some(ActionType::MOVE) => {
+                            // Avoid empty tiles entirely
+                            if let Ok((tile, coords)) = map.get_tile(nx, ny) {
                                 Some((
                                     (nx, ny),
                                     // Get cost based on unit preferences/job
                                     get_movement_cost(
                                         self.clone(),
                                         is_diagonal,
-                                        &terrain,
-                                        Some(action),
+                                        &map,
+                                        action,
                                         Coords(nx as i32, ny as i32),
                                     ),
                                 ))
@@ -249,11 +240,11 @@ impl Unit {
         )?;
 
         let filtered_path = match action {
-            None | Some(ActionType::MOVE) => {
+            Some(ActionType::MOVE) => {
                 let mut last_walkable_path = Vec::new();
                 // Only keep walkable tiles
                 for &(x, y) in path.iter() {
-                    if terrain.is_walkable(Coords(x as i32, y as i32)) {
+                    if map.is_walkable(Coords(x as i32, y as i32)) {
                         last_walkable_path.push((x, y));
                     } else {
                         // Stop when a non walkable tile is reached
@@ -266,7 +257,7 @@ impl Unit {
                 let mut first_diggable_path = Vec::new();
                 for &(x, y) in path.iter() {
                     // Only keep diggable tiles
-                    if terrain.is_diggable(x, y) {
+                    if map.is_diggable(x, y) {
                         first_diggable_path.push((x, y));
                         // Keep going until tileType changes
                         break;
@@ -277,6 +268,6 @@ impl Unit {
             _ => return None,
         };
 
-        Some((filtered_path, cost))
+        Some((path, cost))
     }
 }

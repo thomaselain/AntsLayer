@@ -82,7 +82,7 @@ impl Buffer<BufferType> {
                 let mut color = MineralType::ROCK.color();
 
                 match terrain.get_tile(x, y) {
-                    Ok(tile) => match tile {
+                    Ok((tile,coords)) => match tile {
                         Tile(None, Some(Mineral(mineral_type)), None) => {
                             color = mineral_type.color();
                         }
