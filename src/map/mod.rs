@@ -356,7 +356,7 @@ impl Tile {
                 let ny = y as isize + dy;
                 match terrain.get_tile(nx as usize, ny as usize) {
                     Ok((Tile(_, Some(mineral), _), _)) => {
-                        if mineral == Mineral(tile.1.unwrap().0) {
+                        if tile.has(mineral.0.to_tile_type()).is_ok() {
                             count += 1;
                         }
                     }

@@ -83,7 +83,7 @@ impl MineralType {
         match self {
             MineralType::IRON => 0,
             MineralType::GOLD => 0,
-            MineralType::ROCK => 0,
+            MineralType::ROCK => 5,
             MineralType::MOSS => 0,
             MineralType::DIRT => 0,
         }
@@ -101,18 +101,18 @@ impl MineralType {
         match self {
             MineralType::IRON => 0.01,
             MineralType::GOLD => 0.9,
-            MineralType::ROCK => 0.05,
+            MineralType::ROCK => 0.5,
             MineralType::MOSS => 0.1,
             MineralType::DIRT => 0.37,
         }
     }
     pub fn occurence(self) -> f64 {
         match self {
-            MineralType::IRON => 0.8,
-            MineralType::GOLD => -1.0,
+            MineralType::IRON => 0.0,
+            MineralType::GOLD => 0.0,
             MineralType::ROCK => 0.5,
-            MineralType::MOSS => 0.5,
-            MineralType::DIRT => 1.0,
+            MineralType::MOSS => 0.0,
+            MineralType::DIRT => 0.0,
         }
     }
     pub fn max_air_exposure(self) -> usize {
