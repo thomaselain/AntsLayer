@@ -1,23 +1,13 @@
-#![allow(unused_imports)]
-mod camera;
-mod map;
-//mod team;
-mod units;
-mod window;
+mod game;
+mod render;
 
-use camera::Camera;
+// #![allow(unused_imports)]
+
 use coords::Coords;
+use game::{map::Map, render::{camera::Camera, window::{self, init_sdl2_window, Renderer}}, units::{actions::{Action, ActionQueue, ActionType}, RaceType, Unit}};
 //use team::Team;
-
-use map::{minerals::MineralType, Map, TileType};
-use units::{
-    actions::{display_action_queue, Action, ActionQueue, ActionType},
-    RaceType, Unit,
-};
-
 use sdl2::{event::Event, keyboard::Keycode, mouse::MouseState, pixels::Color, rect::Rect};
 use std::time::Instant;
-use window::{init_sdl2_window, Renderer};
 
 fn main() -> Result<(), String> {
     let mut current_race = RaceType::ANT;
@@ -221,7 +211,7 @@ fn main() -> Result<(), String> {
                 //
                 //
                 // display_action_queue(current_race, u.clone());
-                println!("{:?}", u.inventory.0);
+                //println!("{:?}", u.inventory.0);
             }
             u.think(&mut map, delta_time).ok();
         }

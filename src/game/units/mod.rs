@@ -1,20 +1,21 @@
-use std::i32;
+pub(crate)mod jobs;
+pub(crate)mod actions;
+mod pathfinding;
 
+use std::i32;
 use actions::{display_action_queue, Action, ActionQueue, ActionType};
 use colored::{ColoredString, Colorize};
-
 use jobs::JobType;
 use rand::seq::SliceRandom;
 use rand::{self, Rng};
-
 use coords::Coords;
 
-use crate::map::buildings::{Buildable, BuildingType, Stockpile};
-use crate::map::minerals::{Mineral, MineralType};
-use crate::map::{self, Map, Tile, TileType, HEIGHT, WIDTH};
-pub mod actions;
-pub mod jobs;
-mod pathfinding;
+use crate::game::map::tile::minerals::MineralType;
+
+use super::map::tile::buildings::BuildingType;
+use super::map::tile::TileType;
+use super::map::{Map, HEIGHT, WIDTH};
+
 pub const HOME_STARTING_SIZE: u32 = 15;
 
 #[derive(Clone)]

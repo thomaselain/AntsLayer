@@ -1,4 +1,5 @@
-use super::{minerals::MineralType, terrain::TerrainType, Map, Tile, TileType, HEIGHT, WIDTH};
+use super::{tile::{minerals::MineralType, Tile, TileType}, Map, TerrainType, HEIGHT, WIDTH};
+
 
 extern crate automata;
 

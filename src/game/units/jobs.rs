@@ -1,8 +1,12 @@
 use coords::Coords;
 
-use crate::map::{buildings, minerals::MineralType, terrain::TileType, Map};
-
-use super::{ActionQueue, ActionType, Unit};
+use crate::game::{
+    map::{
+        tile::{buildings::BuildingType, minerals::MineralType},
+        Map,
+    },
+    units::{actions::ActionType, TileType, Unit},
+};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum JobType {
@@ -47,7 +51,7 @@ impl Unit {
 
 impl Map {
     pub fn go_to_hearth(self, from: Coords) -> Result<(ActionType, Coords), Coords> {
-        if let Ok(hearth) = self.find_closest_building(from, buildings::BuildingType::Hearth) {
+        if let Ok(hearth) = self.find_closest_building(from, BuildingType::Hearth) {
             Ok((ActionType::MOVE, hearth))
         } else {
             Err(from)

@@ -3,13 +3,10 @@ use std::collections::VecDeque;
 use coords::Coords;
 use pathfinding::prelude::astar;
 
-use super::{ActionType, Unit};
-use crate::map::{
-    buildings::BuildingType,
-    minerals::{Mineral, MineralType},
-    terrain::TerrainType,
-    Map, Tile, TileType, HEIGHT, WIDTH,
-};
+use crate::game::map::{tile::{buildings::BuildingType, minerals::{Mineral, MineralType}, terrain::TerrainType, Tile}, Map, HEIGHT, WIDTH};
+
+use super::{ActionType, TileType, Unit};
+
 
 impl Tile {
     /// AIR

@@ -1,12 +1,8 @@
 //! Generic function for map creation
 
 #![allow(unused_imports)]
-use crate::map::buildings::{Buildable, Building, Content, Stockpile};
-use crate::map::minerals::MineralType;
-use crate::units::jobs::JobType;
-use crate::units::{RaceType, Unit};
+use crate::game::{map::tile::{buildings::{Buildable, Building, Content, Stockpile}, minerals::MineralType, TileType}, units::{jobs::JobType, RaceType, Unit}};
 
-use super::{buildings::Hearth, Tile};
 use super::{Map, HEIGHT, WIDTH};
 use coords::Coords;
 
@@ -21,7 +17,7 @@ fn generate() -> Result<(), Coords> {
 fn joe_finds_a_job() -> Result<(), ()> {
     let mut joe = Unit::new(None);
     joe.coords = Coords(10, 10);
-    joe.job = JobType::MINER(super::TileType::Mineral(MineralType::MOSS));
+    joe.job = JobType::MINER(TileType::Mineral(MineralType::MOSS));
 
     let mut map = Map::new();
     let res_map = map.generate().clone();
@@ -38,9 +34,9 @@ fn joe_finds_a_job() -> Result<(), ()> {
 fn create_hearths() -> Result<(), Coords> {
     let mut map = Map::new();
 
-    map.build_starting_zone(crate::units::RaceType::ANT)?;
-    map.build_starting_zone(crate::units::RaceType::HUMAN)?;
-    map.build_starting_zone(crate::units::RaceType::ALIEN)?;
+    map.build_starting_zone(RaceType::ANT)?;
+    map.build_starting_zone(RaceType::HUMAN)?;
+    map.build_starting_zone(RaceType::ALIEN)?;
 
     Ok(())
 }

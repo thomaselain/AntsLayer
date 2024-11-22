@@ -2,9 +2,9 @@ use std::collections::VecDeque;
 
 use coords::Coords;
 
-use crate::{map::terrain::TerrainType, units::Unit};
+use crate::game::{map::{Map, TerrainType, HEIGHT, WIDTH}, units::Unit};
 
-use super::{Map, Tile, TileType, HEIGHT, WIDTH};
+use super::{Tile, TileType};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum MineralType {

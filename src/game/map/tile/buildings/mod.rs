@@ -1,8 +1,11 @@
 use coords::Coords;
 
-use crate::units::{RaceType, Unit, HOME_STARTING_SIZE};
+use crate::game::{
+    map::Map,
+    units::{RaceType, HOME_STARTING_SIZE},
+};
 
-use super::{minerals::MineralType, Map, Tile, TileType};
+use super::{minerals::MineralType, TerrainType, Tile, TileType};
 
 impl Map {
     pub fn build_starting_zone(
@@ -14,12 +17,9 @@ impl Map {
         let new_tile = self.set_tile(
             race_type.starting_coords(),
             Some(Tile(
-                Some(crate::map::terrain::TerrainType::AIR),
+                Some(TerrainType::AIR),
                 None,
-                Some(crate::map::buildings::Buildable::Hearth(Hearth {
-                    race_type,
-                    hp: 100,
-                })),
+                Some(Buildable::Hearth(Hearth { race_type, hp: 100 })),
             )),
         )?;
 
@@ -73,7 +73,7 @@ where
 {
     Hearth(Hearth<R>),
     Stockpile(Stockpile<MineralType>),
-   // Incubator(Incubator<R>)
+    // Incubator(Incubator<R>)
 }
 
 impl Buildable<RaceType> {
@@ -154,10 +154,10 @@ impl BuildingType {
         0xff0ff00;
         match self {
             BuildingType::Hearth => 0xccaa44ff,
-           // BuildingType::Incubator => 0xccaa44ff,
-           // Le seul batiment qu'on peut placer précisément
-           //   - influe ou les unités décident de construire ?
-           // BuildingType::Wall
+            // BuildingType::Incubator => 0xccaa44ff,
+            // Le seul batiment qu'on peut placer précisément
+            //   - influe ou les unités décident de construire ?
+            // BuildingType::Wall
             BuildingType::Stockpile(mineral_type) => match mineral_type {
                 MineralType::MOSS => 0x064f28ff,
                 MineralType::DIRT => 0x000030ff,

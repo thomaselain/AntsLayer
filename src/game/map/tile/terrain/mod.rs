@@ -1,10 +1,10 @@
-pub(crate) use super::TileType;
+use super::TileType;
 
 extern crate noise;
 extern crate sdl2;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum TerrainType {
+pub(crate) enum TerrainType {
     AIR,
     WATER,
 }
