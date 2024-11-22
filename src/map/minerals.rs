@@ -18,6 +18,17 @@ pub enum MineralType {
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Mineral(pub MineralType);
 
+/// # Mineral
+/// 
+/// A mineral is one of the 3 main TileType options
+/// 
+/// ```
+/// let tile = Tile::new();
+///  let iron = Mineral(MineralType::IRON);
+/// 
+/// tile.add(iron.to_tile_type());
+/// 
+/// ``` 
 impl Mineral {
     pub fn new(mineral_type: MineralType) -> Mineral {
         Mineral(mineral_type)
@@ -33,14 +44,14 @@ impl MineralType {
             MineralType::IRON => {
                 vec![
                     TileType::TerrainType(TerrainType::AIR),
-                    TileType::Mineral(MineralType::DIRT),
+                    TileType::Mineral(MineralType::ROCK),
                 ]
             }
             MineralType::GOLD => {
                 vec![
-                    TileType::TerrainType(TerrainType::AIR),
+                   // TileType::TerrainType(TerrainType::AIR),
                     TileType::Mineral(MineralType::IRON),
-                    TileType::Mineral(MineralType::ROCK),
+                   // TileType::Mineral(MineralType::ROCK),
                 ]
             }
             MineralType::ROCK => {
@@ -51,12 +62,16 @@ impl MineralType {
                 ]
             }
             MineralType::DIRT => {
-                vec![TileType::TerrainType(TerrainType::AIR)]
+                vec![
+                    TileType::TerrainType(TerrainType::AIR),
+                    TileType::Mineral(MineralType::ROCK),
+                ]
             }
             MineralType::MOSS => {
                 vec![
                     TileType::TerrainType(TerrainType::WATER),
                     TileType::TerrainType(TerrainType::AIR),
+                    TileType::Mineral(MineralType::DIRT),
                 ]
             }
         }
@@ -75,7 +90,7 @@ impl MineralType {
             MineralType::IRON => 3,
             MineralType::GOLD => 3,
             MineralType::ROCK => 3,
-            MineralType::MOSS => 3,
+            MineralType::MOSS => 5,
             MineralType::DIRT => 3,
         }
     }
