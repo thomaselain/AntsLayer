@@ -1,4 +1,4 @@
-use super::{minerals::MineralType, terrain::TerrainType, Map, Tile, TileType, HEIGHT, WIDTH};
+use super::{minerals::MineralType, terrain::TerrainType, Map, Tile, TileType, AIR, HEIGHT, WIDTH};
 
 extern crate automata;
 
@@ -65,11 +65,7 @@ impl Automaton {
                     let count_same = current_tile.count_neighbors(map.clone(), current_tile, x, y);
                     let count_air = current_tile.count_neighbors(
                         map.clone(),
-                        Tile {
-                            0: Some(TerrainType::AIR),
-                            1: current_tile.1,
-                            2: current_tile.2,
-                        },
+                        AIR,
                         x,
                         y,
                     );

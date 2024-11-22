@@ -63,7 +63,7 @@ impl MineralType {
     }
     pub fn birth_limit(self) -> usize {
         match self {
-            MineralType::IRON => 2,
+            MineralType::IRON => 5,
             MineralType::GOLD => 8,
             MineralType::ROCK => 5,
             MineralType::MOSS => 6,
@@ -74,7 +74,7 @@ impl MineralType {
         match self {
             MineralType::IRON => 3,
             MineralType::GOLD => 3,
-            MineralType::ROCK => 3,
+            MineralType::ROCK => 1,
             MineralType::MOSS => 3,
             MineralType::DIRT => 3,
         }
@@ -83,7 +83,7 @@ impl MineralType {
         match self {
             MineralType::IRON => 0,
             MineralType::GOLD => 0,
-            MineralType::ROCK => 5,
+            MineralType::ROCK => 15,
             MineralType::MOSS => 0,
             MineralType::DIRT => 0,
         }
@@ -110,7 +110,7 @@ impl MineralType {
         match self {
             MineralType::IRON => 0.0,
             MineralType::GOLD => 0.0,
-            MineralType::ROCK => 0.5,
+            MineralType::ROCK => 1.0,
             MineralType::MOSS => 0.0,
             MineralType::DIRT => 0.0,
         }
