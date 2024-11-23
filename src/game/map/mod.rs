@@ -1,12 +1,19 @@
 mod automaton;
-pub (crate) mod tile;
-pub (crate) mod map_creation;
+pub(crate) mod map_creation;
+pub(crate) mod tile;
+
+use std::fs;
 
 use automaton::Automaton;
 use coords::Coords;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
-use tile::{buildings::{Buildable, Building}, minerals::MineralType, terrain::TerrainType, Tile};
+use tile::{
+    buildings::{Buildable, Building},
+    minerals::{gen_params::SETTINGS_PATH, MineralType},
+    terrain::TerrainType,
+    Tile,
+};
 
 use super::units::RaceType;
 
@@ -22,43 +29,53 @@ pub const WIDTH: usize = HEIGHT;
 /// data contains all map data
 pub struct Map {
     pub data: Vec<Vec<Tile>>,
+    gen_params: Vec<Automaton>,
 }
 impl Map {
     /// Terrain creation
     /// Needs cleaning (move buildings creation somewhere else)
     pub fn new() -> Map {
         let tiles: Vec<Vec<Tile>> = vec![vec![AIR; WIDTH as usize]; HEIGHT as usize];
-        Map { data: tiles }
+        let data = fs::read_to_string(SETTINGS_PATH);
+        let content = json::parse(&data.expect("!!!")).unwrap();
+        let gen_params: Vec<Automaton> = vec![
+            Automaton::new(MineralType::ROCK, content.clone()),
+            Automaton::new(MineralType::DIRT, content.clone()),
+            Automaton::new(MineralType::MOSS, content.clone()),
+        ];
+
+        Map {
+            data: tiles,
+            gen_params: gen_params,
+        }
     }
 
     /// Use mineral.automaton to modify Perlin noise generated map
-    pub fn generate_caves(&mut self, automaton: Automaton) {
+    pub fn generate_caves(&mut self, automaton: &Automaton) {
         let mut rng = rand::thread_rng();
         let noise: Perlin = Perlin::new(rng.gen());
-        println!("Color = {:#X}", automaton.mineral_type.color()); // Ajout pour le debug
-        if automaton.mineral_type.occurence() == 0.0 {
+        if !automaton.enable {
             return;
-        } // Set to 0.0 to skip (for testing)
+        }
+        println!("Generating {}...", automaton.mineral_type.to_str());
+        println!("With params : {:?} ", automaton);
 
         for x in 0..WIDTH as usize {
             for y in 0..HEIGHT as usize {
-                let tile = self.get_tile(x, y);
-                let mut can_replace: bool = false;
-
                 for c_r in &automaton.can_replace {
-                    if tile == Ok((c_r.as_tile(), Coords(x as i32, y as i32))) {
-                        can_replace = true;
-                    }
-                }
-                let noise_value = noise.get([
-                    x as f64 * automaton.perlin_scale,
-                    y as f64 * automaton.perlin_scale,
-                ]);
-                if can_replace {
-                    match tile {
-                        Ok(_) => {
-                            if noise_value < automaton.perlin_threshold * automaton.occurence {
-                                self.data[x][y] = automaton.mineral_type.to_tile_type().as_tile();
+                    match self.get_tile(x, y) {
+                        Ok((tile, _)) => {
+                            if tile.has(*c_r).is_ok() {
+                                let noise_value = noise.get([
+                                    x as f64 * automaton.perlin_scale,
+                                    y as f64 * automaton.perlin_scale,
+                                ]);
+
+                                if noise_value < automaton.perlin_threshold {
+                                    self.data[x][y] =
+                                        automaton.mineral_type.to_tile_type().as_tile();
+                                }
+                                break;
                             }
                         }
                         Err(coords) => panic!("Caves generation failed at {:?}", coords),
@@ -78,11 +95,12 @@ impl Map {
         self.clear_tiles();
 
         // Generate terrain layer by layer
-        self.generate_caves(Automaton::new(MineralType::IRON));
-        self.generate_caves(Automaton::new(MineralType::ROCK));
-        self.generate_caves(Automaton::new(MineralType::GOLD));
-        self.generate_caves(Automaton::new(MineralType::DIRT));
-        self.generate_caves(Automaton::new(MineralType::MOSS));
+        for automaton in self.gen_params.clone() {
+            self.generate_caves(&automaton);
+        }
+        // self.generate_caves(Automaton::new(MineralType::DIRT, content.clone()));
+        // self.generate_caves(Automaton::new(MineralType::IRON, content.clone()));
+        // self.generate_caves(Automaton::new(MineralType::MOSS, content.clone()));
 
         self.build_starting_zone(RaceType::ANT)
             .expect("Could not place ANT Starting zone");
@@ -102,7 +120,7 @@ impl Map {
 
         self.set_tile(
             building.coords,
-            Some(curr_tile.0.add_single(building.to_tile_type())),
+            Some(curr_tile.0.set_single(building.to_tile_type())),
         )?;
 
         self.get_tile_from_coords(building.coords)

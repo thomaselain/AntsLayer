@@ -181,7 +181,7 @@ impl Inventory {
     }
     pub fn any_mineral(self) -> Result<Item, Self> {
         for item in self.0.clone() {
-            println!("{:?}", item);
+            //println!("{:?}", item);
             item.mineral().ok();
         }
         Err(self)
@@ -246,7 +246,6 @@ impl Unit {
         self.last_action_timer += delta_time;
         self.last_move_timer += delta_time;
 
-        display_action_queue(self.race, self.clone());
         // Check what the first action to do is
         match (self.job, self.clone().action_queue.first()) {
             // MOVE Action

@@ -1,20 +1,70 @@
-use crate::game::units::{Item, RaceType};
-
 pub(crate) mod buildings;
 pub(crate) mod minerals;
 pub(crate) mod terrain;
 
 use buildings::{Buildable, BuildingType};
 use minerals::{Mineral, MineralType};
-use terrain::TerrainType;
 
-use super::Map;
+use crate::game::units::{Item, RaceType};
+
+use super::{Map, TerrainType};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub(crate) enum TileType {
     Mineral(MineralType),
     Building(Buildable<RaceType>),
     TerrainType(TerrainType),
+}
+
+impl TileType {
+
+    /// TODO : better
+    pub fn from_str(str: &str) -> Result<TileType, &str> {
+        match str {
+            "AIR" => Ok(TileType::TerrainType(TerrainType::AIR)),
+            "WATER" => Ok(TileType::TerrainType(TerrainType::WATER)),
+            "ROCK" => Ok(TileType::Mineral(MineralType::ROCK)),
+            "DIRT" => Ok(TileType::Mineral(MineralType::DIRT)),
+            "IRON" => Ok(TileType::Mineral(MineralType::IRON)),
+            "GOLD" => Ok(TileType::Mineral(MineralType::GOLD)),
+            "MOSS" => Ok(TileType::Mineral(MineralType::MOSS)),
+            _ => Err(str),
+        }
+    }
+
+    pub fn to_ascii(self) -> String {
+        match self {
+            TileType::Mineral(mineral_type) => mineral_type.to_char(),
+            _ => " ".to_string(),
+        }
+    }
+    /// Can be harvested
+    /// ROCK - for
+    /// IRON - for
+    /// GOLD - for
+    /// MOSS - for breeding
+    pub fn is_collectable(self) -> bool {
+        match self {
+            TileType::Mineral(MineralType::ROCK) => false,
+            TileType::Mineral(MineralType::IRON) => false,
+            TileType::Mineral(MineralType::GOLD) => false,
+            TileType::Mineral(MineralType::MOSS) => true,
+            _ => false,
+        }
+    }
+    pub fn into_mineral(self) -> Option<Mineral> {
+        match self {
+            TileType::Mineral(mineral_type) => Some(Mineral(mineral_type)),
+            _ => None,
+        }
+    }
+    pub fn into_item(self) -> Option<Item> {
+        if self.is_collectable() {
+            Some(Item::Mineral(self))
+        } else {
+            return None;
+        }
+    }
 }
 
 impl TileType {
@@ -50,13 +100,13 @@ impl TileType {
         let mut tile = Tile::new();
         match self {
             TileType::TerrainType(terrain_type) => {
-                tile.add_single(terrain_type.to_tile_type());
+                tile.set_single(terrain_type.to_tile_type());
             }
             TileType::Mineral(mineral_type) => {
-                tile.add_single(mineral_type.to_tile_type());
+                tile.set_single(mineral_type.to_tile_type());
             }
             TileType::Building(buildable) => {
-                tile.add_single(TileType::Building { 0: buildable });
+                tile.set_single(TileType::Building { 0: buildable });
             }
         };
         tile
@@ -83,6 +133,12 @@ impl Tile {
         }
         false
     }
+    pub fn any(other: TileType) -> Tile {
+        let mut tile = Tile::new();
+        tile.set_single(other);
+        tile
+    }
+
     pub fn has(self, other: TileType) -> Result<Tile, ()> {
         // Mineral comparaison
         if let Ok(terrain) = self.get_terrain() {
@@ -155,7 +211,7 @@ impl Tile {
         }
     }
 
-    pub fn add_single(&mut self, tile_type: TileType) -> Tile {
+    pub fn set_single(&mut self, tile_type: TileType) -> Tile {
         match tile_type {
             TileType::TerrainType(terrain_type) => {
                 self.0 = Some(terrain_type);
@@ -200,41 +256,5 @@ impl Tile {
             }
         }
         count
-    }
-}
-
-impl TileType {
-    pub fn to_ascii(self) -> String {
-        match self {
-            TileType::Mineral(mineral_type) => mineral_type.to_ascii(),
-            _ => " ".to_string(),
-        }
-    }
-    /// Can be harvested
-    /// ROCK - for
-    /// IRON - for
-    /// GOLD - for
-    /// MOSS - for breeding
-    pub fn is_collectable(self) -> bool {
-        match self {
-            TileType::Mineral(MineralType::ROCK) => false,
-            TileType::Mineral(MineralType::IRON) => false,
-            TileType::Mineral(MineralType::GOLD) => false,
-            TileType::Mineral(MineralType::MOSS) => true,
-            _ => false,
-        }
-    }
-    pub fn into_mineral(self) -> Option<Mineral> {
-        match self {
-            TileType::Mineral(mineral_type) => Some(Mineral(mineral_type)),
-            _ => None,
-        }
-    }
-    pub fn into_item(self) -> Option<Item> {
-        if self.is_collectable() {
-            Some(Item::Mineral(self))
-        } else {
-            return None;
-        }
     }
 }

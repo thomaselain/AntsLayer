@@ -1,5 +1,8 @@
-use super::{tile::{minerals::MineralType, Tile, TileType}, Map, TerrainType, HEIGHT, WIDTH};
-
+use super::{
+    tile::{minerals::MineralType, Tile, TileType},
+    Map, TerrainType, AIR, HEIGHT, WIDTH,
+};
+use json::JsonValue;
 
 extern crate automata;
 
@@ -26,21 +29,35 @@ pub struct Automaton {
     pub perlin_threshold: f64,
     /// Percentage we keep from generated Perlin (from -1.0 to 1.0)
     /// Set to negative to reverse Perlin generation (you then probably must tweak some stuff in automaton settings)
-    pub occurence: f64,
+    pub enable: bool,
 }
 
 impl Automaton {
-    pub fn new(mineral_type: MineralType) -> Automaton {
+    pub fn new(mineral_type: MineralType, data: JsonValue) -> Automaton {
+        let settings = &data[mineral_type.to_str()];
+        let mut can_replace: Vec<TileType> = vec![];
+
+        for can in settings["can replace"].members() {
+            can_replace.push(
+                TileType::from_str(can.as_str().unwrap())
+                    .expect("Invalid TileType in  automaton settings"),
+            );
+        }
+
         Automaton {
             mineral_type,
-            can_replace: mineral_type.can_replace(),
-            max_air_exposure: mineral_type.max_air_exposure(),
-            birth_limit: mineral_type.birth_limit(),
-            death_limit: mineral_type.death_limit(),
-            iterations: mineral_type.iterations(),
-            perlin_scale: mineral_type.perlin_scale(),
-            perlin_threshold: mineral_type.perlin_threshold(),
-            occurence: mineral_type.occurence(),
+            can_replace: can_replace.clone().to_vec(),
+            enable: settings["enable"].as_bool().unwrap(),
+
+            perlin_scale: settings["perlin"]["scale"].as_f64().unwrap(),
+            perlin_threshold: settings["perlin"]["threshold"].as_f64().unwrap(),
+
+            birth_limit: settings["automaton"]["birth limit"].as_usize().unwrap(),
+            death_limit: settings["automaton"]["death limit"].as_usize().unwrap(),
+            max_air_exposure: settings["automaton"]["max air exposure"]
+                .as_usize()
+                .unwrap(),
+            iterations: settings["automaton"]["iterations"].as_usize().unwrap(),
         }
     }
 
@@ -48,52 +65,27 @@ impl Automaton {
     pub fn apply_rules(&self, map: &mut Map) {
         for _ in 0..self.iterations {
             let mut new_data = map.data.clone();
-            for x in 1..(WIDTH as usize - 1) {
-                for y in 1..(HEIGHT as usize - 1) {
-                    let mut can_replace: bool = false;
-                    let mut current_tile: Tile;
-                    if let Ok((curr, coords)) = map.get_tile(x, y) {
-                        current_tile = curr;
-                    } else {
-                        continue;
-                    }
-                    for c_r in &self.can_replace {
-                        if map.get_tile(x, y).unwrap().0.to_tile_type().1 == Some(*c_r) {
-                            can_replace = true;
+            for x in 1..WIDTH {
+                for y in 1..HEIGHT {
+                    match map.get_tile(x, y) {
+                        Ok((mut tile, _)) => {
+                            let count_same = tile.count_neighbors(map.clone(), tile, x, y);
+                            let count_air = tile.count_neighbors(
+                                map.clone(),
+                                Tile(Some(TerrainType::AIR), tile.1, tile.2),
+                                x,
+                                y,
+                            );
+                            if count_same < self.death_limit {
+                                new_data[x][y].set_single(TileType::TerrainType(TerrainType::AIR));
+                            } else if tile == AIR && count_air <= self.max_air_exposure {
+                                if count_same > self.birth_limit {
+                                    new_data[x][y]
+                                        .set_single(TileType::TerrainType(TerrainType::AIR));
+                                }
+                            }
                         }
-                    }
-
-                    let count_same = current_tile.count_neighbors(map.clone(), current_tile, x, y);
-                    let count_air = current_tile.count_neighbors(
-                        map.clone(),
-                        Tile {
-                            0: Some(TerrainType::AIR),
-                            1: current_tile.1,
-                            2: current_tile.2,
-                        },
-                        x,
-                        y,
-                    );
-
-                    if can_replace {
-                        if count_same < self.death_limit {
-                            new_data[x][y] = Tile {
-                                0: Some(TerrainType::AIR),
-                                1: current_tile.1,
-                                2: current_tile.2,
-                            };
-                        }
-                    } else if current_tile.0 == Some(TerrainType::AIR)
-                        && count_air <= self.max_air_exposure
-                    {
-                        // loop self.priority_list to find out if we replace
-                        if count_same > self.birth_limit {
-                            new_data[x][y] = Tile {
-                                0: None,
-                                1: current_tile.1,
-                                2: current_tile.2,
-                            };
-                        }
+                        Err(coords) => panic!("Caves generation failed at {:?}", coords),
                     }
                 }
             }

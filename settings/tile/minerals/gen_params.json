@@ -1,0 +1,89 @@
+{
+    "ROCK": {
+        "enable": true,
+        "perlin": {
+            "scale": 0.05,
+            "threshold": 1.0
+        },
+        "automaton": {
+            "iterations": 0,
+            "birth limit": 4,
+            "death limit": 4,
+            "max air exposure": 4
+        },
+        "can replace": [
+            "AIR",
+            "DIRT"
+        ]
+    },
+    "DIRT": {
+        "enable": true,
+        "perlin": {
+            "scale": 0.05,
+            "threshold": 0.3
+        },
+        "automaton": {
+            "iterations": 0,
+            "birth limit": 4,
+            "death limit": 4,
+            "max air exposure": 4
+        },
+        "can replace": [
+            "AIR",
+            "ROCK"
+        ]
+    },
+    "IRON": {
+        "enable": true,
+        "perlin": {
+            "scale": 0.05,
+            "threshold": 0.5
+        },
+        "automaton": {
+            "iterations": 5,
+            "birth limit": 4,
+            "death limit": 4,
+            "max air exposure": 4
+        },
+        "can replace": [
+            "AIR",
+            "MOSS",
+            "ROCK",
+            "DIRT"
+        ]
+    },
+    "GOLD": {
+        "enable": true,
+        "perlin": {
+            "scale": 0.05,
+            "threshold": 1.0
+        },
+        "automaton": {
+            "iterations": 0,
+            "birth limit": 4,
+            "death limit": 4,
+            "max air exposure": 4
+        },
+        "can replace": [
+            "AIR",
+            "ROCK",
+            "IRON"
+        ]
+    },
+    "MOSS": {
+        "enable": true,
+        "perlin": {
+            "scale": 0.05,
+            "threshold": -0.5
+        },
+        "automaton": {
+            "iterations": 3,
+            "birth limit": 2,
+            "death limit": 3,
+            "max air exposure": 2
+        },
+        "can replace": [
+            "DIRT"
+        ]
+    }
+}

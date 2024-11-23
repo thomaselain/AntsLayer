@@ -1,8 +1,11 @@
+pub(crate) mod gen_params;
+
 use std::collections::VecDeque;
 
 use coords::Coords;
+use json::JsonValue;
 
-use crate::game::{map::{Map, TerrainType, HEIGHT, WIDTH}, units::Unit};
+use crate::game::{map::{Map, HEIGHT, WIDTH}, units::Unit};
 
 use super::{Tile, TileType};
 
@@ -15,7 +18,7 @@ pub enum MineralType {
     DIRT,
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Mineral(pub MineralType);
 
 /// # Mineral
@@ -29,118 +32,26 @@ pub struct Mineral(pub MineralType);
 /// tile.add(iron.to_tile_type());
 /// 
 /// ``` 
+
 impl Mineral {
-    pub fn new(mineral_type: MineralType) -> Mineral {
-        Mineral(mineral_type)
-    }
 }
 
 impl MineralType {
+    pub fn to_str(self) -> &'static str{
+        match self{
+            MineralType::IRON => "IRON",
+            MineralType::GOLD => "GOLD",
+            MineralType::ROCK => "ROCK",
+            MineralType::MOSS => "MOSS",
+            MineralType::DIRT => "DIRT",
+            _ => panic!(),
+        }
+    }
     pub fn to_tile_type(self) -> TileType {
         TileType::Mineral(self)
     }
-    pub fn can_replace(self) -> Vec<TileType> {
-        match self {
-            MineralType::IRON => {
-                vec![
-                    TileType::TerrainType(TerrainType::AIR),
-                    TileType::Mineral(MineralType::ROCK),
-                ]
-            }
-            MineralType::GOLD => {
-                vec![
-                   // TileType::TerrainType(TerrainType::AIR),
-                    TileType::Mineral(MineralType::IRON),
-                   // TileType::Mineral(MineralType::ROCK),
-                ]
-            }
-            MineralType::ROCK => {
-                vec![
-                    TileType::TerrainType(TerrainType::AIR),
-                    TileType::TerrainType(TerrainType::WATER),
-                    TileType::Mineral(MineralType::DIRT),
-                ]
-            }
-            MineralType::DIRT => {
-                vec![
-                    TileType::TerrainType(TerrainType::AIR),
-                    TileType::Mineral(MineralType::ROCK),
-                ]
-            }
-            MineralType::MOSS => {
-                vec![
-                    TileType::TerrainType(TerrainType::WATER),
-                    TileType::TerrainType(TerrainType::AIR),
-                    TileType::Mineral(MineralType::DIRT),
-                ]
-            }
-        }
-    }
-    pub fn birth_limit(self) -> usize {
-        match self {
-            MineralType::IRON => 2,
-            MineralType::GOLD => 8,
-            MineralType::ROCK => 5,
-            MineralType::MOSS => 6,
-            MineralType::DIRT => 5,
-        }
-    }
-    pub fn death_limit(self) -> usize {
-        match self {
-            MineralType::IRON => 3,
-            MineralType::GOLD => 3,
-            MineralType::ROCK => 3,
-            MineralType::MOSS => 5,
-            MineralType::DIRT => 3,
-        }
-    }
-    pub fn iterations(self) -> usize {
-        match self {
-            MineralType::IRON => 0,
-            MineralType::GOLD => 0,
-            MineralType::ROCK => 5,
-            MineralType::MOSS => 0,
-            MineralType::DIRT => 0,
-        }
-    }
-    pub fn perlin_scale(self) -> f64 {
-        match self {
-            MineralType::IRON => 0.09,
-            MineralType::GOLD => 0.03,
-            MineralType::ROCK => 0.05,
-            MineralType::MOSS => 0.1,
-            MineralType::DIRT => 0.045,
-        }
-    }
-    pub fn perlin_threshold(self) -> f64 {
-        match self {
-            MineralType::IRON => 0.01,
-            MineralType::GOLD => 0.9,
-            MineralType::ROCK => 0.5,
-            MineralType::MOSS => 0.1,
-            MineralType::DIRT => 0.37,
-        }
-    }
-    pub fn occurence(self) -> f64 {
-        match self {
-            MineralType::IRON => 0.0,
-            MineralType::GOLD => 0.0,
-            MineralType::ROCK => 0.5,
-            MineralType::MOSS => 0.0,
-            MineralType::DIRT => 0.0,
-        }
-    }
-    pub fn max_air_exposure(self) -> usize {
-        match self {
-            MineralType::IRON => 2,
-            MineralType::GOLD => 8,
-            MineralType::ROCK => 5,
-            MineralType::MOSS => 8,
-            MineralType::DIRT => 5,
-        }
-    }
-
-    pub fn to_ascii(self) -> String {
+   
+    pub fn to_char(self) -> String {
         match self {
             MineralType::IRON => "I".to_string(),
             MineralType::GOLD => "G".to_string(),

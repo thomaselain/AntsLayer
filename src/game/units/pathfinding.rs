@@ -101,7 +101,7 @@ impl Map {
 
         queue.push_back((start, 0));
         visited[start.x() as usize][start.y() as usize] = true;
-        println!("--- Looking for : {:?} ", tile_type);
+        //println!("--- Looking for : {:?} ", tile_type);
 
         while let Some((coords, distance)) = queue.pop_front() {
             // Add neighboring tiles to the queue
