@@ -5,7 +5,7 @@ pub(crate) mod terrain;
 use buildings::{Buildable, BuildingType};
 use minerals::{Mineral, MineralType};
 
-use crate::game::units::{Item, RaceType};
+use crate::game::units::{ inventory::Item, RaceType};
 
 use super::{Map, TerrainType};
 

@@ -6,11 +6,11 @@ use std::fs;
 
 use automaton::Automaton;
 use coords::Coords;
-use noise::{NoiseFn, Perlin};
+use noise::{ NoiseFn, Perlin };
 use rand::Rng;
 use tile::{
-    buildings::{Buildable, Building},
-    minerals::{gen_params::SETTINGS_PATH, MineralType},
+    buildings::{ Buildable, Building },
+    minerals::{ gen_params::SETTINGS_PATH, MineralType },
     terrain::TerrainType,
     Tile,
 };
@@ -41,7 +41,7 @@ impl Map {
         let gen_params: Vec<Automaton> = vec![
             Automaton::new(MineralType::ROCK, content.clone()),
             Automaton::new(MineralType::DIRT, content.clone()),
-            Automaton::new(MineralType::MOSS, content.clone()),
+            Automaton::new(MineralType::MOSS, content.clone())
         ];
 
         Map {
@@ -67,13 +67,14 @@ impl Map {
                         Ok((tile, _)) => {
                             if tile.has(*c_r).is_ok() {
                                 let noise_value = noise.get([
-                                    x as f64 * automaton.perlin_scale,
-                                    y as f64 * automaton.perlin_scale,
+                                    (x as f64) * automaton.perlin_scale,
+                                    (y as f64) * automaton.perlin_scale,
                                 ]);
 
                                 if noise_value < automaton.perlin_threshold {
-                                    self.data[x][y] =
-                                        automaton.mineral_type.to_tile_type().as_tile();
+                                    self.data[x][y] = automaton.mineral_type
+                                        .to_tile_type()
+                                        .as_tile();
                                 }
                                 break;
                             }
@@ -102,12 +103,9 @@ impl Map {
         // self.generate_caves(Automaton::new(MineralType::IRON, content.clone()));
         // self.generate_caves(Automaton::new(MineralType::MOSS, content.clone()));
 
-        self.build_starting_zone(RaceType::ANT)
-            .expect("Could not place ANT Starting zone");
-        self.build_starting_zone(RaceType::HUMAN)
-            .expect("Could not place HUMAN Starting zone");
-        self.build_starting_zone(RaceType::ALIEN)
-            .expect("Could not place ALIEN Starting zone");
+        self.build_starting_zone(RaceType::ANT).expect("Could not place ANT Starting zone");
+        self.build_starting_zone(RaceType::HUMAN).expect("Could not place HUMAN Starting zone");
+        self.build_starting_zone(RaceType::ALIEN).expect("Could not place ALIEN Starting zone");
 
         Ok(())
     }
@@ -118,12 +116,17 @@ impl Map {
             .ok()
             .expect("Invalid building coords");
 
-        self.set_tile(
-            building.coords,
-            Some(curr_tile.0.set_single(building.to_tile_type())),
-        )?;
+        self.set_tile(building.coords, Some(curr_tile.0.set_single(building.to_tile_type())))?;
 
         self.get_tile_from_coords(building.coords)
+    }
+    pub fn dig_cell(&mut self, coords: Coords) -> Result<Tile, Coords> {
+        if let Ok((tile, _)) = self.get_tile_from_coords(coords) {
+            self.data[coords.x() as usize][coords.y() as usize] = AIR; // Dig
+            Ok(tile)
+        } else {
+            Err(coords)
+        }
     }
     /// Dig a circle of radius at center
     /// Replaces with TileType::AIR
@@ -131,14 +134,16 @@ impl Map {
         let (cx, cy) = (center.x() as i32, center.y() as i32);
         let radius_squared = (radius * radius) as i32;
 
-        for y in (cy - radius as i32)..=(cy + radius as i32) {
-            for x in (cx - radius as i32)..=(cx + radius as i32) {
+        for y in cy - (radius as i32)..=cy + (radius as i32) {
+            for x in cx - (radius as i32)..=cx + (radius as i32) {
                 let dx = x - cx;
                 let dy = y - cy;
                 // if !(x == center.x && y == center.y) {
                 if dx * dx + dy * dy <= radius_squared {
                     if let Ok(tile) = self.get_tile(x as usize, y as usize) {
                         self.data[x as usize][y as usize] = AIR; // Dig
+                    } else if !self.check_data(x as usize, y as usize){
+                       // return Err(Coords(x, y));
                     }
                 }
                 //}
