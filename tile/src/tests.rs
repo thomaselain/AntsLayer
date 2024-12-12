@@ -2,7 +2,7 @@
 use crate::{ Tile, TileType, TileFlags };
 
 #[test]
-fn test_tile_creation() {
+fn tile_creation() {
     let tile = Tile::new((0, 0), TileType::Floor, 1, TileFlags::TRAVERSABLE);
     assert_eq!(tile.coords, (0, 0));
     assert_eq!(tile.tile_type, TileType::Floor);
@@ -13,14 +13,14 @@ fn test_tile_creation() {
 }
 
 #[test]
-fn test_set_extra_data() {
+fn set_extra_data() {
     let mut tile = Tile::new((1, 1), TileType::Wall, 2, TileFlags::BUILDABLE);
     tile.set_extra_data(10);
     assert_eq!(tile.extra_data, Some(10));
 }
 
 #[test]
-fn test_flags() {
+fn flags() {
     let tile = Tile::new((2, 2), TileType::Liquid, 3, TileFlags::TRAVERSABLE | TileFlags::LIQUID);
     assert!(tile.flags.contains(TileFlags::TRAVERSABLE));
     assert!(tile.flags.contains(TileFlags::LIQUID));
@@ -28,7 +28,7 @@ fn test_flags() {
 }
 
 #[test]
-fn test_tile_type() {
+fn tile_type() {
     let empty_tile = Tile::new((3, 3), TileType::Empty, 4, TileFlags::empty());
     let wall_tile = Tile::new((4, 4), TileType::Wall, 5, TileFlags::TRAVERSABLE);
 
@@ -37,7 +37,7 @@ fn test_tile_type() {
 }
 
 #[test]
-fn test_tile_flags() {
+fn tile_flags() {
     let tile = Tile::new((5, 5), TileType::Floor, 6, TileFlags::DIGGABLE | TileFlags::BUILDABLE);
 
     assert!(tile.flags.contains(TileFlags::DIGGABLE));
@@ -45,7 +45,7 @@ fn test_tile_flags() {
 }
 
 #[test]
-fn test_custom_tile_type() {
+fn custom_tile_type() {
     let custom_tile = Tile::new((6, 6), TileType::Custom(7), 7, TileFlags::empty());
     if let TileType::Custom(value) = custom_tile.tile_type {
         assert_eq!(value, 7);
@@ -55,7 +55,7 @@ fn test_custom_tile_type() {
 }
 
 #[test]
-fn test_tile_hp() {
+fn tile_hp() {
     let tile = Tile::new((7, 7), TileType::Wall, 8, TileFlags::empty());
     assert_eq!(tile.hp, u8::MAX); // Vérifie la valeur initiale de hp
 }

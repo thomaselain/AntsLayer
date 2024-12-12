@@ -5,14 +5,19 @@ use std::{
     time::{ Duration, Instant },
 };
 
-use biomes::BiomeConfig;
-use chunk_manager::ChunkManager;
+#[allow(unused_imports)]
 use chunk_manager::Draw;
-use chunk_manager::Clear;
+#[allow(unused_imports)]
+use chunk_manager::DrawAll;
+use chunk_manager::ChunkManager;
 use chunk_manager::Update;
-use coords::Coords;
-use sdl2::{ event::Event, keyboard::Keycode, pixels::Color, render::WindowCanvas, Sdl };
-use map::{ camera::Camera, renderer::{ Renderer, TILE_SIZE }, Directions, Map };
+
+
+use biomes::BiomeConfig;
+use sdl2::{ event::Event, keyboard::Keycode, Sdl };
+use map::{ camera::Camera, renderer::Renderer, Map };
+
+#[allow(unused_imports)]
 use unit::{ Unit, MOVING };
 
 use crate::inputs::{ Inputs, ToDirection };
@@ -45,7 +50,7 @@ impl Game {
             WIN_DEFAULT_HEIGHT
         ).expect("Failed to create game renderer");
         let biome_config = BiomeConfig::default();
-        let mut chunk_manager = ChunkManager::new();
+        let chunk_manager = ChunkManager::new();
         let camera = Camera::new(0.0, 0.0);
 
         Game {
@@ -67,9 +72,9 @@ impl Game {
     }
 
     pub fn load_world(&mut self) -> Result<Map, ()> {
-        let path = "./data/a.bin";
+        let path = "./data/test_world";
         println!("Loading {}", path);
-        Ok(Map::load_from_file(path).expect(&format!("Failed to load map at '{}'", path)))
+        Ok(Map::load(path).expect(&format!("Failed to load map at '{}'", path)))
     }
 
     pub fn create_world(&mut self) -> Result<(), ()> {
@@ -87,9 +92,8 @@ impl Game {
             print!("Entrez le nom du fichier de la carte : ");
             io::stdout().flush().unwrap(); // Assure-toi que le prompt est affiché avant de lire l'entrée.
 
-            let mut file_name = String::new();
             // Créer le chemin du fichier
-            file_name = if cfg!(test) == false {
+            let file_name = if cfg!(test) == false {
                 "test".to_string()
             } else {
                 let mut file_name = String::new();
@@ -97,7 +101,7 @@ impl Game {
                 file_name.trim().to_string() // Supprimer les espaces inutiles
             };
 
-            let path = format!("./data/{}.bin", file_name);
+            let path = format!("./data/{}", file_name);
 
             // Charger la carte avec le fichier donné
 
@@ -130,16 +134,16 @@ impl Game {
 
         if self.inputs.is_key_pressed(Keycode::KP_MINUS) && self.camera.speed > 0.1 {
             self.camera.speed -= 0.01;
-            println!("Camera speed set to{}", self.camera.speed);
+            println!("Camera speed set to {}", self.camera.speed);
         } else if self.inputs.is_key_pressed(Keycode::KP_PLUS) {
             self.camera.speed += 0.01;
-            println!("Camera speed set to{}", self.camera.speed);
+            println!("Camera speed set to {}", self.camera.speed);
         } else if self.inputs.is_key_pressed(Keycode::A) && self.camera.render_distance > 1 {
             self.camera.render_distance -= 1;
-            println!("Camera zoom set to{}", self.camera.render_distance);
+            println!("Camera zoom set to {}", self.camera.render_distance);
         } else if self.inputs.is_key_pressed(Keycode::E) {
             self.camera.render_distance += 1;
-            println!("Camera zoom set to{}", self.camera.render_distance);
+            println!("Camera zoom set to {}", self.camera.render_distance);
         }
 
         if self.map.is_none() {
@@ -149,7 +153,8 @@ impl Game {
                 self.load_world()?;
             }
         }else if self.inputs.is_key_pressed(Keycode::Space){
-            self.map.as_ref().unwrap().save();
+            self.map.as_ref().unwrap().save().expect("Failed to save map");
+            println!("Map saved !");
         }
 
         if let Some(key) = self.inputs.key_pressed.last() {
@@ -198,7 +203,8 @@ impl Game {
         if let Ok(mut renderer) = self.renderer.lock() {
             // let (offset_x, offset_y) = self.camera.get_offset(window_width, window_height);
 
-            chunk_manager.draw(&mut renderer, &self.camera);
+            // chunk_manager.draw(&mut renderer, &self.camera);
+            chunk_manager.draw_all(&mut self.map.as_ref().unwrap().clone(), &mut renderer, &self.camera);
         } else {
             // Gérer le cas où le verrouillage du renderer échoue
             eprintln!("Impossible de verrouiller le renderer");

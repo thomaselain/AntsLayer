@@ -33,7 +33,7 @@ mod tests {
     use crate::Chunk;
 
     #[test]
-    fn test_chunk_debug_printing() {
+    fn chunk_debug_printing() {
         // Crée un Chunk pour vérifier l'implémentation Debug
         let chunk = Chunk::new();
 

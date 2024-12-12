@@ -1,4 +1,4 @@
-use std::collections::{ HashMap, HashSet };
+use std::collections::HashMap;
 
 use biomes::BiomeConfig;
 use chunk::{ threads::Status, Chunk, CHUNK_SIZE };

@@ -2,8 +2,6 @@ use biomes::BiomeConfig;
 use chunk::threads::Status;
 use chunk::Chunk;
 use std::collections::HashMap;
-use std::sync::mpsc::Receiver;
-use std::sync::{ Arc, Mutex };
 
 use crate::ChunkManager;
 

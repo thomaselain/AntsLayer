@@ -1,63 +1,59 @@
-use rand::Rng;
-
 use super::*;
 
 #[cfg(test)]
-fn setup_test_directory() -> Result<(), std::io::Error> {
-    let test_dir = "test";
-    if !Path::new(test_dir).exists() {
-        fs::create_dir_all(test_dir)?;
+fn setup_directory() -> Result<(), std::io::Error> {
+    let dir = "test";
+    if !Path::new(dir).exists() {
+        fs::create_dir_all(dir)?;
     }
     Ok(())
 }
 
 #[cfg(test)]
-fn cleanup_test_directory() -> Result<(), std::io::Error> {
-    let test_dir = "test";
-    if Path::new(test_dir).exists() {
-        fs::remove_dir_all(test_dir)?;
+fn cleanup_directory() -> Result<(), std::io::Error> {
+    let dir = "test";
+    if Path::new(dir).exists() {
+        fs::remove_dir_all(dir)?;
     }
     Ok(())
 }
 
 
 #[test]
-fn test_chunk_serialization() {
-    setup_test_directory().expect("Failed to set up test directory");
+fn chunk_serialization() {
+    setup_directory().expect("Failed to set up test directory");
 
     let original_chunk = Chunk::new();
-    let file_path = "test/test_chunk.bin";
+    let file_path = "test/chunk.bin";
 
     original_chunk.save(file_path).expect("Failed to save chunk");
 
     let loaded_chunk = Chunk::load(file_path).expect("Failed to load chunk");
-    assert_eq!(original_chunk.tiles, loaded_chunk.tiles);
+    assert_eq!(original_chunk.tiles, loaded_chunk.get_chunk().expect("Failed to load chunk").tiles);
 
-    cleanup_test_directory().expect("Failed to clean up test directory");
+    cleanup_directory().expect("Failed to clean up test directory");
 }
 
-
-
 #[test]
-fn test_read_write_chunk() {
-    let mut chunk = Chunk::new();
+fn read_write_chunk() {
+    let chunk = Chunk::new();
     let path = "test/chunk.bin";
 
-    chunk.save(path);
+    chunk.save(path).expect(&format!("Failed to save chunk at {}", path).to_string());
 
     let loaded_chunk = Chunk::load(path);
     println!("{:?}", loaded_chunk);
 }
 
 #[test]
-pub fn test_tile_modification() {
+pub fn tile_modification() {
     let mut chunk = Chunk::new();
 
     let wall_tile = Tile::new((0, 0), TileType::Wall, 1, TileFlags::DIGGABLE);
     chunk.set_tile(0, 0, wall_tile);
 
     // Sauvegarder le chunk
-    chunk.save("test/modifications.bin").unwrap();
+    chunk.save("test/modifications.bin").expect("Failed to save");
 
     // Charger le chunk
     let loaded_chunk = Chunk::load("chunk.bin");
@@ -65,7 +61,7 @@ pub fn test_tile_modification() {
 }
 
 #[test]
-fn test_chunk_file_operations() {
+fn chunk_file_operations() {
     let chunk = Chunk::new();
     let file_path = "test/chunk.bin";
 
@@ -73,12 +69,12 @@ fn test_chunk_file_operations() {
     chunk.save(file_path).expect("Failed to write chunk");
 
     // Test lecture
-    let loaded_chunk = Chunk::load(file_path).expect("Failed to read chunk");
-    // assert_eq!(chunk.tiles, loaded_chunk.tiles);
+    let chunk_status = Chunk::load(file_path).expect("Failed to read chunk");
+    assert_eq!(chunk, chunk_status.get_chunk().expect("Chunk is not ready !"));
 }
 
 #[test]
-fn test_skip_in_file() {
+fn skip_in_file() {
     use std::io::Cursor;
 
     // Créer un fichier virtuel avec deux chunks

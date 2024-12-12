@@ -8,23 +8,15 @@ pub mod camera;
 pub extern crate chunk_manager;
 
 use std::collections::HashMap;
-use std::fs::{ self, File };
-use std::future::{ Pending, Ready };
-use std::io::{ self, Write };
-use std::path::Path;
-use std::thread::sleep_ms;
-use std::time::Duration;
-use biomes::{ BiomeConfig, Config };
-use byteorder::ReadBytesExt;
+use std::fs::File;
+use std::io;
+use biomes::BiomeConfig;
 use camera::Camera;
 use chunk::threads::Status;
 use chunk::{ Chunk, CHUNK_SIZE };
 use crate::chunk_manager::ChunkManager;
 use rand::Rng;
-use sdl2::pixels::Color;
-use sdl2::render::WindowCanvas;
 use serde::{ Serialize, Deserialize };
-use tile::Tile;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Map {
@@ -136,47 +128,41 @@ impl Map {
                 }
             }
         }
-        map.save();
+        map.save().expect(
+            &format!("Failed to save map after creation at {}", map.path).to_string()
+        );
         map
     }
-    pub fn save(&self) {
-        if let Some(parent) = Path::new(&self.path).parent() {
-            fs::create_dir_all(parent).unwrap();
-        }
 
-        // Sauvegarder les données dans le fichier
-        let file = std::fs::File::create(self.path.clone()).ok().unwrap();
-        bincode::serialize_into(file, self).expect("Could not save map");
-        println!("Map saved at {}", self.path);
-    }
     // Ajouter un chunk
     pub fn add_chunk(&mut self, x: i32, y: i32, chunk: Chunk) {
         self.chunks.insert((x, y), chunk);
     }
 
     // Sauvegarder la map entière
-    pub fn write_to_file(&self) -> std::io::Result<()> {
-        let mut file = File::create(&self.path)?;
+    pub fn save(&self) -> std::io::Result<()> {
+        let mut file = File::create(&format!("/{}.bin", self.path))?;
 
         for ((x, y), chunk) in &self.chunks {
             // Écriture des coordonnées
-            bincode::serialize_into(&mut file, x);
-            bincode::serialize_into(&mut file, y);
+            bincode::serialize_into(&mut file, x).expect("Failed to serialize x");
+            bincode::serialize_into(&mut file, y).expect("Failed to serialize y");
 
             // Écriture des données du chunk
-            bincode::serialize_into(&mut file, chunk);
+            bincode::serialize_into(&mut file, chunk).expect("Failed to serialize chunk");
         }
 
         Ok(())
     }
+
     // Charger la map entière
-    pub fn load_from_file(path: &str) -> Result<Map, io::Error> {
+    pub fn load(path: &str) -> Result<Map, io::Error> {
         let file = File::open(path).ok();
         let map = bincode::deserialize_from(file.expect("failed to open map file"));
         Ok(map.ok().expect("Error while loading map?"))
     }
 
-    pub fn load_chunk_from_file(&self, chunk_x: i32, chunk_y: i32) -> Option<Chunk> {
+    pub fn load_chunk(&self, chunk_x: i32, chunk_y: i32) -> Option<Chunk> {
         let file = File::open(&self.path).ok()?;
         let mut reader = std::io::BufReader::new(file);
 

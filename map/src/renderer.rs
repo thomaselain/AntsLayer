@@ -1,13 +1,11 @@
-use std::sync::mpsc::Receiver;
-
 use chunk::{ threads::Status, CHUNK_SIZE };
-use chunk_manager::{ ChunkManager, Draw };
+use chunk_manager::{ ChunkManager, Draw, DrawAll };
 use sdl2::{ pixels::Color, rect::Rect, Sdl };
 use tile::TileType;
 
-use crate::camera::Camera;
+use crate::{ camera::Camera, Map };
 
-pub const TILE_SIZE: i32 = 5;
+pub const TILE_SIZE: i32 = 3;
 
 pub fn tile_screen_coords(
     x_chunk: i32,
@@ -45,6 +43,46 @@ impl Renderer {
     }
     pub fn get_window_size(&self) -> (u32, u32) {
         self.canvas.output_size().expect("Failed to get window size")
+    }
+}
+
+impl DrawAll<Map, Renderer, Camera> for ChunkManager {
+    fn draw_all(&mut self, map: &mut Map, renderer: &mut Renderer, camera: &Camera) {
+        let (window_width, window_height) = renderer.get_window_size();
+        let (offset_x, offset_y) = camera.get_offset(window_width, window_height);
+
+        map.generate_visible_chunks(camera, self);
+
+        for (&(chunk_x, chunk_y), chunk) in &map.chunks {
+            let chunk_screen_x = chunk_x * (CHUNK_SIZE as i32) * (TILE_SIZE as i32);
+            let chunk_screen_y = chunk_y * (CHUNK_SIZE as i32) * (TILE_SIZE as i32);
+
+            // Check if current_chunk is done generating
+            //Draw each tile
+            for (x, row) in chunk.tiles.iter().enumerate() {
+                for (y, tile) in row.iter().enumerate() {
+                    let (screen_x, screen_y) = (
+                        chunk_screen_x + (x as i32) * (TILE_SIZE as i32) - offset_x,
+                        chunk_screen_y + (y as i32) * (TILE_SIZE as i32) - offset_y,
+                    );
+
+                    let color = match tile.tile_type {
+                        TileType::Floor => Color::GREEN,
+                        TileType::Liquid => Color::BLUE,
+                        TileType::Wall => Color::GRAY,
+                        _ => Color::WHITE,
+                    };
+
+                    renderer.canvas.set_draw_color(color);
+                    renderer.canvas
+                        .fill_rect(
+                            Rect::new(screen_x, screen_y, TILE_SIZE as u32, TILE_SIZE as u32)
+                        )
+                        .expect("Failed to draw tile");
+                }
+            }
+            renderer.canvas.set_draw_color(Color::BLACK);
+        }
     }
 }
 

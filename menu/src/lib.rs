@@ -4,7 +4,6 @@ use button::Button;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
-use std::time::Duration;
 
 pub fn main_menu() -> Result<(), ()> {
     // Initialisation SDL2
@@ -79,7 +78,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        main_menu();
+        main_menu().unwrap();
         print!("yep");
     }
 }

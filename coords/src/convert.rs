@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 /// This module provides conversion traits and methods for coordinates.
 use crate::Coords;
 
@@ -25,14 +26,12 @@ impl Tof32 for i32 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::Coords;
 
-
     #[test]
-    fn test_coords_conversion() {
-        let coords_f32 = Coords:: new(3.0, 4.0);
-        let coords_i32 = Coords:: new(3, 4);
+    fn coords_conversion() {
+        let coords_f32 = Coords::new(3.0, 4.0);
+        let coords_i32 = Coords::new(3, 4);
 
         assert_eq!(coords_f32.x_i32(), 3); // Convert x from f32 to i32
         assert_eq!(coords_f32.y_i32(), 4); // Convert y from f32 to i32

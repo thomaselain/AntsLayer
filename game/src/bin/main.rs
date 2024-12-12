@@ -1,11 +1,6 @@
-use chunk::threads::ChunkKey;
 use game::game::Game;
 use sdl2::{ keyboard::Keycode, pixels::Color };
 use menu::main_menu;
-use std::collections::HashMap;
-use std::sync::{ Arc, Mutex };
-use std::thread;
-use chunk::Chunk;
 
 pub fn main() {
     game();

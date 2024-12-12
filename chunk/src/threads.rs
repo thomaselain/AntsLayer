@@ -1,8 +1,4 @@
-use std::{
-    sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex },
-    thread::{ self, sleep },
-    time::Duration,
-};
+use std::{sync::mpsc::Sender, thread};
 
 use biomes::BiomeConfig;
 use noise::{ NoiseFn, Perlin };
@@ -15,18 +11,19 @@ use crate::{ Chunk, CHUNK_SIZE };
 /// (x, y)
 pub type ChunkKey = (i32, i32);
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum Status {
     Pending, // En attente de génération
     Ready(Chunk), // Prêt à être dessiné
 }
 
 impl Status {
-    pub fn get_chunk(self) -> Result<Self, String> {
+    pub fn get_chunk(self) -> Result<Chunk, Self> {
         match self {
-            Status::Pending => Ok(Self::Pending),
-            Status::Ready(chunk) => Ok(Self::Ready(chunk)),
-            _ => Err("Invalid status".to_string()),
+            Status::Ready(chunk) => Ok(chunk),
+            Status::Pending => Err(self)
+            // For other status ...
+            // _ => Err(self),
         }
     }
 }

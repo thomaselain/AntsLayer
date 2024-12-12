@@ -7,6 +7,8 @@ pub const ATTACKING: u32 = 1 << 1; // 0010 : L'unité est en train d'attaquer
 pub const INVISIBLE: u32 = 1 << 2; // 0100 : L'unité est invisible
 pub const RESTING: u32 = 1 << 3; // 1000 : L'unité est en train de se reposer
 
+
+#[allow(dead_code)]
 pub struct Unit {
     pub coords: Coords<f32>,
     action_dest: Option<Coords<f32>>, // Destination pour une action
@@ -19,9 +21,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_unit_creation() {
+    fn unit_creation() {
         let coords = Coords::new(0.0, 0.0);
-        let unit = Unit::new(coords, 1.0);
+        let _unit = Unit::new(coords, 1.0);
     }
 }
 
@@ -30,16 +32,16 @@ mod tests_states {
     use super::*;
 
     #[test]
-    fn test_unit_creation() {
+    fn unit_creation() {
         let coords = Coords::new(0.0, 0.0);
-        let mut unit = Unit::new(coords, 1.0);
+        let  unit = Unit::new(coords, 1.0);
 
         assert_eq!(unit.has_state(MOVING), false); // Initialement, l'unité n'est pas en mouvement
         assert_eq!(unit.has_state(ATTACKING), false); // L'unité n'attaque pas
     }
 
     #[test]
-    fn test_set_state() {
+    fn set_state() {
         let coords = Coords::new(0.0, 0.0);
         let mut unit = Unit::new(coords, 1.0);
 
@@ -48,7 +50,7 @@ mod tests_states {
     }
 
     #[test]
-    fn test_clear_state() {
+    fn clear_state() {
         let coords = Coords::new(0.0, 0.0);
         let mut unit = Unit::new(coords, 1.0);
 
@@ -60,7 +62,7 @@ mod tests_states {
     }
 
     #[test]
-    fn test_multiple_states() {
+    fn multiple_states() {
         let coords = Coords::new(0.0, 0.0);
         let mut unit = Unit::new(coords, 1.0);
 

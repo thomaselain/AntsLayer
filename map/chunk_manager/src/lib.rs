@@ -19,6 +19,10 @@ pub trait Update<Map, Camera> {
 pub trait Draw<Renderer, Camera> {
     fn draw(&self, renderer: &mut Renderer, camera:&Camera);
 }
+/// Draw all map
+pub trait DrawAll<Map, Renderer, Camera> {
+    fn draw_all(&mut self, map:&mut Map, renderer: &mut Renderer, camera:&Camera);
+}
 
 /// #
 #[derive(Clone)]
@@ -31,12 +35,10 @@ pub struct ChunkManager {
 
 #[cfg(test)]
 mod tests {
-    use chunk::threads::Status;
-
     use crate::ChunkManager;
 
     #[test]
-    fn test_chunk_manager_empty() {
+    fn chunk_manager_empty() {
         // Crée un ChunkManager vide
         let chunk_manager = ChunkManager::new();
 

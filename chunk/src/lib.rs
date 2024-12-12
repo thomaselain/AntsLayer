@@ -6,12 +6,10 @@ pub mod threads;
 
 use std::fs::{ self, File };
 use std::path::Path;
-use std::sync::mpsc::{self, Receiver, Sender};
-use std::thread::sleep;
-use std::time::Duration;
+use std::sync::mpsc::{ self, Receiver, Sender };
 use biomes::BiomeConfig;
 use serde::{ Deserialize, Serialize };
-use threads::{ChunkKey, Status};
+use threads::{ ChunkKey, Status };
 use tile::{ Tile, TileFlags, TileType };
 use std::io::{ self, Read, Seek, SeekFrom };
 
@@ -19,6 +17,7 @@ pub const CHUNK_SIZE: usize = 16;
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub struct Chunk {
+    pub is_dirty:bool,
     pub tiles: [[Tile; CHUNK_SIZE]; CHUNK_SIZE], // Stockage linéaire pour optimiser la mémoire cache
 }
 
@@ -26,12 +25,18 @@ impl Chunk {
     pub fn new() -> Self {
         let default_tile = Tile::new((0, 0), TileType::Empty, 0, TileFlags::empty());
         Self {
+            is_dirty:true,
             tiles: [[default_tile; CHUNK_SIZE]; CHUNK_SIZE],
         }
     }
 
     /// Génère un chunk basé sur la configuration d'un biome
-    pub fn generate_from_biome(x: i32, y: i32, seed: u32, biome_config: &BiomeConfig)-> ((i32,i32),Status) {
+    pub fn generate_from_biome(
+        x: i32,
+        y: i32,
+        seed: u32,
+        biome_config: &BiomeConfig
+    ) -> ((i32, i32), Status) {
         let (sender, receiver): (
             Sender<(ChunkKey, Status)>,
             Receiver<(ChunkKey, Status)>,
@@ -51,29 +56,38 @@ impl Chunk {
             self.tiles[x][y] = tile;
         }
     }
-
+    
     pub fn save(&self, path: &str) -> Result<(), std::io::Error> {
-        // Créez le dossier parent si nécessaire
-        if let Some(parent) = Path::new(path).parent() {
-            fs::create_dir_all(parent)?;
+        if self.is_dirty {
+            if let Some(parent) = Path::new(path).parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let file = std::fs::File::create(path)?;
+            bincode::serialize_into(file, self).expect("Failed to serialize");
+            Ok(())
+        } else {
+            Ok(()) // Pas besoin de sauvegarder si non modifié
         }
-
-        // Sauvegarder les données dans le fichier
-        let file = std::fs::File::create(path)?;
-        bincode::serialize_into(file, self);
-        Ok(())
     }
 
-    pub fn load(file_path: &str) -> Result<Self, std::io::Error> {
-        let file = File::open(file_path)?;
-        bincode
-            ::deserialize_from(file)
-            .map_err(|e| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Deserialization error: {}", e)
-                )
-            })
+
+    pub fn load(file_path: &str) -> Result<Status, ()> {
+        let file = File::open(file_path).expect(
+            &format!("Failed to load chunk at {}", file_path).to_string()
+        );
+        Ok(
+            Status::Ready(
+                bincode
+                    ::deserialize_from(file)
+                    .map_err(|e| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            format!("Deserialization error: {}", e)
+                        )
+                    })
+                    .unwrap()
+            )
+        )
     }
     pub fn skip_in_file<R: Read + Seek>(reader: &mut R) -> io::Result<()> {
         // Calcule la taille d'un chunk en octets

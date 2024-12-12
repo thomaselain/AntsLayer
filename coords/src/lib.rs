@@ -56,7 +56,7 @@ mod tests {
     /// assert_eq!(a - b, Coords::new(0.0, 0.0));
     /// ```
     #[test]
-    fn test_sub_f64() {
+    fn sub_f64() {
         let (a, b) = (Coords::new(2.0, 0.0), Coords::new(2.0, 0.0));
         assert_eq!(a - b, Coords::new(0.0, 0.0));
     }
@@ -69,7 +69,7 @@ mod tests {
     /// assert_eq!(a + b, Coords::new(4.0, 0.0));
     /// ```
     #[test]
-    fn test_add_f64() {
+    fn add_f64() {
         let (a, b) = (Coords::new(2.0, 0.0), Coords::new(2.0, 0.0));
         assert_eq!(a + b, Coords::new(4.0, 0.0));
     }
@@ -82,7 +82,7 @@ mod tests {
     /// assert_eq!(a - b, Coords::new(0, 0));
     /// ```
     #[test]
-    fn test_sub_i32() {
+    fn sub_i32() {
         let (a, b) = (Coords::new(2, 0), Coords::new(2, 0));
         assert_eq!(a - b, Coords::new(0, 0));
     }
@@ -95,7 +95,7 @@ mod tests {
     /// assert_eq!(a + b, Coords::new(4, 0));
     /// ```
     #[test]
-    fn test_add_i32() {
+    fn add_i32() {
         let (a, b) = (Coords::new(2, 0), Coords::new(2, 0));
         assert_eq!(a + b, Coords::new(4, 0));
     }
