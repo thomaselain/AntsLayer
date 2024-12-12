@@ -1,0 +1,23 @@
+[[biomes]]
+name = "Plain"
+seed = 0
+scale = 0.05
+wall_threshold = 0.5
+floor_threshold = -0.3
+liquid_threshold = -0.5
+
+[[biomes]]
+name = "Mountain"
+seed = 0
+scale = 0.6
+wall_threshold = 0.6
+floor_threshold = 0.0
+liquid_threshold = -1.0
+
+[[biomes]]
+name = "Forest"
+seed = 0
+scale = 0.05
+wall_threshold = 0.4
+floor_threshold = 0.0
+liquid_threshold = -0.5
