@@ -28,8 +28,6 @@ pub trait DrawAll<Map, Renderer, Camera> {
 #[derive(Clone)]
 pub struct ChunkManager {
     // pub receiver: Receiver<Chunk>,
-
-    // pub chunks: HashMap<(i32, i32), Chunk>, // Clé : coordonnées du chunk
     pub chunks: HashMap<(i32, i32), Status>, // Modifié pour inclure le statut
 }
 
@@ -39,10 +37,8 @@ mod tests {
 
     #[test]
     fn chunk_manager_empty() {
-        // Crée un ChunkManager vide
         let chunk_manager = ChunkManager::new();
 
-        // Assure qu'il n'y a pas de chunks chargés au début
         assert!(chunk_manager.chunks.is_empty());
     }
 }

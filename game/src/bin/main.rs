@@ -7,6 +7,7 @@ pub fn main() {
 }
 
 #[test]
+#[ignore = "Multithreading disabled for tests"]
 pub fn main_test() {
     game();
 }

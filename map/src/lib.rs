@@ -10,7 +10,7 @@ pub extern crate chunk_manager;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
-use biomes::BiomeConfig;
+// use biomes::BiomeConfig;
 use camera::Camera;
 use chunk::threads::Status;
 use chunk::{ Chunk, CHUNK_SIZE };
@@ -18,14 +18,15 @@ use crate::chunk_manager::ChunkManager;
 use rand::Rng;
 use serde::{ Serialize, Deserialize };
 
+pub const WORLD_STARTING_AREA: i32 = 4;
+pub const WORLDS_FOLDER: &str = "data/worlds/";
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Map {
     pub path: String,
     pub seed: u32,
     pub chunks: HashMap<(i32, i32), Chunk>, // Utilisation de coordonnées pour les chunks
 }
-
-pub const STARTING_AREA: i32 = 1;
 
 pub enum Directions {
     North,
@@ -82,74 +83,55 @@ impl Map {
         )
     }
 
-    pub fn new(path: &str) -> Self {
+    pub fn new(name: &str) -> Result<Self, String> {
         let mut rng = rand::thread_rng();
         let seed = rng.gen_range(0..10);
+
         let mut map = Map {
             seed,
-            path: path.to_string(),
+            path: format!("{}{}", WORLDS_FOLDER, name).to_string(),
             chunks: HashMap::new(),
         };
 
-        // Taille de la zone initiale (par exemple, une grille de 5x5 chunks)
-        let half_size = STARTING_AREA / 2;
+        // Vérifier si le dossier "data/worlds" existe, sinon le créer
+        if !std::fs::metadata(format!("{}{}", WORLDS_FOLDER, name).to_string()).is_ok() {
+            // Créer le dossier "data/"
+            if
+                let Err(e) = std::fs::DirBuilder
+                    ::new()
+                    .recursive(true)
+                    .create(format!("{}{}", WORLDS_FOLDER, name).to_string())
+            {
+                eprintln!("Erreur lors de la création du dossier '{}': {}", WORLDS_FOLDER, e);
+                return Err(format!("{}{}", WORLDS_FOLDER, name).to_string());
+            }
+        }
 
+        // Taille de la zone initiale (par exemple, une grille de 5x5 chunks)
+        let half_size = WORLD_STARTING_AREA / 2;
         // Générer les chunks de la zone de départ
         for x in -half_size..=half_size {
             for y in -half_size..=half_size {
-                let biome_config = if x == 0 && y == 0 {
-                    // Biome spécial pour le centre (ex : zone de départ sûre)
-                    &BiomeConfig::default() // Vous pouvez personnaliser ici
-                } else {
-                    &BiomeConfig::default()
-                };
-
-                let ((x, y), new_chunk_status) = Chunk::generate_from_biome(
-                    x,
-                    y,
-                    seed,
-                    biome_config
-                );
-
-                'chunk_gen: loop {
-                    match new_chunk_status {
-                        // Just wait ? idk
-                        Status::Pending => {
-                            // std::thread::sleep(Duration::new(0, 500_000));
-                        }
-
-                        //Only add chunk to map when it is done loading
-                        Status::Ready(chunk) => {
-                            map.add_chunk(x, y, chunk);
-
-                            break 'chunk_gen;
-                        }
-                    }
-                }
+                let chunk = Chunk::new();
+                map.add_chunk(x, y, chunk);
             }
         }
-        map.save().expect(
-            &format!("Failed to save map after creation at {}", map.path).to_string()
-        );
-        map
+        Ok(map)
     }
 
     // Ajouter un chunk
     pub fn add_chunk(&mut self, x: i32, y: i32, chunk: Chunk) {
+        // let path = format!("{}/chunks/{}_{}.bin", self.path, x, y);
+
         self.chunks.insert((x, y), chunk);
+        // chunk.save(&path).unwrap();
     }
 
     // Sauvegarder la map entière
     pub fn save(&self) -> std::io::Result<()> {
-        let mut file = File::create(&format!("/{}.bin", self.path))?;
-
         for ((x, y), chunk) in &self.chunks {
-            // Écriture des coordonnées
-            bincode::serialize_into(&mut file, x).expect("Failed to serialize x");
-            bincode::serialize_into(&mut file, y).expect("Failed to serialize y");
-
-            // Écriture des données du chunk
-            bincode::serialize_into(&mut file, chunk).expect("Failed to serialize chunk");
+            let chunk_path = &format!("{}/chunks/{}_{}.bin", self.path, x, y);
+            chunk.save(&chunk_path)?;
         }
 
         Ok(())
@@ -161,7 +143,15 @@ impl Map {
         let map = bincode::deserialize_from(file.expect("failed to open map file"));
         Ok(map.ok().expect("Error while loading map?"))
     }
-
+    
+    pub fn get_chunk(self, x: i32, y: i32) -> Result<Chunk, ()> {
+        if !self.chunks.contains_key(&(x, y)) {
+            Err(())
+        } else {
+            Ok(*self.chunks.get(&(x, y)).unwrap())
+        }
+    }
+    
     pub fn load_chunk(&self, chunk_x: i32, chunk_y: i32) -> Option<Chunk> {
         let file = File::open(&self.path).ok()?;
         let mut reader = std::io::BufReader::new(file);

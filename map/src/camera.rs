@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{ collections::HashMap, sync::mpsc, time::Duration };
 
 use biomes::BiomeConfig;
 use chunk::{ threads::Status, Chunk, CHUNK_SIZE };
@@ -72,18 +72,17 @@ impl Clear<&Map, Camera> for ChunkManager {
 
 impl Update<Map, Camera> for ChunkManager {
     fn update(&mut self, map: &mut Map, camera: &Camera) {
+        let (sender, receiver) = mpsc::channel();
         let visible_chunks: HashMap<(i32, i32), Status> = map.visible_chunks(camera, self);
 
-        // Ajouter les chunks manquants
         for ((x, y), _) in visible_chunks.iter() {
             if !self.chunks.contains_key(&(*x, *y)) {
-                let status = Chunk::generate_from_biome(
-                    *x,
-                    *y,
-                    map.seed,
-                    &BiomeConfig::default()
-                ).1;
-                self.chunks.insert((*x, *y), status);
+                Chunk::generate_async(*x, *y, map.seed, BiomeConfig::default(), sender.clone());
+                let ((x, y), status) = receiver
+                    .recv_timeout(Duration::new(1, 0))
+                    .expect("Chunk took too long to generate");
+
+                self.chunks.insert((x, y), status);
             }
         }
         self.clear_out_of_range(visible_chunks);

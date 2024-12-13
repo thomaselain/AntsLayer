@@ -1,5 +1,4 @@
 use std::{
-    fs::{ self, DirBuilder },
     io::{ self, Write },
     sync::{ Arc, Mutex },
     time::{ Duration, Instant },
@@ -78,15 +77,6 @@ impl Game {
     }
 
     pub fn create_world(&mut self) -> Result<(), ()> {
-        // Vérifier si le dossier "data/" existe, sinon le créer
-        if !fs::metadata("./data").is_ok() {
-            // Créer le dossier "data/"
-            if let Err(e) = DirBuilder::new().recursive(true).create("./data") {
-                eprintln!("Erreur lors de la création du dossier 'data/': {}", e);
-                return Err(());
-            }
-        }
-
         if self.map.is_none() {
             // Demander le nom du fichier de la carte à l'utilisateur
             print!("Entrez le nom du fichier de la carte : ");
@@ -101,11 +91,9 @@ impl Game {
                 file_name.trim().to_string() // Supprimer les espaces inutiles
             };
 
-            let path = format!("./data/{}", file_name);
-
             // Charger la carte avec le fichier donné
 
-            self.map = Some(Map::new(&path));
+            self.map = Some(Map::new(&file_name)).expect("Failed to create map").ok();
             Ok(())
         } else {
             Err(())
@@ -203,8 +191,8 @@ impl Game {
         if let Ok(mut renderer) = self.renderer.lock() {
             // let (offset_x, offset_y) = self.camera.get_offset(window_width, window_height);
 
-            // chunk_manager.draw(&mut renderer, &self.camera);
-            chunk_manager.draw_all(&mut self.map.as_ref().unwrap().clone(), &mut renderer, &self.camera);
+            chunk_manager.draw(&mut renderer, &self.camera);
+            // chunk_manager.draw_all(&mut self.map.as_ref().unwrap().clone(), &mut renderer, &self.camera);
         } else {
             // Gérer le cas où le verrouillage du renderer échoue
             eprintln!("Impossible de verrouiller le renderer");

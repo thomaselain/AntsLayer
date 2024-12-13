@@ -18,7 +18,6 @@ fn cleanup_directory() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-
 #[test]
 fn chunk_serialization() {
     setup_directory().expect("Failed to set up test directory");
@@ -47,16 +46,23 @@ fn read_write_chunk() {
 
 #[test]
 pub fn tile_modification() {
+    let file_path = "test/modification.bin";
     let mut chunk = Chunk::new();
 
-    let wall_tile = Tile::new((0, 0), TileType::Wall, 1, TileFlags::DIGGABLE);
-    chunk.set_tile(0, 0, wall_tile);
+    for x in 0..CHUNK_SIZE {
+        for y in 0..CHUNK_SIZE {
+            if x == y {
+                let new_tile = Tile::new((0, 0), TileType::Floor, 0, TileFlags::empty());
+                chunk.set_tile(x,y, new_tile);
+            }
+        }
+    }
 
     // Sauvegarder le chunk
-    chunk.save("test/modifications.bin").expect("Failed to save");
+    chunk.save(&file_path).expect("Failed to save");
 
     // Charger le chunk
-    let loaded_chunk = Chunk::load("chunk.bin");
+    let loaded_chunk = Chunk::load(file_path);
     println!("{:?}", loaded_chunk);
 }
 
