@@ -3,7 +3,7 @@ use std::{ sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex }, time::Duratio
 use super::Map;
 use chunk::{ threads::{ ChunkKey, Status }, Chunk };
 use chunk_manager::ChunkManager;
-use crate::{ camera::Camera, renderer::Renderer };
+use crate::{ camera::Camera, renderer::Renderer, WORLD_STARTING_AREA };
 
 use biomes::{ BiomeConfig, Config };
 
@@ -41,15 +41,24 @@ pub fn every_biomes() {
 }
 
 #[test]
-#[ignore = "TODO"]
-fn load_and_generate_chunk() {}
+fn create_and_save() {
+    let map = Map::new("save_test");
+
+    let (x, y) = (WORLD_STARTING_AREA * 2, WORLD_STARTING_AREA * 2);
+    let chunk = Chunk::new();
+
+    let mut map = map.expect("Map creation failed");
+    map.add_chunk(x, y, chunk);
+    map.save().expect("Map saving failed");
+}
+
 #[test]
 #[ignore = "TODO"]
-fn dynamic_chunk_loading() {}
+fn map_loading() {}
 
 #[test]
 #[ignore = "MultiThreading doesn't work for tests, no idea why :("]
-fn threading() {
+fn threads() {
     let map = Map::new("multi_threading").unwrap();
     let seed = map.seed;
     let _camera = Camera::new(0.0, 0.0);
