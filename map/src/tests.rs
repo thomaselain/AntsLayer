@@ -71,7 +71,7 @@ fn threads() {
     let chunk_manager = Arc::new(Mutex::new(ChunkManager::new()));
 
     // Size of the created zone
-    let size = 200;
+    let size = 20;
     let range = -size..size;
 
     eprintln!("Going to generate {} chunks, this may take a while ...", size * size);

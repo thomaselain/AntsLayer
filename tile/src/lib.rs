@@ -20,8 +20,8 @@ pub struct Tile {
     pub hp: u8,
     pub coords: (i32, i32),
     pub tile_type: TileType, // Le type de la tuile
-    pub material: u16, // Index ou ID du matériau (roche, métal, etc.)
     pub flags: TileFlags, // États dynamiques (traversable, liquide, etc.)
+    pub material: u16, // Index ou ID du matériau (roche, métal, etc.)
     pub extra_data: Option<u8>, // Données supplémentaires (exemple : objet)
 }
 
@@ -47,20 +47,41 @@ use bitflags::bitflags;
 bitflags! {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
     pub struct TileFlags: u8 {
-        const TRAVERSABLE = 0b00000001;
-        const DIGGABLE    = 0b00000010;
-        const BUILDABLE   = 0b00000100;
-        const LIQUID      = 0b00001000;
-        const CUSTOM1     = 0b00010000;
+        const TRAVERSABLE  = 0b00000001;
+        const DIGGABLE     = 0b00000010;
+        const BUILDABLE    = 0b00000100;
+        const LIQUID       = 0b00001000;
+        const TEMPERATURE  = 0b00010000;
+        const BROKEN       = 0b00100000;
+        const INTERACTIBLE = 0b01000000;
+        const HAS_STATE    = 0b10000000;
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(u8)] // Utiliser 1 octet pour économiser de la mémoire
+#[repr(u8)]
+pub enum FluidType{
+    Magma,
+    Water
+}
+impl FluidType{
+    pub fn flow_speed(self) -> u8{
+        match self {
+            FluidType::Magma => 1,
+            FluidType::Water => 3,
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u8)]
 pub enum TileType {
-    Empty, // 0
-    Wall, // 1
-    Floor, // 2
-    Liquid, // 3
-    Custom(u8), // 4+ (types personnalisés)
+    Empty,
+    Wall,
+    Rock,
+    Dirt,
+    Grass,
+    Floor,
+    Fluid(FluidType),
+    Custom(u8),//+ (types personnalisés)
 }

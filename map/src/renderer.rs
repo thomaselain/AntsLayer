@@ -1,7 +1,7 @@
 use chunk::{ thread::Status, CHUNK_SIZE };
 use chunk_manager::{ ChunkManager, Draw, DrawAll };
 use sdl2::{ pixels::Color, rect::Rect, Sdl };
-use tile::TileType;
+use tile::{FluidType, TileType};
 
 use crate::{ camera::Camera, Map };
 
@@ -68,7 +68,10 @@ impl DrawAll<Map, Renderer, Camera> for ChunkManager {
 
                     let color = match tile.tile_type {
                         TileType::Floor => Color::GREEN,
-                        TileType::Liquid => Color::BLUE,
+                        TileType::Fluid(liquid) => match liquid{
+                            FluidType::Magma => Color::BLUE,
+                            FluidType::Water => Color::RED
+                        },
                         TileType::Wall => Color::GRAY,
                         _ => Color::WHITE,
                     };
@@ -108,8 +111,11 @@ impl Draw<Renderer, Camera> for ChunkManager {
 
                             let color = match tile.tile_type {
                                 TileType::Floor => Color::GREEN,
-                                TileType::Liquid => Color::BLUE,
-                                TileType::Wall => Color::GRAY,
+                                TileType::Fluid(liquid) => match liquid{
+                                    FluidType::Magma => Color::BLUE,
+                                    FluidType::Water => Color::RED
+                                },
+                                        TileType::Wall => Color::GRAY,
                                 _ => Color::WHITE,
                             };
 

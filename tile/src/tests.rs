@@ -21,7 +21,7 @@ fn set_extra_data() {
 
 #[test]
 fn flags() {
-    let tile = Tile::new((2, 2), TileType::Liquid, 3, TileFlags::TRAVERSABLE | TileFlags::LIQUID);
+    let tile = Tile::new((2, 2), TileType::Fluid(crate::FluidType::Magma), 3, TileFlags::TRAVERSABLE | TileFlags::LIQUID);
     assert!(tile.flags.contains(TileFlags::TRAVERSABLE));
     assert!(tile.flags.contains(TileFlags::LIQUID));
     assert!(!tile.flags.contains(TileFlags::DIGGABLE)); // Vérifie que l'état DIGGABLE n'est pas actif

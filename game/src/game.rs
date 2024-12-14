@@ -1,17 +1,16 @@
 use std::{
     io::{ self, Write },
-    sync::{ mpsc::{self, Receiver, Sender}, Arc, Mutex },
+    sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex },
     time::{ Duration, Instant },
 };
 
-use chunk::thread::{ChunkKey, Status};
+use chunk::thread::{ ChunkKey, Status };
 #[allow(unused_imports)]
 use chunk_manager::Draw;
 #[allow(unused_imports)]
 use chunk_manager::DrawAll;
 use chunk_manager::ChunkManager;
 use chunk_manager::Update;
-
 
 use biomes::BiomeConfig;
 use sdl2::{ event::Event, keyboard::Keycode, Sdl };
@@ -20,7 +19,7 @@ use map::{ camera::Camera, renderer::Renderer, Map };
 #[allow(unused_imports)]
 use unit::{ Unit, MOVING };
 
-use crate::{inputs::{ Inputs, ToDirection }, thread::{MapChannel, MapSender}};
+use crate::{ inputs::{ Inputs, ToDirection }, thread::MapSender };
 pub const WIN_DEFAULT_WIDTH: u32 = 1000;
 pub const WIN_DEFAULT_HEIGHT: u32 = 800;
 
@@ -38,14 +37,17 @@ pub struct Game {
     pub sdl: Sdl,
     pub events: Vec<Event>,
     pub inputs: Inputs,
-    
-    pub map_sender:MapSender,
+
+    pub map_sender: MapSender,
     pub map: Option<Map>,
 }
 
 impl Game {
     pub fn new(sdl: Sdl) -> Game {
-        let (map_sender, _map_receiver):(Sender<(ChunkKey, Status)>, Receiver<(ChunkKey,Status)>)= mpsc::channel();
+        let (map_sender, _map_receiver): (
+            Sender<(ChunkKey, Status)>,
+            Receiver<(ChunkKey, Status)>,
+        ) = mpsc::channel();
 
         let renderer = Renderer::new(
             &sdl,
@@ -146,7 +148,7 @@ impl Game {
             } else if self.inputs.is_key_pressed(Keycode::L) {
                 self.load_world()?;
             }
-        }else if self.inputs.is_key_pressed(Keycode::Space){
+        } else if self.inputs.is_key_pressed(Keycode::Space) {
             self.map.as_ref().unwrap().save().expect("Failed to save map");
             println!("Map saved !");
         }

@@ -9,7 +9,7 @@ use std::path::Path;
 use biomes::BiomeConfig;
 use serde::{ Deserialize, Serialize };
 use thread::Status;
-use tile::{ Tile, TileFlags, TileType };
+use tile::{ FluidType, Tile, TileFlags, TileType };
 use std::io::{ self, Read, Seek, SeekFrom };
 
 pub const CHUNK_SIZE: usize = 16;
@@ -66,14 +66,19 @@ impl Chunk {
                 // let value = (value / 1.5).clamp(-1.0, 1.0);
 
                 // Attribue des types de tuiles selon les seuils du biome
-                let tile_type = if value < biome_config.liquid_threshold {
-                    TileType::Liquid
-                } else if value < biome_config.floor_threshold {
-                    TileType::Floor
-                } else if value < biome_config.wall_threshold {
-                    TileType::Wall
+                let tile_type =
+                if value < biome_config.magma_threshold {
+                    TileType::Fluid(FluidType::Magma)
+                } else if value < biome_config.water_threshold {
+                    TileType::Fluid(FluidType::Water)
+                } else if value < biome_config.grass_threshold {
+                    TileType::Grass
+                } else if value < biome_config.dirt_threshold {
+                    TileType::Dirt
+                } else if value < biome_config.rock_threshold {
+                    TileType::Rock
                 } else {
-                    TileType::Custom(0) // Exemple de type personnalisé pour des cas rares
+                    TileType::Floor
                 };
 
                 chunk.set_tile(

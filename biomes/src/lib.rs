@@ -9,19 +9,23 @@ use std::io::{ self, Read };
 pub struct BiomeConfig {
     pub name: String,
     pub scale: f64,
-    pub wall_threshold: f64,
-    pub floor_threshold: f64,
-    pub liquid_threshold: f64,
+    pub rock_threshold: f64,
+    pub grass_threshold: f64,
+    pub dirt_threshold: f64,
+    pub water_threshold: f64,
+    pub magma_threshold: f64,
 }
 
 impl BiomeConfig {
     pub fn default() -> BiomeConfig {
         BiomeConfig {
-            name: "Plains".to_string(),
+            name: "Default_biome".to_string(),
             scale: 1.0,
-            wall_threshold: 0.5,
-            floor_threshold: 0.0,
-            liquid_threshold: -0.5,
+            rock_threshold: 0.8,
+            grass_threshold: 0.4,
+            water_threshold: -0.4,
+            dirt_threshold: -0.8,
+            magma_threshold: -0.9,
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use tile::TileType;
+use tile::{FluidType, TileType};
 
 use crate::{ Chunk, CHUNK_SIZE };
 
@@ -12,11 +12,18 @@ impl fmt::Debug for Chunk {
             for x in 0..CHUNK_SIZE {
                 let tile = &self.tiles[y][x];
                 let symbol = match tile.tile_type {
-                    TileType::Empty => '.', // Espace pour les tuiles vides
-                    TileType::Wall => '#', // Mur
-                    TileType::Floor => '_', // Sol
-                    TileType::Liquid => '~', // Liquide
-                    TileType::Custom(_) => '?', // Type personnalisé
+                    TileType::Empty => ' ',
+                    TileType::Wall => '#',
+                    TileType::Floor => '_',
+                    TileType::Rock => '&',
+                    TileType::Grass => ',',
+                    TileType::Dirt => '.',
+                    TileType::Fluid(liquid) =>
+                        match liquid {
+                            FluidType::Magma => '~',
+                            FluidType::Water => '~',
+                        }
+                        TileType::Custom(_) => '?',
                 };
                 write!(f, "{} ", symbol)?;
             }
