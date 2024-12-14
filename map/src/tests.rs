@@ -1,7 +1,7 @@
 use std::{ sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex }, time::Duration };
 
 use super::Map;
-use chunk::{ threads::{ ChunkKey, Status }, Chunk };
+use chunk::{ thread::{ ChunkKey, Status }, Chunk };
 use chunk_manager::ChunkManager;
 use crate::{ camera::Camera, renderer::Renderer, WORLD_STARTING_AREA };
 

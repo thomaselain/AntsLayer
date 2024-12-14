@@ -2,13 +2,13 @@
 mod tests;
 
 pub mod debug;
-pub mod threads;
+pub mod thread;
 
 use std::fs::{ self, File };
 use std::path::Path;
 use biomes::BiomeConfig;
 use serde::{ Deserialize, Serialize };
-use threads::Status;
+use thread::Status;
 use tile::{ Tile, TileFlags, TileType };
 use std::io::{ self, Read, Seek, SeekFrom };
 

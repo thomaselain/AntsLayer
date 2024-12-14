@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chunk::threads::Status;
+use chunk::thread::Status;
 
 pub mod chunk_manager;
 

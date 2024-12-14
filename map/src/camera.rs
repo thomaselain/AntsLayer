@@ -1,7 +1,7 @@
 use std::{ collections::HashMap, sync::mpsc, time::Duration };
 
 use biomes::BiomeConfig;
-use chunk::{ threads::Status, Chunk, CHUNK_SIZE };
+use chunk::{ thread::Status, Chunk, CHUNK_SIZE };
 use chunk_manager::{ ChunkManager, Clear, Update };
 use coords::Coords;
 

@@ -12,7 +12,7 @@ use std::fs::File;
 use std::io;
 // use biomes::BiomeConfig;
 use camera::Camera;
-use chunk::threads::Status;
+use chunk::thread::Status;
 use chunk::{ Chunk, CHUNK_SIZE };
 use crate::chunk_manager::ChunkManager;
 use rand::Rng;

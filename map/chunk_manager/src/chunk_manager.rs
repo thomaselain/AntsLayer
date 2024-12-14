@@ -1,5 +1,5 @@
 use biomes::BiomeConfig;
-use chunk::threads:: Status ;
+use chunk::thread:: Status ;
 use chunk::Chunk;
 use std::collections::HashMap;
 

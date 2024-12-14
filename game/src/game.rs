@@ -1,9 +1,10 @@
 use std::{
     io::{ self, Write },
-    sync::{ Arc, Mutex },
+    sync::{ mpsc::{self, Receiver, Sender}, Arc, Mutex },
     time::{ Duration, Instant },
 };
 
+use chunk::thread::{ChunkKey, Status};
 #[allow(unused_imports)]
 use chunk_manager::Draw;
 #[allow(unused_imports)]
@@ -19,7 +20,7 @@ use map::{ camera::Camera, renderer::Renderer, Map };
 #[allow(unused_imports)]
 use unit::{ Unit, MOVING };
 
-use crate::inputs::{ Inputs, ToDirection };
+use crate::{inputs::{ Inputs, ToDirection }, thread::{MapChannel, MapSender}};
 pub const WIN_DEFAULT_WIDTH: u32 = 1000;
 pub const WIN_DEFAULT_HEIGHT: u32 = 800;
 
@@ -37,11 +38,15 @@ pub struct Game {
     pub sdl: Sdl,
     pub events: Vec<Event>,
     pub inputs: Inputs,
+    
+    pub map_sender:MapSender,
     pub map: Option<Map>,
 }
 
 impl Game {
     pub fn new(sdl: Sdl) -> Game {
+        let (map_sender, _map_receiver):(Sender<(ChunkKey, Status)>, Receiver<(ChunkKey,Status)>)= mpsc::channel();
+
         let renderer = Renderer::new(
             &sdl,
             "Ants Layer",
@@ -67,6 +72,7 @@ impl Game {
             events: Vec::new(),
             inputs: Inputs::new(),
             map: None,
+            map_sender,
         }
     }
 
