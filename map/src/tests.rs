@@ -71,10 +71,10 @@ fn threads() {
     let chunk_manager = Arc::new(Mutex::new(ChunkManager::new()));
 
     // Size of the created zone
-    let size = 20;
+    let size = 200;
     let range = -size..size;
 
-    println!("Going to generate {} chunks, this may take a while ...", size * size);
+    eprintln!("Going to generate {} chunks, this may take a while ...", size * size);
 
     // Génération des chunks
     range
@@ -90,17 +90,19 @@ fn threads() {
 
     // Boucle principale pour surveiller les chunks générés
     while let Ok((key, status)) = receiver.recv_timeout(Duration::from_secs(10)) {
-        println!("Chunk {:?} prêt.", key);
         chunks.push(status.clone());
 
         chunk_manager.chunks.insert(key, status.clone());
 
         match status {
-            Status::Pending => panic!(),
+            Status::Pending => {
+                println!("Attends frero prends ton temps ... ");
+            }
             Status::Ready(chunk) => {
                 println!("{:?}", chunk);
                 if chunks.len() >= ((size * size) as usize) {
                     // Generation is done !
+                    println!("Chunk {:?} prêt.", key);
                     break;
                 }
             }

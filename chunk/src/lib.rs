@@ -12,7 +12,7 @@ use thread::Status;
 use tile::{ Tile, TileFlags, TileType };
 use std::io::{ self, Read, Seek, SeekFrom };
 
-pub const CHUNK_SIZE: usize = 32;
+pub const CHUNK_SIZE: usize = 16;
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub struct Chunk {
