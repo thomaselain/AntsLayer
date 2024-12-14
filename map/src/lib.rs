@@ -13,7 +13,7 @@ use std::io;
 // use biomes::BiomeConfig;
 use camera::Camera;
 use chunk::thread::Status;
-use chunk::{ Chunk, CHUNK_SIZE };
+use chunk::{ Chunk, ChunkPath, CHUNK_SIZE };
 use crate::chunk_manager::ChunkManager;
 use rand::Rng;
 use serde::{ Serialize, Deserialize };
@@ -120,38 +120,40 @@ impl Map {
     }
 
     // Ajouter un chunk
-    pub fn add_chunk(&mut self, x: i32, y: i32, chunk: Chunk) {
+    pub fn add_chunk(&mut self, x: i32, y: i32, chunk: Chunk) -> std::io::Result<()> {
         // let path = format!("{}/chunks/{}_{}.bin", self.path, x, y);
 
         self.chunks.insert((x, y), chunk);
-        // chunk.save(&path).unwrap();
-    }
+        chunk.save(ChunkPath::build(self.path.clone(), x, y).expect("Failed to save chunk"))?;
 
+        Ok(())
+    }
     // Sauvegarder la map entière
     pub fn save(&self) -> std::io::Result<()> {
+        
         for ((x, y), chunk) in &self.chunks {
             let chunk_path = &format!("{}/chunks/{}_{}.bin", self.path, x, y);
-            chunk.save(&chunk_path)?;
+            chunk.save(ChunkPath::build(self.path.clone(), *x, *y).expect("Failed to save chunk"))?;
         }
 
         Ok(())
     }
 
     // Charger la map entière
-    pub fn load(path: &str) -> Result<Map, io::Error> {
-        let file = File::open(path).ok();
-        let map = bincode::deserialize_from(file.expect("failed to open map file"));
-        Ok(map.ok().expect("Error while loading map?"))
-    }
-    
-    pub fn get_chunk(self, x: i32, y: i32) -> Result<Chunk, ()> {
+    // pub fn load(path: &str) -> Result<Map, io::Error> {
+    //     let file = File::open(path).ok();
+    //     let map = bincode::deserialize_from(file.expect("failed to open map file"));
+    //     Ok(map.ok().expect("Error while loading map?"))
+    // }
+
+    pub fn get_chunk(&self, x: i32, y: i32) -> Result<Chunk, ()> {
         if !self.chunks.contains_key(&(x, y)) {
             Err(())
         } else {
             Ok(*self.chunks.get(&(x, y)).unwrap())
         }
     }
-    
+
     pub fn load_chunk(&self, chunk_x: i32, chunk_y: i32) -> Option<Chunk> {
         let file = File::open(&self.path).ok()?;
         let mut reader = std::io::BufReader::new(file);
@@ -181,14 +183,20 @@ impl Map {
 
         let mut chunks = HashMap::new();
 
-        // Les coordonnées des chunks visibles doivent être calculées en termes de chunks, pas de pixels
         for x in chunk_x_start - (camera.render_distance as i32)..=chunk_x_start +
             (camera.render_distance as i32) {
             for y in chunk_y_start - (camera.render_distance as i32)..=chunk_y_start +
                 (camera.render_distance as i32) {
-                let chunk = chunk_manager.load_chunk(x, y, self.seed);
-                chunks.insert((x, y), chunk);
-                // println!("Chunk {},{} became visible", x, y);
+                let status = chunk_manager.load_chunk(x, y, self.seed);
+
+                match status {
+                    Status::Visible(_) | Status::Ready(_) => {
+                        // println!("Chunk {},{} became visible", x, y);
+                        chunks.insert((x, y), status);
+                    }
+                    Status::Pending | Status::ToGenerate => {}
+                    Status::Error(e) => panic!("{:?}", e),
+                }
             }
         }
         chunks

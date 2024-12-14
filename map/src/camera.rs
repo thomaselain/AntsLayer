@@ -1,7 +1,7 @@
 use std::{ collections::HashMap, sync::mpsc, time::Duration };
 
 use biomes::BiomeConfig;
-use chunk::{ thread::Status, Chunk, CHUNK_SIZE };
+use chunk::{ thread::Status, Chunk, ChunkPath, CHUNK_SIZE };
 use chunk_manager::{ ChunkManager, Clear, Update };
 use coords::Coords;
 
@@ -76,8 +76,20 @@ impl Update<Map, Camera> for ChunkManager {
         let visible_chunks: HashMap<(i32, i32), Status> = map.visible_chunks(camera, self);
 
         for ((x, y), _) in visible_chunks.iter() {
-            if !self.chunks.contains_key(&(*x, *y)) {
-                Chunk::generate_async(*x, *y, map.seed, BiomeConfig::default(), sender.clone());
+            let path = ChunkPath::build(map.path.clone(), *x, *y).expect("Failed to create chunks folder");
+
+            match Chunk::load(path) {
+                Ok(((x, y), status)) => {
+                    self.chunks.insert((x, y), status);
+                }
+                Err(e) => panic!("{:?}", e),
+            }
+        }
+
+        for ((x, y), status) in self.chunks.clone() {
+            if status == Status::ToGenerate {
+                Chunk::generate_async(x, y, map.seed, BiomeConfig::default(), sender.clone());
+
                 let ((x, y), status) = receiver
                     .recv_timeout(Duration::new(1, 0))
                     .expect("Chunk took too long to generate");
@@ -85,6 +97,7 @@ impl Update<Map, Camera> for ChunkManager {
                 self.chunks.insert((x, y), status);
             }
         }
+
         self.clear_out_of_range(visible_chunks);
     }
 }

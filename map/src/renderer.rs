@@ -1,7 +1,7 @@
 use chunk::{ thread::Status, CHUNK_SIZE };
 use chunk_manager::{ ChunkManager, Draw, DrawAll };
 use sdl2::{ pixels::Color, rect::Rect, Sdl };
-use tile::{FluidType, TileType};
+use tile::{ FluidType, TileType };
 
 use crate::{ camera::Camera, Map };
 
@@ -68,10 +68,11 @@ impl DrawAll<Map, Renderer, Camera> for ChunkManager {
 
                     let color = match tile.tile_type {
                         TileType::Floor => Color::GREEN,
-                        TileType::Fluid(liquid) => match liquid{
-                            FluidType::Magma => Color::BLUE,
-                            FluidType::Water => Color::RED
-                        },
+                        TileType::Fluid(liquid) =>
+                            match liquid {
+                                FluidType::Magma => Color::BLUE,
+                                FluidType::Water => Color::RED,
+                            }
                         TileType::Wall => Color::GRAY,
                         _ => Color::WHITE,
                     };
@@ -100,7 +101,7 @@ impl Draw<Renderer, Camera> for ChunkManager {
 
             // Check if current_chunk is done generating
             match status {
-                Status::Ready(ref chunk) => {
+                Status::Visible(ref chunk) => {
                     //Draw each tile
                     for (x, row) in chunk.tiles.iter().enumerate() {
                         for (y, tile) in row.iter().enumerate() {
@@ -110,13 +111,19 @@ impl Draw<Renderer, Camera> for ChunkManager {
                             );
 
                             let color = match tile.tile_type {
-                                TileType::Floor => Color::GREEN,
-                                TileType::Fluid(liquid) => match liquid{
-                                    FluidType::Magma => Color::BLUE,
-                                    FluidType::Water => Color::RED
-                                },
-                                        TileType::Wall => Color::GRAY,
-                                _ => Color::WHITE,
+                                TileType::Floor => Color::WHITE,
+                                TileType::Fluid(liquid) =>
+                                    match liquid {
+                                        FluidType::Magma => Color::BLUE,
+                                        FluidType::Water => Color::RED,
+                                    }
+                                TileType::Wall => Color::GRAY,
+                                TileType::Empty => Color::BLACK,
+                                TileType::Rock => Color::GREY,
+                                TileType::Dirt => Color::RGB(50, 200, 25),
+                                TileType::Grass => Color::GREEN,
+                                TileType::Custom(_) => todo!(),
+                                // _ => Color::WHITE,
                             };
 
                             renderer.canvas.set_draw_color(color);
@@ -132,6 +139,38 @@ impl Draw<Renderer, Camera> for ChunkManager {
                                 .expect("Failed to draw tile");
                         }
                     }
+                }
+                Status::Ready(_) => {
+                    let (screen_x, screen_y) = (
+                        chunk_screen_x + offset_x,
+                        chunk_screen_y + offset_y,
+                    );
+
+                    renderer.canvas.set_draw_color(Color::CYAN);
+
+                    renderer.canvas
+                        .fill_rect(
+                            Rect::new(screen_x, screen_y, TILE_SIZE as u32, TILE_SIZE as u32)
+                        )
+                        .expect("Failed to draw tile");
+
+                    // Render loading tile
+                }
+                Status::ToGenerate => {
+                    let (screen_x, screen_y) = (
+                        chunk_screen_x + offset_x,
+                        chunk_screen_y + offset_y,
+                    );
+
+                    renderer.canvas.set_draw_color(Color::MAGENTA);
+
+                    renderer.canvas
+                        .fill_rect(
+                            Rect::new(screen_x, screen_y, TILE_SIZE as u32, TILE_SIZE as u32)
+                        )
+                        .expect("Failed to draw tile");
+
+                    // Render loading tile
                 }
                 Status::Pending => {
                     let (screen_x, screen_y) = (
@@ -149,6 +188,7 @@ impl Draw<Renderer, Camera> for ChunkManager {
 
                     // Render loading tile
                 }
+                Status::Error(e) => panic!("{:?}", e),
             }
         }
         renderer.canvas.set_draw_color(Color::BLACK);

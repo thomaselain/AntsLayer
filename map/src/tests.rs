@@ -63,7 +63,6 @@ fn threads() {
     let seed = map.seed;
     let _camera = Camera::new(0.0, 0.0);
 
-    let mut chunks = Vec::new();
     let (sender, receiver): (
         Sender<(ChunkKey, Status)>,
         Receiver<(ChunkKey, Status)>,
@@ -87,24 +86,25 @@ fn threads() {
         });
 
     let mut chunk_manager = chunk_manager.lock().expect("Chunk manager was not ready !");
+    let mut chunks: Vec<Chunk> = Vec::new();
 
     // Boucle principale pour surveiller les chunks générés
-    while let Ok((key, status)) = receiver.recv_timeout(Duration::from_secs(10)) {
-        chunks.push(status.clone());
+    while let Ok(((x,y), status)) = receiver.recv_timeout(Duration::from_secs(10)) {
+        chunk_manager.chunks.insert((x,y), status.clone());
 
-        chunk_manager.chunks.insert(key, status.clone());
+        match status.get_chunk() {
+            Ok(chunk) => {
+                chunks.push(chunk);
 
-        match status {
-            Status::Pending => {
-                println!("Attends frero prends ton temps ... ");
-            }
-            Status::Ready(chunk) => {
                 println!("{:?}", chunk);
                 if chunks.len() >= ((size * size) as usize) {
                     // Generation is done !
-                    println!("Chunk {:?} prêt.", key);
+                    println!("Chunk {:?} prêt.", (x,y));
                     break;
                 }
+            }
+            Err(_) => {
+                println!("Attends frero prends ton temps ... ({},{})", x,y);
             }
         }
     }

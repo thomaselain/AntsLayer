@@ -1,15 +1,6 @@
 use super::*;
 
 #[cfg(test)]
-fn setup_directory() -> Result<(), std::io::Error> {
-    let dir = "test";
-    if !Path::new(dir).exists() {
-        fs::create_dir_all(dir)?;
-    }
-    Ok(())
-}
-
-#[cfg(test)]
 fn cleanup_directory() -> Result<(), std::io::Error> {
     let dir = "test";
     if Path::new(dir).exists() {
@@ -20,67 +11,79 @@ fn cleanup_directory() -> Result<(), std::io::Error> {
 
 #[test]
 fn chunk_serialization() {
-    setup_directory().expect("Failed to set up test directory");
+    let (x, y) = (0, 0);
+    let ((x, y), status) = Chunk::generate_default(x, y);
+    let chunk = status.get_chunk().expect(&ChunkError::FailedToGenerate.to_string());
 
-    let original_chunk = Chunk::new();
-    let file_path = "test/chunk.bin";
+    let path = ChunkPath::build("test".to_string(), x, y).expect("Failed to set up test directory");
 
-    original_chunk.save(file_path).expect("Failed to save chunk");
+    chunk.save(path.clone()).expect("Failed to save chunk");
 
-    let loaded_chunk = Chunk::load(file_path).expect("Failed to load chunk");
-    assert_eq!(original_chunk.tiles, loaded_chunk.get_chunk().expect("Failed to load chunk").tiles);
+    let ((_x, _y), status) = Chunk::load(path.clone()).unwrap();
+    assert_eq!(chunk, status.get_chunk().expect("Failed to load chunk"));
 
     cleanup_directory().expect("Failed to clean up test directory");
 }
 
 #[test]
 fn read_write_chunk() {
-    let chunk = Chunk::new();
-    let path = "test/chunk.bin";
+    let path =ChunkPath::build("test".to_string(), 0, 0).expect("Failed to set up test directory");
 
-    chunk.save(path).expect(&format!("Failed to save chunk at {}", path).to_string());
+    let ((x, y), status) = Chunk::generate_default(69, 420);
 
-    let loaded_chunk = Chunk::load(path);
+    // Save new chunk
+    status
+        .clone()
+        .get_chunk()
+        .expect("Chunk failed to generate")
+        .save(path.clone())
+        .expect(&format!("Failed to save chunk at {:?}", &path.clone().to_string()));
+
+    println!("Generated chunk : {:?}", status.get_chunk().unwrap());
+
+    let ((_x, _y), loaded_chunk) = Chunk::load(path).unwrap();
     println!("{:?}", loaded_chunk);
 }
 
 #[test]
 pub fn tile_modification() {
-    let file_path = "test/modification.bin";
+   let path= ChunkPath::build("test".to_string(), 0, 0).expect("Failed to set up test directory");
+
     let mut chunk = Chunk::new();
 
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
             if x == y {
                 let new_tile = Tile::new((0, 0), TileType::Floor, 0, TileFlags::empty());
-                chunk.set_tile(x,y, new_tile);
+                chunk.set_tile(x, y, new_tile);
             }
         }
     }
 
     // Sauvegarder le chunk
-    chunk.save(&file_path).expect("Failed to save");
+    chunk.save(path.clone()).expect("Failed to save");
 
     // Charger le chunk
-    let loaded_chunk = Chunk::load(file_path);
+    let ((_x, _y), loaded_chunk) = Chunk::load(path.clone()).unwrap();
     println!("{:?}", loaded_chunk);
 }
 
 #[test]
 fn chunk_file_operations() {
-    let chunk = Chunk::new();
-    let file_path = "test/chunk.bin";
+   let path= ChunkPath::build("test/file_operations".to_string(), 0, 0).expect("Failed to set up test directory");
+   let chunk = Chunk::new();
 
     // Test écriture
-    chunk.save(file_path).expect("Failed to write chunk");
+    chunk.save(path.clone()).expect("Failed to write chunk");
 
     // Test lecture
-    let chunk_status = Chunk::load(file_path).expect("Failed to read chunk");
-    assert_eq!(chunk, chunk_status.get_chunk().expect("Chunk is not ready !"));
+    let ((_x, _y), loaded_chunk) = Chunk::load(path.clone()).unwrap();
+    assert_eq!(chunk, loaded_chunk.get_chunk().expect("Chunk is not ready !"));
 }
 
 #[test]
 fn skip_in_file() {
+    ChunkPath::build("test".to_string(), 0, 0).expect("Failed to set up test directory");
     use std::io::Cursor;
 
     // Créer un fichier virtuel avec deux chunks

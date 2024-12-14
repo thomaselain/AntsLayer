@@ -29,9 +29,6 @@ pub struct Game {
     pub last_tick: Instant,
     pub tick_rate: Duration, // Pour contrôler la fréquence des ticks (30 ou 60 fps)
 
-    // pub renderer: Renderer,
-    // pub chunk_manager: ChunkManager,
-
     pub biome_config: BiomeConfig,
     pub camera: Camera,
     pub sdl: Sdl,
@@ -78,11 +75,11 @@ impl Game {
         }
     }
 
-    pub fn load_world(&mut self) -> Result<Map, ()> {
-        let path = "./data/test_world";
-        println!("Loading {}", path);
-        Ok(Map::load(path).expect(&format!("Failed to load map at '{}'", path)))
-    }
+    // pub fn load_world(&mut self) -> Result<Map, ()> {
+    //     let path = "./data/test_world";
+    //     println!("Loading {}", path);
+    //     // Ok(Map::load(path).expect(&format!("Failed to load map at '{}'", path)))
+    // }
 
     pub fn create_world(&mut self) -> Result<(), ()> {
         if self.map.is_none() {
@@ -146,7 +143,7 @@ impl Game {
             if self.inputs.is_key_pressed(Keycode::R) {
                 self.create_world()?; // Appel de la méthode pour créer la carte
             } else if self.inputs.is_key_pressed(Keycode::L) {
-                self.load_world()?;
+                // self.load_world()?;
             }
         } else if self.inputs.is_key_pressed(Keycode::Space) {
             self.map.as_ref().unwrap().save().expect("Failed to save map");

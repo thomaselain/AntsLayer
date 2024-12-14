@@ -8,14 +8,35 @@ use std::fs::{ self, File };
 use std::path::Path;
 use biomes::BiomeConfig;
 use serde::{ Deserialize, Serialize };
-use thread::Status;
+use thread::{ ChunkError, ChunkKey, Status };
 use tile::{ FluidType, Tile, TileFlags, TileType };
 use std::io::{ self, Read, Seek, SeekFrom };
 
-pub const CHUNK_SIZE: usize = 16;
+pub const CHUNK_SIZE: usize = 8;
+
+#[derive(Clone)]
+pub struct ChunkPath(String, i32, i32);
+
+impl ChunkPath {
+    fn new(path: String, x: i32, y: i32) -> Self {
+        Self { 0: path, 1: x, 2: y }
+    }
+    pub fn to_string(self) -> String {
+        format!("{}/{}_{}.bin", self.0, self.1, self.2).to_string()
+    }
+    pub fn build(path: String, x: i32, y: i32) -> std::io::Result<Self> {
+        let dir = path.clone();
+        if !Path::new(&dir).exists() {
+            fs::create_dir_all(dir)?;
+        }
+        Ok(Self::new(path, x, y))
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub struct Chunk {
+    pub x: i32,
+    pub y: i32,
     pub is_dirty: bool,
     pub tiles: [[Tile; CHUNK_SIZE]; CHUNK_SIZE], // Stockage linéaire pour optimiser la mémoire cache
 }
@@ -24,13 +45,18 @@ impl Chunk {
     pub fn new() -> Self {
         let default_tile = Tile::new((0, 0), TileType::Empty, 0, TileFlags::empty());
         Self {
+            x: 0,
+            y: 0,
             is_dirty: true,
             tiles: [[default_tile; CHUNK_SIZE]; CHUNK_SIZE],
         }
     }
 
-    pub fn generate_default(x: i32, y: i32) {
-        Self::generate_from_biome(x, y, 0, BiomeConfig::default());
+    /// Generate a chunk without multi threading
+    pub fn generate_default(x: i32, y: i32) -> ((i32, i32), Status) {
+        let ((_x,_y),chunk) = Self::generate_from_biome(x, y, 0, BiomeConfig::default());
+
+        ((x,y),Status::Ready(chunk))
     }
 
     /// Génère un chunk basé sur la configuration d'un biome
@@ -66,8 +92,7 @@ impl Chunk {
                 // let value = (value / 1.5).clamp(-1.0, 1.0);
 
                 // Attribue des types de tuiles selon les seuils du biome
-                let tile_type =
-                if value < biome_config.magma_threshold {
+                let tile_type = if value < biome_config.magma_threshold {
                     TileType::Fluid(FluidType::Magma)
                 } else if value < biome_config.water_threshold {
                     TileType::Fluid(FluidType::Water)
@@ -101,36 +126,46 @@ impl Chunk {
         }
     }
 
-    pub fn save(&self, path: &str) -> Result<(), std::io::Error> {
+    pub fn save(&self, path: ChunkPath) -> Result<(), std::io::Error> {
         if self.is_dirty {
-            if let Some(parent) = Path::new(path).parent() {
+            if let Some(parent) = Path::new(&path.clone().to_string()).parent() {
                 fs::create_dir_all(parent)?;
             }
-            let file = std::fs::File::create(path)?;
+            let file = std::fs::File::create(path.to_string())?;
             bincode::serialize_into(file, self).expect("Failed to serialize");
             Ok(())
         } else {
-            Ok(()) // Pas besoin de sauvegarder si non modifié
+            Ok(())
         }
     }
 
-    pub fn load(file_path: &str) -> Result<Status, ()> {
-        let file = File::open(file_path).expect(
-            &format!("Failed to load chunk at {}", file_path).to_string()
-        );
-        Ok(
-            Status::Ready(
-                bincode
-                    ::deserialize_from(file)
-                    .map_err(|e| {
-                        std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            format!("Deserialization error: {}", e)
-                        )
-                    })
-                    .expect("Failed to deserialize")
-            )
-        )
+    pub fn load(
+        path: ChunkPath,
+    ) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
+        let chunk_file = File::open(path.clone().to_string());
+        let (x,y) = (path.1,path.2);
+
+        if chunk_file.is_err() {
+            Ok(((x, y), Status::ToGenerate))
+        } else if let Ok(file) = chunk_file {
+            Ok((
+                (x, y),
+                Status::Ready(
+                    bincode
+                        ::deserialize_from(file)
+                        .map_err(|e| {
+                            std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("Deserialization error for chunk ({},{}):\n{}\n", x, y, e)
+                            )
+                        })
+                        .expect("Failed to deserialize")
+                ),
+            ))
+        } else {
+            println!("Failed to load chunk at {}", path.to_string());
+            Err(((x, y), ChunkError::FailedToLoad))
+        }
     }
     pub fn skip_in_file<R: Read + Seek>(reader: &mut R) -> io::Result<()> {
         // Calcule la taille d'un chunk en octets

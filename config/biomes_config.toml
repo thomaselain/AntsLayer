@@ -2,30 +2,28 @@
 name = "Plain"
 seed = 0
 scale = 0.5
-rock_threshold: 0.8,
-grass_threshold: 0.4,
-dirt_threshold: 0.0,
-water_threshold: -0.4,
-magma_threshold: -0.9,
-
+rock_threshold= 0.8
+grass_threshold= 0.4
+dirt_threshold= 0.0
+water_threshold= -0.4
+magma_threshold= -0.9
 
 [[biomes]]
 name = "Mountain"
 seed = 0
 scale = 0.6
-rock_threshold: 0.8,
-grass_threshold: 0.4,
-dirt_threshold: 0.0,
-water_threshold: -0.4,
-magma_threshold: -0.9,
-
+rock_threshold= 0.8
+grass_threshold= 0.4
+dirt_threshold= 0.0
+water_threshold= -0.4
+magma_threshold= -0.9
 
 [[biomes]]
 name = "Forest"
 seed = 0
 scale = 0.5
-rock_threshold: 0.8,
-grass_threshold: 0.4,
-dirt_threshold: 0.0,
-water_threshold: -0.4,
-magma_threshold: -0.9,
+rock_threshold= 0.8
+grass_threshold= 0.4
+dirt_threshold= 0.0
+water_threshold= -0.4
+magma_threshold= -0.9

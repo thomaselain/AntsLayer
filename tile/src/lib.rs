@@ -74,7 +74,7 @@ impl FluidType{
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(u8)]
+#[repr(u16)]
 pub enum TileType {
     Empty,
     Wall,

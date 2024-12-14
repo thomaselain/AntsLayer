@@ -1,4 +1,4 @@
-use std::{ sync::mpsc:: Sender , thread };
+use std::{ sync::mpsc::Sender, thread };
 
 use biomes::BiomeConfig;
 use serde::{ Deserialize, Serialize };
@@ -10,18 +10,34 @@ use crate::Chunk;
 pub type ChunkKey = (i32, i32);
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub enum ChunkError {
+    FailedToLoad,
+    FailedToGenerate,
+}
+impl ChunkError {
+    pub fn to_string(self) -> String {
+        let e = match self {
+            ChunkError::FailedToLoad => "Failed to load chunk",
+            ChunkError::FailedToGenerate => "Failed to generate chunk",
+        };
+        e.to_string()
+    }
+}
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum Status {
-    Pending, // En attente de génération
-    Ready(Chunk), // Prêt à être dessiné
+    ToGenerate,
+    Pending,
+    Visible(Chunk),
+    Ready(Chunk),
+    Error(ChunkError),
 }
 
 impl Status {
     pub fn get_chunk(self) -> Result<Chunk, Self> {
         match self {
-            Status::Ready(chunk) => Ok(chunk),
+            Status::Ready(chunk) | Status::Visible(chunk) => Ok(chunk),
             Status::Pending => Err(self),
-            // For other status ...
-            // _ => Err(self),
+            _ => Err(self),
         }
     }
 }

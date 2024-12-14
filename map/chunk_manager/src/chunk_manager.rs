@@ -1,5 +1,5 @@
 use biomes::BiomeConfig;
-use chunk::thread:: Status ;
+use chunk::thread::Status;
 use chunk::Chunk;
 use std::collections::HashMap;
 
@@ -24,7 +24,9 @@ impl ChunkManager {
                     println!("Chunk ({}, {}) est encore en attente...", x, y);
                     status
                 }
-                Status::Ready(_) => status,
+                Status::Ready(_) | Status::Visible(_) => status,
+                Status::ToGenerate => todo!(),
+                Status::Error(e) => panic!("{}", e.to_string()),
             }
         } else {
             // println!("Génération du chunk ({}, {}) ...", x, y);
