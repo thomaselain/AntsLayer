@@ -6,6 +6,7 @@ pub mod thread;
 
 use std::fs::{ self, File };
 use std::path::Path;
+use std::sync::mpsc::{ self, Receiver };
 use std::thread::sleep;
 use std::time::Duration;
 use biomes::BiomeConfig;
@@ -75,7 +76,7 @@ impl Chunk {
         let chunk_offset_y = y * (CHUNK_SIZE as i32);
 
         sleep(Duration::new(0, 5_000));
-        
+
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
                 let nx = ((x as f64) + (chunk_offset_x as f64)) / (CHUNK_SIZE as f64);
@@ -144,20 +145,30 @@ impl Chunk {
         }
     }
 
-    pub fn load(path: ChunkPath) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
+    pub fn load(path: ChunkPath, seed: u32) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
         let chunk_file = File::open(path.clone().to_string());
         let (x, y) = (path.1, path.2);
 
         println!("{:?}", path.clone().to_string());
 
         if chunk_file.is_err() {
-            let ((x, y), status) = Chunk::generate_default(x, y);
-            Chunk::save(&status.clone().get_chunk().ok().unwrap(), path).expect(
-                "Failed to write new chunk file"
-            );
+            let (sender, receiver) = mpsc::channel();
+            Chunk::generate_async(x, y, seed, BiomeConfig::default(), sender);
 
-            println!("{:?}", chunk_file);
-            return Ok(((x, y), status));
+            while let Ok(((_x, _y), status)) = receiver.recv_timeout(Duration::new(5, 0)) {
+                match status {
+                    Status::Ready(_chunk) => {
+                        Chunk::save(&status.clone().get_chunk().ok().unwrap(), path.clone()).expect(
+                            "Failed to write new chunk file"
+                        );
+                    }
+                    Status::Error(e) => panic!("{:?}", e),
+                    _ => {}
+                }
+            }
+
+            // println!("{:?}", chunk_file);
+            // return Ok(((x, y), status));
         }
         if let Ok(file) = chunk_file {
             Ok((

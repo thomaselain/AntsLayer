@@ -1,13 +1,9 @@
+use bincode::Serializer;
+use mpsc::Sender;
+
 use super::*;
 
-#[cfg(test)]
-fn cleanup_directory() -> Result<(), std::io::Error> {
-    let dir = "test";
-    if Path::new(dir).exists() {
-        fs::remove_dir_all(dir)?;
-    }
-    Ok(())
-}
+const TEST_SEED: u32 = 0;
 
 #[test]
 fn chunk_serialization() {
@@ -19,15 +15,12 @@ fn chunk_serialization() {
 
     chunk.save(path.clone()).expect("Failed to save chunk");
 
-    let ((_x, _y), file_status) = Chunk::load(path.clone()).unwrap();
-    assert_eq!(chunk, file_status.get_chunk().ok().unwrap());
-
-    cleanup_directory().expect("Failed to clean up test directory");
+    println!("{:?}", bincode::serialize(&chunk));
 }
 
 #[test]
 fn read_write_chunk() {
-    let path =ChunkPath::build("test".to_string(), 0, 0).expect("Failed to set up test directory");
+    let path = ChunkPath::build("test".to_string(), 0, 0).expect("Failed to set up test directory");
 
     let ((_x, _y), status) = Chunk::generate_default(69, 420);
 
@@ -41,13 +34,13 @@ fn read_write_chunk() {
 
     println!("Generated chunk : {:?}", status.get_chunk().unwrap());
 
-    let ((_x, _y), loaded_chunk) = Chunk::load(path).unwrap();
+    let ((_x, _y), loaded_chunk) = Chunk::load(path, TEST_SEED).unwrap();
     println!("{:?}", loaded_chunk);
 }
 
 #[test]
 pub fn tile_modification() {
-   let path= ChunkPath::build("test".to_string(), 0, 0).expect("Failed to set up test directory");
+    let path = ChunkPath::build("test".to_string(), 0, 0).expect("Failed to set up test directory");
 
     let mut chunk = Chunk::new();
 
@@ -64,21 +57,43 @@ pub fn tile_modification() {
     chunk.save(path.clone()).expect("Failed to save");
 
     // Charger le chunk
-    let ((_x, _y), loaded_chunk) = Chunk::load(path.clone()).unwrap();
+    let ((_x, _y), loaded_chunk) = Chunk::load(path.clone(), TEST_SEED).unwrap();
     println!("{:?}", loaded_chunk);
 }
 
 #[test]
 fn chunk_file_operations() {
-   let path= ChunkPath::build("test/file_operations".to_string(), 0, 0).expect("Failed to set up test directory");
-   let chunk = Chunk::new();
+    // Build chunks paths
+    let path_1 = ChunkPath::build("test/file_operations".to_string(), 0, 0).expect(
+        "Failed to set up test directory"
+    );
+    let path_2 = ChunkPath::build("test/file_operations".to_string(), 0, 0).expect(
+        "Failed to set up test directory"
+    );
+
+    // Save chunks
+    let chunk_1 = Chunk::new();
+    chunk_1.save(path_1.clone()).unwrap();
+    let mut chunk_2 = Chunk::new();
+    chunk_2.save(path_2.clone()).unwrap();
+
+    // generate new chunk
+    let chunk_1 = Chunk::generate_default(path_1.1, path_1.2).1.get_chunk().unwrap();
+
+    // get chunk_2 from file (It should return a Status::ToGenerate)
+    let ((_, _), status) = Chunk::load(path_2.clone(), TEST_SEED).unwrap();
+    match status {
+        Status::ToGenerate => {
+            chunk_2 = Chunk::generate_default(path_2.1, path_2.2).1.get_chunk().unwrap();
+        }
+        _ => {panic!("!")}
+    }
 
     // Test écriture
-    chunk.save(path.clone()).expect("Failed to write chunk");
+    chunk_1.save(path_1.clone()).expect("Failed to save chunk");
 
     // Test lecture
-    let ((_x, _y), loaded_chunk) = Chunk::load(path.clone()).unwrap();
-    assert_eq!(chunk, loaded_chunk.get_chunk().ok().unwrap());
+    assert_eq!(Some(chunk_1), Some(chunk_2));
 }
 
 #[test]

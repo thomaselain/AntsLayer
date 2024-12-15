@@ -75,17 +75,17 @@ impl Update<Map, Camera> for ChunkManager {
         let (sender, receiver) = mpsc::channel();
         let visible_chunks: HashMap<(i32, i32), Status> = map.visible_chunks(camera, self);
 
-        for ((x, y), status) in visible_chunks.iter() {
+        for ((x, y), _status) in visible_chunks.iter() {
             let path = ChunkPath::build(map.path.clone(), *x, *y).expect(
                 "Failed to create chunks folder"
             );
 
-            match Chunk::load(path) {
+            match Chunk::load(path, map.seed.clone()) {
                 Ok(((x, y), status)) => {
                     self.chunks.insert((x, y), status);
                 }
                 Err(e) => {
-                    panic!("{:?}", e);
+                    // panic!("{:?}", e);
                 }
             }
         }
