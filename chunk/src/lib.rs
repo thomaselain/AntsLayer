@@ -6,6 +6,8 @@ pub mod thread;
 
 use std::fs::{ self, File };
 use std::path::Path;
+use std::thread::sleep;
+use std::time::Duration;
 use biomes::BiomeConfig;
 use serde::{ Deserialize, Serialize };
 use thread::{ ChunkError, ChunkKey, Status };
@@ -29,6 +31,7 @@ impl ChunkPath {
         if !Path::new(&dir).exists() {
             fs::create_dir_all(dir)?;
         }
+
         Ok(Self::new(path, x, y))
     }
 }
@@ -54,9 +57,9 @@ impl Chunk {
 
     /// Generate a chunk without multi threading
     pub fn generate_default(x: i32, y: i32) -> ((i32, i32), Status) {
-        let ((_x,_y),chunk) = Self::generate_from_biome(x, y, 0, BiomeConfig::default());
+        let ((_x, _y), chunk) = Self::generate_from_biome(x, y, 0, BiomeConfig::default());
 
-        ((x,y),Status::Ready(chunk))
+        ((x, y), Status::Ready(chunk))
     }
 
     /// Génère un chunk basé sur la configuration d'un biome
@@ -71,6 +74,8 @@ impl Chunk {
         let chunk_offset_x = x * (CHUNK_SIZE as i32);
         let chunk_offset_y = y * (CHUNK_SIZE as i32);
 
+        sleep(Duration::new(0, 5_000));
+        
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
                 let nx = ((x as f64) + (chunk_offset_x as f64)) / (CHUNK_SIZE as f64);
@@ -139,28 +144,33 @@ impl Chunk {
         }
     }
 
-    pub fn load(
-        path: ChunkPath,
-    ) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
+    pub fn load(path: ChunkPath) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
         let chunk_file = File::open(path.clone().to_string());
-        let (x,y) = (path.1,path.2);
+        let (x, y) = (path.1, path.2);
+
+        println!("{:?}", path.clone().to_string());
 
         if chunk_file.is_err() {
-            Ok(((x, y), Status::ToGenerate))
-        } else if let Ok(file) = chunk_file {
+            let ((x, y), status) = Chunk::generate_default(x, y);
+            Chunk::save(&status.clone().get_chunk().ok().unwrap(), path).expect(
+                "Failed to write new chunk file"
+            );
+
+            println!("{:?}", chunk_file);
+            return Ok(((x, y), status));
+        }
+        if let Ok(file) = chunk_file {
             Ok((
                 (x, y),
-                Status::Ready(
-                    bincode
-                        ::deserialize_from(file)
-                        .map_err(|e| {
-                            std::io::Error::new(
-                                std::io::ErrorKind::Other,
-                                format!("Deserialization error for chunk ({},{}):\n{}\n", x, y, e)
-                            )
-                        })
-                        .expect("Failed to deserialize")
-                ),
+                bincode
+                    ::deserialize_from(file)
+                    .map_err(|e| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            format!("Deserialization error for chunk ({},{}):\n{}\n", x, y, e)
+                        )
+                    })
+                    .expect("Failed to deserialize"),
             ))
         } else {
             println!("Failed to load chunk at {}", path.to_string());

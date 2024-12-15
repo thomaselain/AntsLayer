@@ -1,4 +1,4 @@
-use chunk::{ thread::Status, Chunk, CHUNK_SIZE };
+use chunk::{ thread::Status, CHUNK_SIZE };
 use chunk_manager::{ ChunkManager, Draw, DrawAll };
 use sdl2::{ pixels::Color, rect::Rect, Sdl };
 use tile::{ FluidType, TileType };

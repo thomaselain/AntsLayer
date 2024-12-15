@@ -29,7 +29,7 @@ pub fn every_biomes() {
         // let mut chunk_manager = chunk_manager.lock().expect("Failed to lock chunk manager");
         let ((x, y), chunk) = Chunk::generate_from_biome(x, y, map.seed, biome);
 
-        map.add_chunk(x, y, chunk);
+        map.add_chunk(x, y, chunk).expect("Failed to add chunk to map");
 
         println!(
             "\nSeed : {} \n Biome {}\n {:?}",
@@ -48,7 +48,7 @@ fn create_and_save() {
     let chunk = Chunk::new();
 
     let mut map = map.expect("Map creation failed");
-    map.add_chunk(x, y, chunk);
+    map.add_chunk(x, y, chunk).expect("Failed to add chunk to map");
     map.save().expect("Map saving failed");
 }
 
@@ -84,7 +84,7 @@ fn threads() {
             Chunk::generate_async(x, y, seed, BiomeConfig::default(), sender.clone());
         });
 
-    let mut chunk_manager = chunk_manager.lock().expect("Chunk manager was not ready !");
+    let mut _chunk_manager = chunk_manager.lock().expect("Chunk manager was not ready !");
     let mut chunks: Vec<Chunk> = Vec::new();
 
     // Boucle principale pour surveiller les chunks générés

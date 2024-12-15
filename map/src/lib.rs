@@ -9,7 +9,6 @@ pub extern crate chunk_manager;
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io;
 // use biomes::BiomeConfig;
 use camera::Camera;
 use chunk::thread::Status;
@@ -107,13 +106,11 @@ impl Map {
             }
         }
 
-        // Taille de la zone initiale (par exemple, une grille de 5x5 chunks)
         let half_size = WORLD_STARTING_AREA / 2;
-        // Générer les chunks de la zone de départ
         for x in -half_size..=half_size {
             for y in -half_size..=half_size {
                 let chunk = Chunk::new();
-                map.add_chunk(x, y, chunk);
+                map.add_chunk(x, y, chunk).expect("Failed to add chunk");
             }
         }
         Ok(map)
@@ -121,20 +118,16 @@ impl Map {
 
     // Ajouter un chunk
     pub fn add_chunk(&mut self, x: i32, y: i32, chunk: Chunk) -> std::io::Result<()> {
-        // let path = format!("{}/chunks/{}_{}.bin", self.path, x, y);
-
         self.chunks.insert((x, y), chunk);
-        chunk.save(ChunkPath::build(self.path.clone(), x, y).expect("Failed to save chunk"))?;
-
+        // chunk.save(ChunkPath::build(self.path.clone(), x, y).expect("Failed to save chunk"))?;
         Ok(())
     }
+
     // Sauvegarder la map entière
     pub fn save(&self) -> std::io::Result<()> {
         for ((x, y), chunk) in &self.chunks {
-            let chunk_path = &format!("{}/chunks/{}_{}.bin", self.path, x, y);
             chunk.save(ChunkPath::build(self.path.clone(), *x, *y).expect("Failed to save chunk"))?;
         }
-
         Ok(())
     }
 

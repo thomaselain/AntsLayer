@@ -13,12 +13,14 @@ pub type ChunkKey = (i32, i32);
 pub enum ChunkError {
     FailedToLoad,
     FailedToGenerate,
+    FailedToOpenFile,
 }
 impl ChunkError {
     pub fn to_string(self) -> String {
         let e = match self {
             ChunkError::FailedToLoad => "Failed to load chunk",
             ChunkError::FailedToGenerate => "Failed to generate chunk",
+            ChunkError::FailedToOpenFile => "Failed to open file chunk",
         };
         e.to_string()
     }
@@ -37,6 +39,7 @@ impl Status {
         match self {
             Status::Ready(chunk) | Status::Visible(chunk) => Ok(chunk),
             Status::Pending => Err(self),
+            Status::ToGenerate => Err(self),
             _ => Err(self),
         }
     }
@@ -57,7 +60,7 @@ impl Chunk {
             let ((x, y), chunk) = Self::generate_from_biome(x, y, seed, biome_config);
             // let ((x, y), chunk) = Self::generate_from_biome(x, y, seed, biome_config)?;
 
-            sender.send(((x as i32, y as i32), Status::Ready(chunk)));
+            sender.send(((x as i32, y as i32), Status::Ready(chunk))).unwrap();
         });
     }
 }

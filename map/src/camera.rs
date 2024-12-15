@@ -7,7 +7,7 @@ use coords::Coords;
 
 use crate::{ renderer::TILE_SIZE, Directions, Map };
 
-const DEFAULT_RENDER_DISTANCE: usize = 7;
+const DEFAULT_RENDER_DISTANCE: usize = 3;
 const DEFAULT_SPEED: f32 = 5.0;
 const DEFAULT_ZOOM: f32 = 1.0;
 
@@ -75,7 +75,7 @@ impl Update<Map, Camera> for ChunkManager {
         let (sender, receiver) = mpsc::channel();
         let visible_chunks: HashMap<(i32, i32), Status> = map.visible_chunks(camera, self);
 
-        for ((x, y), _) in visible_chunks.iter() {
+        for ((x, y), status) in visible_chunks.iter() {
             let path = ChunkPath::build(map.path.clone(), *x, *y).expect(
                 "Failed to create chunks folder"
             );
@@ -84,7 +84,9 @@ impl Update<Map, Camera> for ChunkManager {
                 Ok(((x, y), status)) => {
                     self.chunks.insert((x, y), status);
                 }
-                Err(e) => panic!("{:?}", e),
+                Err(e) => {
+                    panic!("{:?}", e);
+                }
             }
         }
 

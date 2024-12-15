@@ -19,8 +19,8 @@ fn chunk_serialization() {
 
     chunk.save(path.clone()).expect("Failed to save chunk");
 
-    let ((_x, _y), status) = Chunk::load(path.clone()).unwrap();
-    assert_eq!(chunk, status.get_chunk().expect("Failed to load chunk"));
+    let ((_x, _y), file_status) = Chunk::load(path.clone()).unwrap();
+    assert_eq!(chunk, file_status.get_chunk().ok().unwrap());
 
     cleanup_directory().expect("Failed to clean up test directory");
 }
@@ -29,7 +29,7 @@ fn chunk_serialization() {
 fn read_write_chunk() {
     let path =ChunkPath::build("test".to_string(), 0, 0).expect("Failed to set up test directory");
 
-    let ((x, y), status) = Chunk::generate_default(69, 420);
+    let ((_x, _y), status) = Chunk::generate_default(69, 420);
 
     // Save new chunk
     status
@@ -78,7 +78,7 @@ fn chunk_file_operations() {
 
     // Test lecture
     let ((_x, _y), loaded_chunk) = Chunk::load(path.clone()).unwrap();
-    assert_eq!(chunk, loaded_chunk.get_chunk().expect("Chunk is not ready !"));
+    assert_eq!(chunk, loaded_chunk.get_chunk().ok().unwrap());
 }
 
 #[test]
