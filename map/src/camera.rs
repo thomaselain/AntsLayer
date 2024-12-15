@@ -7,8 +7,8 @@ use coords::Coords;
 
 use crate::{ renderer::TILE_SIZE, Directions, Map };
 
-const DEFAULT_RENDER_DISTANCE: usize = 3;
-const DEFAULT_SPEED: f32 = 0.6;
+const DEFAULT_RENDER_DISTANCE: usize = 7;
+const DEFAULT_SPEED: f32 = 5.0;
 const DEFAULT_ZOOM: f32 = 1.0;
 
 pub struct Camera {
@@ -92,7 +92,7 @@ impl Update<Map, Camera> for ChunkManager {
             if status == Status::ToGenerate {
                 Chunk::generate_async(x, y, map.seed, BiomeConfig::default(), sender.clone());
 
-                if let Ok(((x, y), status)) = receiver.recv_timeout(Duration::new(5, 0)) {
+                if let Ok(((x, y), status)) = receiver.recv_timeout(Duration::new(10, 0)) {
                     let res = status.get_chunk();
                     match res {
                         Ok(chunk) => {

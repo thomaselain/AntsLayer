@@ -12,7 +12,7 @@ use thread::{ ChunkError, ChunkKey, Status };
 use tile::{ FluidType, Tile, TileFlags, TileType };
 use std::io::{ self, Read, Seek, SeekFrom };
 
-pub const CHUNK_SIZE: usize = 8;
+pub const CHUNK_SIZE: usize = 15;
 
 #[derive(Clone)]
 pub struct ChunkPath(String, i32, i32);

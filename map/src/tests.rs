@@ -88,7 +88,7 @@ fn threads() {
     let mut chunks: Vec<Chunk> = Vec::new();
 
     // Boucle principale pour surveiller les chunks générés
-    while let Ok(((x, y), status)) = receiver.recv_timeout(Duration::from_secs(1)) {
+    while let Ok(((x, y), status)) = receiver.recv_timeout(Duration::from_secs(5)) {
         match status.clone().get_chunk() {
             Ok(chunk) => {
                 println!("Chunk {:?} prêt.", (x, y));

@@ -199,7 +199,6 @@ impl Game {
             chunk_manager.draw(&mut renderer, &self.camera);
             // chunk_manager.draw_all(&mut self.map.as_ref().unwrap().clone(), &mut renderer, &self.camera);
         } else {
-            // Gérer le cas où le verrouillage du renderer échoue
             eprintln!("Impossible de verrouiller le renderer");
         }
     }

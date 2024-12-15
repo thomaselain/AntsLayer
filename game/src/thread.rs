@@ -12,7 +12,7 @@ impl MapChannel {
         self.0.clone()
     }
     fn receive(&self) -> Result<MapChunk, RecvTimeoutError> {
-        let ((x, y), status) = self.1.recv_timeout(std::time::Duration::new(1, 0))?;
+        let ((x, y), status) = self.1.recv_timeout(std::time::Duration::new(3, 0))?;
         Ok(((x, y), status))
     }
 }
