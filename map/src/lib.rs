@@ -130,7 +130,6 @@ impl Map {
     }
     // Sauvegarder la map entière
     pub fn save(&self) -> std::io::Result<()> {
-        
         for ((x, y), chunk) in &self.chunks {
             let chunk_path = &format!("{}/chunks/{}_{}.bin", self.path, x, y);
             chunk.save(ChunkPath::build(self.path.clone(), *x, *y).expect("Failed to save chunk"))?;
@@ -189,13 +188,19 @@ impl Map {
                 (camera.render_distance as i32) {
                 let status = chunk_manager.load_chunk(x, y, self.seed);
 
-                match status {
-                    Status::Visible(_) | Status::Ready(_) => {
-                        // println!("Chunk {},{} became visible", x, y);
-                        chunks.insert((x, y), status);
+                match status.get_chunk() {
+                    Ok(chunk) => {
+                        chunks.insert((x, y), Status::Visible(chunk));
                     }
-                    Status::Pending | Status::ToGenerate => {}
-                    Status::Error(e) => panic!("{:?}", e),
+                    Err(status) => {
+                        match status {
+                            Status::Visible(_) | Status::Ready(_) => {
+                                // println!("Chunk {},{} became visible", x, y);
+                            }
+                            Status::Pending | Status::ToGenerate => {}
+                            Status::Error(e) => panic!("{:?}", e),
+                        }
+                    }
                 }
             }
         }

@@ -76,7 +76,9 @@ impl Update<Map, Camera> for ChunkManager {
         let visible_chunks: HashMap<(i32, i32), Status> = map.visible_chunks(camera, self);
 
         for ((x, y), _) in visible_chunks.iter() {
-            let path = ChunkPath::build(map.path.clone(), *x, *y).expect("Failed to create chunks folder");
+            let path = ChunkPath::build(map.path.clone(), *x, *y).expect(
+                "Failed to create chunks folder"
+            );
 
             match Chunk::load(path) {
                 Ok(((x, y), status)) => {
@@ -90,11 +92,20 @@ impl Update<Map, Camera> for ChunkManager {
             if status == Status::ToGenerate {
                 Chunk::generate_async(x, y, map.seed, BiomeConfig::default(), sender.clone());
 
-                let ((x, y), status) = receiver
-                    .recv_timeout(Duration::new(1, 0))
-                    .expect("Chunk took too long to generate");
+                if let Ok(((x, y), status)) = receiver.recv_timeout(Duration::new(5, 0)) {
+                    let res = status.get_chunk();
+                    match res {
+                        Ok(chunk) => {
+                            self.chunks.insert((x, y), Status::Visible(chunk));
+                        }
+                        Err(status) => {
+                            // panic!("{:?}", status);
 
-                self.chunks.insert((x, y), status);
+                        }
+                    }
+                }
+
+                // self.chunks.insert((x, y), status);
             }
         }
 

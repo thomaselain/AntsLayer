@@ -57,7 +57,7 @@ impl Chunk {
             let ((x, y), chunk) = Self::generate_from_biome(x, y, seed, biome_config);
             // let ((x, y), chunk) = Self::generate_from_biome(x, y, seed, biome_config)?;
 
-            sender.send(((x as i32, y as i32), Status::Ready(chunk))).unwrap();
+            sender.send(((x as i32, y as i32), Status::Ready(chunk)));
         });
     }
 }

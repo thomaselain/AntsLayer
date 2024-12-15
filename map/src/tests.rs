@@ -57,7 +57,6 @@ fn create_and_save() {
 fn map_loading() {}
 
 #[test]
-#[ignore = "MultiThreading doesn't work for tests, no idea why :("]
 fn threads() {
     let map = Map::new("multi_threading").unwrap();
     let seed = map.seed;
@@ -89,22 +88,28 @@ fn threads() {
     let mut chunks: Vec<Chunk> = Vec::new();
 
     // Boucle principale pour surveiller les chunks générés
-    while let Ok(((x,y), status)) = receiver.recv_timeout(Duration::from_secs(10)) {
-        chunk_manager.chunks.insert((x,y), status.clone());
-
-        match status.get_chunk() {
+    while let Ok(((x, y), status)) = receiver.recv_timeout(Duration::from_secs(1)) {
+        match status.clone().get_chunk() {
             Ok(chunk) => {
+                println!("Chunk {:?} prêt.", (x, y));
                 chunks.push(chunk);
 
                 println!("{:?}", chunk);
                 if chunks.len() >= ((size * size) as usize) {
                     // Generation is done !
-                    println!("Chunk {:?} prêt.", (x,y));
                     break;
                 }
             }
-            Err(_) => {
-                println!("Attends frero prends ton temps ... ({},{})", x,y);
+            Err(status) => {
+                match status {
+                    Status::ToGenerate => todo!(),
+                    Status::Pending => {
+                        println!("Attends frero prends ton temps ... ({},{})", x, y);
+                    }
+                    Status::Visible(_) => todo!(),
+                    Status::Ready(_) => todo!(),
+                    Status::Error(_) =>todo!(),
+                }
             }
         }
     }
