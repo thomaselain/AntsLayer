@@ -7,7 +7,6 @@ pub mod thread;
 use std::fs::{ self, File };
 use std::path::Path;
 use std::sync::mpsc::{ self };
-use std::thread::sleep;
 use std::time::Duration;
 use biomes::BiomeConfig;
 use serde::{ Deserialize, Serialize };

@@ -1,7 +1,7 @@
-use std:: collections::HashMap ;
+use std::collections::HashMap;
 
-use chunk::{ thread::Status, CHUNK_SIZE };
-use chunk_manager::{ threads::BuildThread,threads::ReceiveStatus, ChunkManager, Clear, Update };
+use chunk::{ thread::{Status, X, Y}, CHUNK_SIZE };
+use chunk_manager::{ threads::{BuildThread, ReceiveStatus}, ChunkManager, Clear, Update };
 use coords::Coords;
 
 use crate::{ renderer::TILE_SIZE, thread::MapChannel, Directions, Map };
@@ -74,21 +74,33 @@ impl Update<Map, Camera> for ChunkManager {
         let visible_chunks = map.visible_chunks(camera, self);
 
         // Lancer la génération de chunks manquants
-        for ((x, y), status) in visible_chunks.iter() {
-            if *status == Status::ToGenerate {
-                self.build_thread(map, *x, *y, channel.sender());
+        for (key, status) in visible_chunks.clone() {
+            match status {
+                Status::ToGenerate => {
+                    println!("{:?} : {:?}", key, status);
+                    self.chunks.insert(key, status.clone());
+                    self.build_thread(map, key.x(),key.y(), channel.sender());
+                }
+                Status::Visible(mut chunk) | Status::Ready(mut chunk) => {
+                    chunk.is_dirty = false;
+                    self.chunks.insert(key, Status::Visible(chunk));
+                }
+                _ => {}
             }
         }
 
         // Réception et traitement des chunks générés
-        while let Some(((x,y), status)) = self.receive_status(&channel) {
+        while let Some((key, status)) = self.receive_status(&channel) {
+            println!("{:?} : {:?}", key, status);
             match status {
-                Status::Ready(_) => {
-                    self.chunks.insert((x,y), status);
-                    eprintln!("Chunk ({},{}) prêt et visible.", x,y);
+                Status::Ready(chunk) => {
+                    self.chunks.insert(key, status);
+                    map.chunks.insert(key, chunk);
+
+                    println!("Chunk ({:?}) prêt et visible.", key);
                 }
                 _ => {
-                    eprintln!("Statut inattendu pour le chunk ({},{}) : {:?}", x,y, status);
+                    println!("Statut inattendu pour le chunk ({:?}) : {:?}", key, status);
                 }
             }
         }
@@ -97,4 +109,3 @@ impl Update<Map, Camera> for ChunkManager {
         self.clear_out_of_range(visible_chunks);
     }
 }
-

@@ -1,4 +1,4 @@
-use std::{ sync::{mpsc::Sender, Arc, Mutex}, thread };
+use std::{ sync::{ mpsc::Sender, Arc, Mutex }, thread };
 
 use biomes::BiomeConfig;
 use serde::{ Deserialize, Serialize };
@@ -9,21 +9,21 @@ use crate::Chunk;
 /// (x, y)
 pub type ChunkKey = (i32, i32);
 
-pub trait X{
-    fn x(self) ->i32;
+pub trait X {
+    fn x(self) -> i32;
 }
-impl X for ChunkKey{
-     fn x(self) ->i32{
+impl X for ChunkKey {
+    fn x(self) -> i32 {
         self.0
     }
 }
-pub trait Y{
-    fn y(self) ->i32;
+pub trait Y {
+    fn y(self) -> i32;
 }
-impl Y for ChunkKey{
-    fn y(self) ->i32{
-       self.1
-   }
+impl Y for ChunkKey {
+    fn y(self) -> i32 {
+        self.1
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -31,13 +31,12 @@ pub enum ChunkError {
     FailedToLoad,
     FailedToGenerate,
     FailedToOpenFile,
+    NotVisible,
 }
 impl ChunkError {
     pub fn to_string(self) -> String {
         let e = match self {
-            ChunkError::FailedToLoad => "Failed to load chunk",
-            ChunkError::FailedToGenerate => "Failed to generate chunk",
-            ChunkError::FailedToOpenFile => "Failed to open file chunk",
+            _ => "",
         };
         e.to_string()
     }
@@ -60,6 +59,12 @@ impl Status {
             _ => Err(self),
         }
     }
+    pub fn visible(self) -> Result<Self, Self> {
+        match self {
+            Status::Ready(chunk) | Status::Visible(chunk) => Ok(Self::Visible(chunk)),
+            _ => Err(self),
+        }
+    }
 }
 
 impl Chunk {
@@ -75,7 +80,6 @@ impl Chunk {
 
         let sender = Arc::new(Mutex::new(sender));
         thread::spawn(move || {
-
             let ((x, y), chunk) = Self::generate_from_biome(x, y, seed, biome_config);
             // let ((x, y), chunk) = Self::generate_from_biome(x, y, seed, biome_config)?;
 

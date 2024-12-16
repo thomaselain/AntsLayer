@@ -11,6 +11,7 @@ use chunk_manager::Draw;
 #[allow(unused_imports)]
 use chunk_manager::DrawAll;
 use chunk_manager::ChunkManager;
+use chunk_manager::Update;
 
 use biomes::BiomeConfig;
 use sdl2::{ event::Event, keyboard::Keycode, Sdl };
@@ -135,7 +136,6 @@ impl Game {
             self.camera.render_distance += 1;
             println!("Camera zoom set to {}", self.camera.render_distance);
         }
-
         if self.map.is_none() {
             if self.inputs.is_key_pressed(Keycode::R) {
                 self.create_world()?; // Appel de la méthode pour créer la carte
@@ -216,8 +216,9 @@ impl Game {
         if let Some(map) = self.map.clone().as_mut() {
             let mut chunk_manager = self.chunk_manager.lock().unwrap();
             let mut renderer = self.renderer.lock().unwrap();
-            chunk_manager.draw_all(map, &mut renderer, &self.camera);
-            // chunk_manager.draw(&mut renderer, &self.camera);
+            chunk_manager.update(map, &self.camera);
+            // chunk_manager.draw_all(map, &mut renderer, &self.camera);
+            chunk_manager.draw(&mut renderer, &self.camera);
         }
     }
 }

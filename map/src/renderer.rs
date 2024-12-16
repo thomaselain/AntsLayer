@@ -58,7 +58,6 @@ impl DrawAll<Map, Renderer, Camera> for ChunkManager {
             let chunk_screen_y = chunk_y * (CHUNK_SIZE as i32) * (TILE_SIZE as i32);
 
             // Check if current_chunk is done generating
-
             for (x, row) in chunk.tiles.iter().enumerate() {
                 for (y, tile) in row.iter().enumerate() {
                     let (screen_x, screen_y) = (

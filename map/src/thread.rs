@@ -20,7 +20,7 @@ impl MapChannel {
         self.0.clone()
     }
     pub fn receive(&self) -> Result<MapStatus, RecvTimeoutError> {
-        let ((x, y), status) = self.1.recv_timeout(std::time::Duration::new(1, 5_000_000))?;
+        let ((x, y), status) = self.1.recv_timeout(std::time::Duration::new(0, 500))?;
         Ok(((x, y), status))
     }
 }

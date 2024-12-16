@@ -1,4 +1,5 @@
 use game::game::Game;
+use map::Map;
 use sdl2::{ keyboard::Keycode, pixels::Color };
 use menu::main_menu;
 
@@ -7,18 +8,19 @@ pub fn main() {
 }
 
 #[test]
-#[ignore = "Multithreading disabled for tests"]
+#[ignore = "Runs the whole game"]
 pub fn main_test() {
     game();
 }
 
 pub fn game() {
     if main_menu().is_err() {
-    todo!("main_menu returned Error!");
+        todo!("main_menu returned Error!");
     }
 
     let mut game = Game::new(sdl2::init().unwrap());
-
+    game.map = Some(Map::new("default").expect("Failed to create default map"));
+    
     // Boucle de jeu
     'running: loop {
         let mut event_pump = game.sdl.event_pump().unwrap();
