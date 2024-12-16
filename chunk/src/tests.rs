@@ -1,6 +1,3 @@
-use bincode::Serializer;
-use mpsc::Sender;
-
 use super::*;
 
 const TEST_SEED: u32 = 0;

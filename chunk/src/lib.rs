@@ -6,7 +6,7 @@ pub mod thread;
 
 use std::fs::{ self, File };
 use std::path::Path;
-use std::sync::mpsc::{ self, Receiver };
+use std::sync::mpsc::{ self };
 use std::thread::sleep;
 use std::time::Duration;
 use biomes::BiomeConfig;
@@ -75,7 +75,7 @@ impl Chunk {
         let chunk_offset_x = x * (CHUNK_SIZE as i32);
         let chunk_offset_y = y * (CHUNK_SIZE as i32);
 
-        sleep(Duration::new(0, 5_000));
+        // sleep(Duration::new(0, 5_000));
 
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {

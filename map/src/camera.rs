@@ -1,11 +1,10 @@
-use std::{ collections::HashMap, sync::mpsc, time::Duration };
+use std:: collections::HashMap ;
 
-use biomes::BiomeConfig;
-use chunk::{ thread::Status, Chunk, ChunkPath, CHUNK_SIZE };
-use chunk_manager::{ ChunkManager, Clear, Update };
+use chunk::{ thread::Status, CHUNK_SIZE };
+use chunk_manager::{ threads::BuildThread,threads::ReceiveStatus, ChunkManager, Clear, Update };
 use coords::Coords;
 
-use crate::{ renderer::TILE_SIZE, Directions, Map };
+use crate::{ renderer::TILE_SIZE, thread::MapChannel, Directions, Map };
 
 const DEFAULT_RENDER_DISTANCE: usize = 3;
 const DEFAULT_SPEED: f32 = 5.0;
@@ -69,48 +68,33 @@ impl Clear<&Map, Camera> for ChunkManager {
         self.chunks.retain(|&(x, y), _| visible_chunks.contains_key(&(x, y)));
     }
 }
-
 impl Update<Map, Camera> for ChunkManager {
     fn update(&mut self, map: &mut Map, camera: &Camera) {
-        let (sender, receiver) = mpsc::channel();
-        let visible_chunks: HashMap<(i32, i32), Status> = map.visible_chunks(camera, self);
+        let channel = MapChannel::new();
+        let visible_chunks = map.visible_chunks(camera, self);
 
-        for ((x, y), _status) in visible_chunks.iter() {
-            let path = ChunkPath::build(map.path.clone(), *x, *y).expect(
-                "Failed to create chunks folder"
-            );
+        // Lancer la génération de chunks manquants
+        for ((x, y), status) in visible_chunks.iter() {
+            if *status == Status::ToGenerate {
+                self.build_thread(map, *x, *y, channel.sender());
+            }
+        }
 
-            match Chunk::load(path, map.seed.clone()) {
-                Ok(((x, y), status)) => {
-                    self.chunks.insert((x, y), status);
+        // Réception et traitement des chunks générés
+        while let Some(((x,y), status)) = self.receive_status(&channel) {
+            match status {
+                Status::Ready(_) => {
+                    self.chunks.insert((x,y), status);
+                    eprintln!("Chunk ({},{}) prêt et visible.", x,y);
                 }
-                Err(e) => {
-                    // panic!("{:?}", e);
+                _ => {
+                    eprintln!("Statut inattendu pour le chunk ({},{}) : {:?}", x,y, status);
                 }
             }
         }
 
-        for ((x, y), status) in self.chunks.clone() {
-            if status == Status::ToGenerate {
-                Chunk::generate_async(x, y, map.seed, BiomeConfig::default(), sender.clone());
-
-                if let Ok(((x, y), status)) = receiver.recv_timeout(Duration::new(10, 0)) {
-                    let res = status.get_chunk();
-                    match res {
-                        Ok(chunk) => {
-                            self.chunks.insert((x, y), Status::Visible(chunk));
-                        }
-                        Err(status) => {
-                            // panic!("{:?}", status);
-
-                        }
-                    }
-                }
-
-                // self.chunks.insert((x, y), status);
-            }
-        }
-
+        // Nettoyer les chunks hors de la portée
         self.clear_out_of_range(visible_chunks);
     }
 }
+

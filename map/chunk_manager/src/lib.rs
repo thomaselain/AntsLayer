@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use chunk::thread::Status;
 
 pub mod chunk_manager;
+pub mod threads;
+mod tests;
 
 /// # For Game implementation
 /// Clear chunks that are not seen by the camera
@@ -29,16 +31,4 @@ pub trait DrawAll<Map, Renderer, Camera> {
 pub struct ChunkManager {
     // pub receiver: Receiver<Chunk>,
     pub chunks: HashMap<(i32, i32), Status>, // Modifié pour inclure le statut
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::ChunkManager;
-
-    #[test]
-    fn chunk_manager_empty() {
-        let chunk_manager = ChunkManager::new();
-
-        assert!(chunk_manager.chunks.is_empty());
-    }
 }

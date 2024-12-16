@@ -1,6 +1,7 @@
 use std::{
+    collections::HashMap,
     io::{ self, Write },
-    sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex },
+    sync::{ Arc, Mutex },
     time::{ Duration, Instant },
 };
 
@@ -10,20 +11,20 @@ use chunk_manager::Draw;
 #[allow(unused_imports)]
 use chunk_manager::DrawAll;
 use chunk_manager::ChunkManager;
-use chunk_manager::Update;
 
 use biomes::BiomeConfig;
 use sdl2::{ event::Event, keyboard::Keycode, Sdl };
-use map::{ camera::Camera, renderer::Renderer, Map };
+use map::{ camera::Camera, renderer::Renderer, thread::MapChannel, Map };
 
 #[allow(unused_imports)]
 use unit::{ Unit, MOVING };
 
-use crate::{ inputs::{ Inputs, ToDirection }, thread::MapSender };
+use crate::inputs::{ Inputs, ToDirection };
 pub const WIN_DEFAULT_WIDTH: u32 = 1000;
 pub const WIN_DEFAULT_HEIGHT: u32 = 800;
 
 pub struct Game {
+    pub pending_chunks: HashMap<ChunkKey, Status>,
     pub chunk_manager: Arc<Mutex<ChunkManager>>,
     pub renderer: Arc<Mutex<Renderer>>,
     pub last_tick: Instant,
@@ -35,17 +36,12 @@ pub struct Game {
     pub events: Vec<Event>,
     pub inputs: Inputs,
 
-    pub map_sender: MapSender,
+    pub map_channel: MapChannel,
     pub map: Option<Map>,
 }
 
 impl Game {
     pub fn new(sdl: Sdl) -> Game {
-        let (map_sender, _map_receiver): (
-            Sender<(ChunkKey, Status)>,
-            Receiver<(ChunkKey, Status)>,
-        ) = mpsc::channel();
-
         let renderer = Renderer::new(
             &sdl,
             "Ants Layer",
@@ -71,7 +67,8 @@ impl Game {
             events: Vec::new(),
             inputs: Inputs::new(),
             map: None,
-            map_sender,
+            map_channel: MapChannel::new(),
+            pending_chunks: HashMap::new(),
         }
     }
 
@@ -162,44 +159,65 @@ impl Game {
 
     // Mettre à jour les unités, la carte, les ressources, etc.
     fn update_game_logic(&mut self) {
-        // if self.map.is_some() {
-        //     self.chunk_manager
-        //         .lock()
-        //         .expect("...?")
-        //         .update(self.map.clone().unwrap(), &self.camera);
-        // }
+        // Vérifiez les chunks reçus via le receiver
+        while let Ok((chunk_key, status)) = self.map_channel.receive() {
+            match status {
+                Status::Pending => {
+                    // Stocke les chunks en attente dans le cache
+                    self.pending_chunks.insert(chunk_key, Status::Pending);
+                }
+                Status::Ready(chunk) => {
+                    // Ajoutez ou remplacez le chunk dans la carte une fois prêt
+                    if let Some(map) = self.map.as_mut() {
+                        map.add_chunk(chunk_key, chunk);
+                    }
+                    // Retirez le chunk du cache
+                    self.pending_chunks.remove(&chunk_key);
+                }
+                _ => {
+                    eprintln!("Statut inconnu pour le chunk {:?}: {:?}", chunk_key, status);
+                }
+            }
+        }
+
+        // Vérifiez régulièrement si des chunks en `Pending` doivent être relancés
+        self.retry_pending_chunks();
+    }
+
+    fn retry_pending_chunks(&mut self) {
+        for (chunk_key, status) in self.pending_chunks.clone() {
+            let mut chunk_manager = self.chunk_manager.lock().expect("Failed to lock chunk_manager");
+
+            match status {
+                Status::ToGenerate => {
+                    if let Err(e) = self.map_channel.sender().send((chunk_key, status)) {
+                        eprintln!("Erreur lors du renvoi du chunk {:?}: {:?}", chunk_key, e);
+                    }
+                }
+                Status::Pending => {
+                    // Check is the file is already written
+                    if
+                        let Ok(chunk) = chunk_manager
+                            .load_chunk(chunk_key, self.map.clone().unwrap().seed)
+                            .get_chunk()
+                    {
+                        chunk_manager.chunks.insert(chunk_key, Status::Ready(chunk));
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 
     // Mettre à jour les animations, états visuels, etc.
     fn update_visuals(&mut self) {}
 
-    // Dessiner la scène avec le renderer
     fn render(&mut self) {
-        if self.map.is_none() {
-            // No map, no render
-            // Makes it safe to use self.map.unwrap() in this method
-            return;
-        }
-
-        // Accéder au chunk_manager
-        let mut chunk_manager = match self.chunk_manager.lock() {
-            Ok(lock) => lock,
-            Err(_) => {
-                eprintln!("Impossible de verrouiller chunk_manager");
-                return;
-            }
-        };
-
-        chunk_manager.update(&mut self.map.clone().unwrap(), &self.camera);
-
-        // Essayez d'obtenir une référence mutable au renderer
-        if let Ok(mut renderer) = self.renderer.lock() {
-            // let (offset_x, offset_y) = self.camera.get_offset(window_width, window_height);
-
-            chunk_manager.draw(&mut renderer, &self.camera);
-            // chunk_manager.draw_all(&mut self.map.as_ref().unwrap().clone(), &mut renderer, &self.camera);
-        } else {
-            eprintln!("Impossible de verrouiller le renderer");
+        if let Some(map) = self.map.clone().as_mut() {
+            let mut chunk_manager = self.chunk_manager.lock().unwrap();
+            let mut renderer = self.renderer.lock().unwrap();
+            chunk_manager.draw_all(map, &mut renderer, &self.camera);
+            // chunk_manager.draw(&mut renderer, &self.camera);
         }
     }
 }

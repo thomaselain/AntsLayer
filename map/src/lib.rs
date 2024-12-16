@@ -4,6 +4,7 @@ mod tests;
 mod debug;
 pub mod renderer;
 pub mod camera;
+pub mod thread;
 
 pub extern crate chunk_manager;
 
@@ -11,7 +12,7 @@ use std::collections::HashMap;
 use std::fs::File;
 // use biomes::BiomeConfig;
 use camera::Camera;
-use chunk::thread::Status;
+use chunk::thread::{ChunkKey, Status, X,Y};
 use chunk::{ Chunk, ChunkPath, CHUNK_SIZE };
 use crate::chunk_manager::ChunkManager;
 use rand::Rng;
@@ -48,7 +49,7 @@ impl Map {
         // Générer ou charger les chunks nécessaires dans la zone visible
         for x in start_chunk_x..=end_chunk_x as i32 {
             for y in start_chunk_y..=end_chunk_y as i32 {
-                chunk_manager.load_chunk(x, y, self.seed);
+                chunk_manager.load_chunk((x, y), self.seed);
             }
         }
     }
@@ -110,15 +111,15 @@ impl Map {
         for x in -half_size..=half_size {
             for y in -half_size..=half_size {
                 let chunk = Chunk::new();
-                map.add_chunk(x, y, chunk).expect("Failed to add chunk");
+                map.add_chunk((x, y), chunk).expect("Failed to add chunk");
             }
         }
         Ok(map)
     }
 
     // Ajouter un chunk
-    pub fn add_chunk(&mut self, x: i32, y: i32, chunk: Chunk) -> std::io::Result<()> {
-        self.chunks.insert((x, y), chunk);
+    pub fn add_chunk(&mut self, key: ChunkKey, chunk: Chunk) -> std::io::Result<()> {
+        self.chunks.insert((key.x(), key.y()), chunk);
         // chunk.save(ChunkPath::build(self.path.clone(), x, y).expect("Failed to save chunk"))?;
         Ok(())
     }
@@ -179,7 +180,7 @@ impl Map {
             (camera.render_distance as i32) {
             for y in chunk_y_start - (camera.render_distance as i32)..=chunk_y_start +
                 (camera.render_distance as i32) {
-                let status = chunk_manager.load_chunk(x, y, self.seed);
+                let status = chunk_manager.load_chunk((x, y), self.seed);
 
                 match status.get_chunk() {
                     Ok(chunk) => {

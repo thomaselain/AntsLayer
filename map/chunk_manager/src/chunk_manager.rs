@@ -1,5 +1,5 @@
 use biomes::BiomeConfig;
-use chunk::thread::Status;
+use chunk::thread::{ChunkKey, Status, X, Y};
 use chunk::Chunk;
 use std::collections::HashMap;
 
@@ -23,22 +23,22 @@ impl ChunkManager {
         // chunk
     // }
 
-    pub fn load_chunk(&mut self, x: i32, y: i32, seed: u32) -> Status {
-        if let Some(status) = self.chunks.get(&(x, y)).cloned() {
+    pub fn load_chunk(&mut self, key: ChunkKey, seed: u32) -> Status {
+        if let Some(status) = self.chunks.get(&key).cloned() {
             match status {
                 Status::Pending => {
-                    println!("Chunk ({}, {}) est encore en attente...", x, y);
+                    println!("Chunk {:?} est encore en attente...",key);
                     status
                 }
                 Status::Ready(_) | Status::Visible(_) => status,
                 Status::ToGenerate => {
                     let ((_x, _y), chunk) = Chunk::generate_from_biome(
-                        x,
-                        y,
+                        key.x(),
+                        key.y(),
                         seed,
                         BiomeConfig::default()
                     );
-                    self.chunks.insert((x, y), Status::Ready(chunk));
+                    self.chunks.insert(key, Status::Ready(chunk));
                     Status::Ready(chunk)
                 }
 
@@ -46,8 +46,8 @@ impl ChunkManager {
             }
         } else {
             // println!("Génération du chunk ({}, {}) ...", x, y);
-            let ((_, _), chunk) = Chunk::generate_from_biome(x, y, seed, BiomeConfig::default());
-            self.chunks.insert((x, y), Status::Ready(chunk));
+            let ((_, _), chunk) = Chunk::generate_from_biome(key.x(), key.y(), seed, BiomeConfig::default());
+            self.chunks.insert(key, Status::Ready(chunk));
             Status::Ready(chunk)
 }
     }
