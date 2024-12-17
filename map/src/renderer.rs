@@ -1,11 +1,11 @@
-use chunk::{ thread::Status, CHUNK_SIZE };
+use chunk::{ thread::Status, Chunk, CHUNK_SIZE };
 use chunk_manager::{ ChunkManager, Draw, DrawAll };
 use sdl2::{ pixels::Color, rect::Rect, Sdl };
-use tile::{ FluidType, TileType };
+use tile::{ FluidType, Tile, TileType };
 
 use crate::{ camera::Camera, Map };
 
-pub const TILE_SIZE: i32 = 5;
+pub const TILE_SIZE: i32 = 10;
 
 pub fn tile_screen_coords(
     x_chunk: i32,
@@ -48,47 +48,9 @@ impl Renderer {
 
 impl DrawAll<Map, Renderer, Camera> for ChunkManager {
     fn draw_all(&mut self, map: &mut Map, renderer: &mut Renderer, camera: &Camera) {
-        let (window_width, window_height) = renderer.get_window_size();
-        let (offset_x, offset_y) = camera.get_offset(window_width, window_height);
-
         // map.generate_visible_chunks(camera, self);
-
-        for (&(chunk_x, chunk_y), chunk) in &map.chunks {
-            let chunk_screen_x = chunk_x * (CHUNK_SIZE as i32) * (TILE_SIZE as i32);
-            let chunk_screen_y = chunk_y * (CHUNK_SIZE as i32) * (TILE_SIZE as i32);
-
-            // Check if current_chunk is done generating
-            for (x, row) in chunk.tiles.iter().enumerate() {
-                for (y, tile) in row.iter().enumerate() {
-                    let (screen_x, screen_y) = (
-                        chunk_screen_x + (x as i32) * (TILE_SIZE as i32) - offset_x,
-                        chunk_screen_y + (y as i32) * (TILE_SIZE as i32) - offset_y,
-                    );
-
-                    let color = match tile.tile_type {
-                        TileType::Floor => Color::WHITE,
-                        TileType::Fluid(liquid) =>
-                            match liquid {
-                                FluidType::Magma => Color::BLUE,
-                                FluidType::Water => Color::RED,
-                            }
-                        TileType::Wall => Color::GRAY,
-                        TileType::Empty => Color::BLACK,
-                        TileType::Rock => Color::GREY,
-                        TileType::Dirt => Color::RGB(50, 200, 25),
-                        TileType::Grass => Color::GREEN,
-                        TileType::Custom(_) => todo!(),
-                        // _ => Color::WHITE,
-                    };
-
-                    renderer.canvas.set_draw_color(color);
-                    renderer.canvas
-                        .fill_rect(
-                            Rect::new(screen_x, screen_y, TILE_SIZE as u32, TILE_SIZE as u32)
-                        )
-                        .expect("Failed to draw tile");
-                }
-            }
+        for (_, chunk) in &map.chunks {
+            chunk.draw(renderer, camera);
         }
         renderer.canvas.set_draw_color(Color::BLACK);
     }
@@ -96,121 +58,56 @@ impl DrawAll<Map, Renderer, Camera> for ChunkManager {
 
 impl Draw<Renderer, Camera> for ChunkManager {
     fn draw(&self, renderer: &mut Renderer, camera: &Camera) {
-        let (window_width, window_height) = renderer.get_window_size();
-        let (offset_x, offset_y) = camera.get_offset(window_width, window_height);
 
-        for (&(chunk_x, chunk_y), status) in &self.chunks {
-            let chunk_screen_x = chunk_x * (CHUNK_SIZE as i32) * (TILE_SIZE as i32);
-            let chunk_screen_y = chunk_y * (CHUNK_SIZE as i32) * (TILE_SIZE as i32);
-
-            // Check if current_chunk is done generating
-            match status {
-                Status::Visible(ref chunk) => {
-                    //Draw each tile
-                    for (x, row) in chunk.tiles.iter().enumerate() {
-                        for (y, tile) in row.iter().enumerate() {
-                            let (screen_x, screen_y) = (
-                                chunk_screen_x + (x as i32) * (TILE_SIZE as i32) - offset_x,
-                                chunk_screen_y + (y as i32) * (TILE_SIZE as i32) - offset_y,
-                            );
-
-                            let color = match tile.tile_type {
-                                TileType::Floor => Color::WHITE,
-                                TileType::Fluid(liquid) =>
-                                    match liquid {
-                                        FluidType::Magma => Color::BLUE,
-                                        FluidType::Water => Color::RED,
-                                    }
-                                TileType::Wall => Color::GRAY,
-                                TileType::Empty => Color::BLACK,
-                                TileType::Rock => Color::GREY,
-                                TileType::Dirt => Color::RGB(50, 200, 25),
-                                TileType::Grass => Color::GREEN,
-                                TileType::Custom(_) => todo!(),
-                                // _ => Color::WHITE,
-                            };
-
-                            renderer.canvas.set_draw_color(color);
-                            renderer.canvas
-                                .fill_rect(
-                                    Rect::new(
-                                        screen_x,
-                                        screen_y,
-                                        TILE_SIZE as u32,
-                                        TILE_SIZE as u32
-                                    )
-                                )
-                                .expect("Failed to draw tile");
-                        }
-                    }
+        for (x, y) in &self.visible_chunks {
+            if let Some(status) = self.loaded_chunks.get(&(*x, *y)) {
+                if let Ok(chunk) = status.clone().get_chunk() {
+                    chunk.draw(renderer, camera);
                 }
-                Status::Ready(_) => {
-                    let (screen_x, screen_y) = (
-                        chunk_screen_x - offset_x,
-                        chunk_screen_y - offset_y,
-                    );
-
-                    renderer.canvas.set_draw_color(Color::CYAN);
-
-                    renderer.canvas
-                        .fill_rect(
-                            Rect::new(
-                                screen_x,
-                                screen_y,
-                                (CHUNK_SIZE as u32) * (TILE_SIZE as u32),
-                                (CHUNK_SIZE as u32) * (TILE_SIZE as u32)
-                            )
-                        )
-                        .expect("Failed to draw tile");
-
-                    // Render loading tile
-                }
-                Status::ToGenerate => {
-                    let (screen_x, screen_y) = (
-                        chunk_screen_x - offset_x,
-                        chunk_screen_y - offset_y,
-                    );
-
-                    renderer.canvas.set_draw_color(Color::MAGENTA);
-
-                    renderer.canvas
-                        .fill_rect(
-                            Rect::new(
-                                screen_x,
-                                screen_y,
-                                (CHUNK_SIZE as u32) * (TILE_SIZE as u32),
-                                (CHUNK_SIZE as u32) * (TILE_SIZE as u32)
-                            )
-                        )
-                        .expect("Failed to draw tile");
-
-                    // Render loading tile
-                }
-                Status::Pending => {
-                    let (screen_x, screen_y) = (
-                        chunk_screen_x - offset_x,
-                        chunk_screen_y - offset_y,
-                    );
-
-                    renderer.canvas.set_draw_color(Color::CYAN);
-
-                    renderer.canvas
-                        .fill_rect(
-                            Rect::new(
-                                screen_x,
-                                screen_y,
-                                (CHUNK_SIZE as u32) * (TILE_SIZE as u32),
-                                (CHUNK_SIZE as u32) * (TILE_SIZE as u32)
-                            )
-                        )
-                        .expect("Failed to draw tile");
-
-                    // Render loading tile
-                }
-                Status::Error(e) => panic!("{:?}", e),
             }
         }
         renderer.canvas.set_draw_color(Color::BLACK);
+    }
+}
+
+impl Draw<Renderer, Camera> for Chunk {
+    fn draw(&self, renderer: &mut Renderer, camera: &Camera) {
+        let (window_width, window_height) = renderer.get_window_size();
+        let (offset_x, offset_y) = camera.get_offset(window_width, window_height);
+
+        for (x, row) in self.tiles.clone().iter().enumerate() {
+            for (y, tile) in row.iter().enumerate() {
+                let (screen_x, screen_y) = tile_screen_coords(
+                    self.x,
+                    self.y,
+                    x,
+                    y,
+                    offset_x,
+                    offset_y
+                );
+
+                let color = match tile.tile_type {
+                    TileType::Floor => Color::WHITE,
+                    TileType::Fluid(liquid) =>
+                        match liquid {
+                            FluidType::Magma => Color::BLUE,
+                            FluidType::Water => Color::RED,
+                        }
+                    TileType::Wall => Color::GRAY,
+                    TileType::Empty => Color::BLACK,
+                    TileType::Rock => Color::GREY,
+                    TileType::Dirt => Color::RGB(50, 200, 25),
+                    TileType::Grass => Color::GREEN,
+                    TileType::Custom(_) => todo!(),
+                    // _ => Color::WHITE,
+                };
+
+                renderer.canvas.set_draw_color(color);
+                renderer.canvas
+                    .fill_rect(Rect::new(screen_x, screen_y, TILE_SIZE as u32, TILE_SIZE as u32))
+                    .expect("Failed to draw tile");
+            }
+        }
     }
 }
 

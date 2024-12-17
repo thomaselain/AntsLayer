@@ -14,7 +14,7 @@ use thread::{ ChunkError, ChunkKey, Status };
 use tile::{ FluidType, Tile, TileFlags, TileType };
 use std::io::{ self, Read, Seek, SeekFrom };
 
-pub const CHUNK_SIZE: usize = 15;
+pub const CHUNK_SIZE: usize = 20;
 
 #[derive(Clone)]
 pub struct ChunkPath(String, i32, i32);
@@ -146,13 +146,13 @@ impl Chunk {
 
     pub fn load(path: ChunkPath, seed: u32) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
         let chunk_file = File::open(path.clone().to_string());
-        let (x, y) = (path.1, path.2);
+        let key= (path.1, path.2);
 
         println!("{:?}", path.clone().to_string());
 
         if chunk_file.is_err() {
             let (sender, receiver) = mpsc::channel();
-            Chunk::generate_async(x, y, seed, BiomeConfig::default(), sender);
+            Chunk::generate_async(key, seed, BiomeConfig::default(), sender);
 
             while let Ok(((_x, _y), status)) = receiver.recv_timeout(Duration::new(5, 0)) {
                 match status {
@@ -171,20 +171,20 @@ impl Chunk {
         }
         if let Ok(file) = chunk_file {
             Ok((
-                (x, y),
+                key,
                 bincode
                     ::deserialize_from(file)
                     .map_err(|e| {
                         std::io::Error::new(
                             std::io::ErrorKind::Other,
-                            format!("Deserialization error for chunk ({},{}):\n{}\n", x, y, e)
+                            format!("Deserialization error for chunk {:?}:\n{}\n", key, e)
                         )
                     })
                     .expect("Failed to deserialize"),
             ))
         } else {
             println!("Failed to load chunk at {}", path.to_string());
-            Err(((x, y), ChunkError::FailedToLoad))
+            Err((key, ChunkError::FailedToLoad))
         }
     }
     pub fn skip_in_file<R: Read + Seek>(reader: &mut R) -> io::Result<()> {

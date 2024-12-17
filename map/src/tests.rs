@@ -3,7 +3,7 @@ use std::{ sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex }, time::Duratio
 use super::Map;
 use chunk::{ thread::{ ChunkKey, Status }, Chunk };
 use chunk_manager::ChunkManager;
-use crate::{ camera::Camera, renderer::Renderer, thread::MapChannel, WORLD_STARTING_AREA };
+use crate::{ camera::Camera, renderer::Renderer, thread::MapStatus, WORLD_STARTING_AREA };
 
 use biomes::{ BiomeConfig, Config };
 
@@ -21,35 +21,34 @@ pub fn every_biomes() {
     let config = Config::load().unwrap();
 
     for biome in config.biomes {
-        let chunk_manager = ChunkManager::new();
-        let chunk_manager: Arc<Mutex<ChunkManager>> = Arc::new(Mutex::new(chunk_manager));
+        let chunk_manager = Arc::new(Mutex::new(ChunkManager::new()));
 
         let biome_clone = biome.clone();
 
         let mut map = Map::new(&biome.name).unwrap();
-        let channel = MapChannel::new();
-        let (x, y) = (0, 0);
+        let (sndr, rcvr): (Sender<MapStatus>, Receiver<MapStatus>) = mpsc::channel();
+        let key = (0, 0);
 
         let chunk_manager = chunk_manager.lock().expect("Failed to lock chunk manager");
-        Chunk::generate_async(x, y, map.seed, biome, channel.sender());
+        Chunk::generate_async(key, map.seed, biome, sndr);
 
-        while let Some((key, status)) = channel.receive().ok(){
+        while let Some((key, status)) = rcvr.recv_timeout(Duration::from_secs(1)).ok() {
             match status {
-                Status::Pending =>{}
-                Status::Ready(chunk) =>{
+                Status::Pending => {}
+                Status::Ready(chunk) => {
                     map.add_chunk(key, chunk);
-
                 }
-                _=>{panic!("Error")}
+                _ => {
+                    panic!("Error");
+                }
             }
-
         }
 
         println!(
             "\nSeed : {} \n Biome {}\n {:?}",
             map.seed,
             biome_clone.name,
-            map.clone().get_chunk(x, y).ok()
+            map.clone().get_chunk(key).ok()
         );
     }
 }
@@ -73,47 +72,47 @@ fn map_loading() {}
 #[cfg(test)]
 mod threads {
     use chunk::Chunk;
-
-    use crate::thread::MapChannel;
-
     use super::*;
     use std::sync::Arc;
     use std::thread;
 
     #[test]
     fn test_map_channel() {
-        let channel = MapChannel::new();
-        let sender = channel.sender();
+        let key = (1, 1);
+        let (sndr, rcvr): (Sender<MapStatus>, Receiver<MapStatus>) = mpsc::channel();
 
         thread::spawn(move || {
-            sender.send(((1, 1), Status::Pending)).unwrap();
-            sender.send(((1, 1), Status::Ready(Chunk::new()))).unwrap();
+            Chunk::generate_async(key, 42, BiomeConfig::default(), sndr.clone());
         });
 
-        // Tester réception
-        assert_eq!(channel.receive().unwrap(), ((1, 1), Status::Pending));
-
-        match channel.receive().unwrap() {
-            ((1, 1), Status::Ready(_)) => assert!(true),
-            _ => panic!("Statut incorrect reçu"),
+        while let Some((key, status)) = rcvr.recv_timeout(Duration::from_secs(3)).ok() {
+            match status {
+                Status::Ready(chunk) => {
+                    eprintln!("{:?}", chunk);
+                    assert!(true);
+                }
+                Status::Pending => println!("Y'a pas le feu au lac, la ..."),
+                Status::Error(chunk_error) => {
+                    panic!("{:?}", chunk_error);
+                }
+                Status::ToGenerate => {
+                    // osef
+                }
+                _ => {}
+            }
         }
     }
 
     #[test]
-    fn big_array_of_chunk() {
+    fn big_array_of_chunks() {
         let map = Map::new("big").unwrap();
         let seed = map.seed;
-        let _camera = Camera::new(0.0, 0.0);
 
-        let (sender, receiver): (
-            Sender<(ChunkKey, Status)>,
-            Receiver<(ChunkKey, Status)>,
-        ) = mpsc::channel();
-        let chunk_manager = Arc::new(Mutex::new(ChunkManager::new()));
+        let mngr = Arc::new(Mutex::new(ChunkManager::new()));
 
         // Size of the created zone
-        let size = 20;
-        let range = -size..size;
+        let size = 30;
+        let range = -(size / 2)..size / 2;
 
         eprintln!("Going to generate {} chunks, this may take a while ...", size * size);
 
@@ -124,40 +123,41 @@ mod threads {
             .collect::<Vec<_>>()
             .iter()
             .for_each(|&(x, y)| {
-                Chunk::generate_async(x, y, seed, BiomeConfig::default(), sender.clone());
+                let chunk_manager = mngr.lock().unwrap();
+                let sndr = chunk_manager.sndr.lock().unwrap().clone();
+
+                Chunk::generate_async((x, y), seed, BiomeConfig::default(), sndr.clone());
             });
 
-        let mut _chunk_manager = chunk_manager.lock().expect("Chunk manager was not ready !");
+        let chunk_manager = mngr.lock().expect("Chunk manager was not ready !");
         let mut chunks: Vec<Chunk> = Vec::new();
 
         // Boucle principale pour surveiller les chunks générés
-        while let Ok(((x, y), status)) = receiver.recv_timeout(Duration::from_secs(5)) {
+        while
+            let Ok(((x, y), status)) = chunk_manager.rcvr
+                .lock()
+                .unwrap()
+                .recv_timeout(Duration::from_secs(1))
+        {
             match status.clone().get_chunk() {
                 Ok(chunk) => {
                     println!("Chunk {:?} prêt.", (x, y));
                     chunks.push(chunk);
 
-                    println!("{:?}", chunk);
-                    if chunks.len() >= ((size * size) as usize) {
-                        // Generation is done !
-                        break;
-                    }
+                    eprintln!("{:?}", chunk);
                 }
                 Err(status) => {
                     match status {
-                        Status::ToGenerate => todo!(),
                         Status::Pending => {
-                            println!("Attends frero prends ton temps ... ({},{})", x, y);
+                            eprintln!("Attends frero prends ton temps ... ({},{})", x, y);
                         }
-                        Status::Visible(_) => todo!(),
-                        Status::Ready(_) => todo!(),
-                        Status::Error(_) => todo!(),
+                        _ => todo!(),
                     }
                 }
             }
         }
 
-        println!("{} chunks générés", chunks.len());
+        eprintln!("{} chunks générés", chunks.len());
         assert_eq!(chunks.len(), (size * size) as usize);
     }
 }

@@ -60,12 +60,12 @@ bitflags! {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u8)]
-pub enum FluidType{
+pub enum FluidType {
     Magma,
-    Water
+    Water,
 }
-impl FluidType{
-    pub fn flow_speed(self) -> u8{
+impl FluidType {
+    pub fn flow_speed(self) -> u8 {
         match self {
             FluidType::Magma => 1,
             FluidType::Water => 3,
@@ -83,5 +83,5 @@ pub enum TileType {
     Grass,
     Floor,
     Fluid(FluidType),
-    Custom(u8),//+ (types personnalisés)
+    Custom(u8), //+ (types personnalisés)
 }

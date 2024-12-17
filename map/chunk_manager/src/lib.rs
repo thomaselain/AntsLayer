@@ -1,16 +1,10 @@
-use std::collections::HashMap;
+use std::{ collections::{HashMap, HashSet}, sync::{ mpsc::{ Receiver, Sender }, Arc, Mutex } };
 
-use chunk::thread::Status;
+use chunk::thread::{ ChunkKey, Status };
 
 pub mod chunk_manager;
 pub mod threads;
 mod tests;
-
-/// # For Game implementation
-/// Clear chunks that are not seen by the camera
-pub trait Clear<Map, Camera> {
-    fn clear_out_of_range(&mut self, visible_chunks: HashMap<(i32, i32), Status>);
-}
 
 /// Update chunks
 pub trait Update<Map, Camera> {
@@ -19,16 +13,17 @@ pub trait Update<Map, Camera> {
 
 /// Draw
 pub trait Draw<Renderer, Camera> {
-    fn draw(&self, renderer: &mut Renderer, camera:&Camera);
+    fn draw(&self, renderer: &mut Renderer, camera: &Camera);
 }
 /// Draw all map
 pub trait DrawAll<Map, Renderer, Camera> {
-    fn draw_all(&mut self, map:&mut Map, renderer: &mut Renderer, camera:&Camera);
+    fn draw_all(&mut self, map: &mut Map, renderer: &mut Renderer, camera: &Camera);
 }
 
 /// #
-#[derive(Clone)]
 pub struct ChunkManager {
-    // pub receiver: Receiver<Chunk>,
-    pub chunks: HashMap<(i32, i32), Status>, // Modifié pour inclure le statut
+    pub sndr: Arc<Mutex<Sender<(ChunkKey, Status)>>>, 
+    pub rcvr :Arc<Mutex<Receiver<(ChunkKey, Status)>>>,
+    pub loaded_chunks: HashMap<(i32, i32), Status>,
+    pub visible_chunks: HashSet<ChunkKey>,
 }

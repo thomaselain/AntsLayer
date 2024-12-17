@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use chunk::{ thread::{Status, X, Y}, CHUNK_SIZE };
-use chunk_manager::{ threads::{BuildThread, ReceiveStatus}, ChunkManager, Clear, Update };
+use chunk_manager::{ threads::{BuildThread, ReceiveStatus}, ChunkManager, Update };
 use coords::Coords;
 
-use crate::{ renderer::TILE_SIZE, thread::MapChannel, Directions, Map };
+use crate::{ renderer::TILE_SIZE, Directions, Map };
 
 const DEFAULT_RENDER_DISTANCE: usize = 3;
-const DEFAULT_SPEED: f32 = 5.0;
+const DEFAULT_SPEED: f32 = 0.5;
 const DEFAULT_ZOOM: f32 = 1.0;
 
 pub struct Camera {
@@ -59,53 +59,5 @@ impl Camera {
     /// Déplace la caméra
     pub fn move_by(&mut self, dx: f32, dy: f32) {
         self.coords = self.coords + Coords::new(dx / (TILE_SIZE as f32), dy / (TILE_SIZE as f32));
-    }
-}
-
-impl Clear<&Map, Camera> for ChunkManager {
-    fn clear_out_of_range(&mut self, visible_chunks: HashMap<(i32, i32), Status>) {
-        // Retirer les chunks hors de portée
-        self.chunks.retain(|&(x, y), _| visible_chunks.contains_key(&(x, y)));
-    }
-}
-impl Update<Map, Camera> for ChunkManager {
-    fn update(&mut self, map: &mut Map, camera: &Camera) {
-        let channel = MapChannel::new();
-        let visible_chunks = map.visible_chunks(camera, self);
-
-        // Lancer la génération de chunks manquants
-        for (key, status) in visible_chunks.clone() {
-            match status {
-                Status::ToGenerate => {
-                    println!("{:?} : {:?}", key, status);
-                    self.chunks.insert(key, status.clone());
-                    self.build_thread(map, key.x(),key.y(), channel.sender());
-                }
-                Status::Visible(mut chunk) | Status::Ready(mut chunk) => {
-                    chunk.is_dirty = false;
-                    self.chunks.insert(key, Status::Visible(chunk));
-                }
-                _ => {}
-            }
-        }
-
-        // Réception et traitement des chunks générés
-        while let Some((key, status)) = self.receive_status(&channel) {
-            println!("{:?} : {:?}", key, status);
-            match status {
-                Status::Ready(chunk) => {
-                    self.chunks.insert(key, status);
-                    map.chunks.insert(key, chunk);
-
-                    println!("Chunk ({:?}) prêt et visible.", key);
-                }
-                _ => {
-                    println!("Statut inattendu pour le chunk ({:?}) : {:?}", key, status);
-                }
-            }
-        }
-
-        // Nettoyer les chunks hors de la portée
-        self.clear_out_of_range(visible_chunks);
     }
 }
