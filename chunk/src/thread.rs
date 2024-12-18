@@ -27,7 +27,6 @@ impl ChunkError {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum Status {
-    ToGenerate,
     Pending,
     Visible(Chunk),
     Ready(Chunk),
@@ -39,7 +38,6 @@ impl Status {
         match self {
             Status::Ready(chunk) | Status::Visible(chunk) => Ok(chunk),
             Status::Pending => Err(self),
-            Status::ToGenerate => Err(self),
             _ => Err(self),
         }
     }

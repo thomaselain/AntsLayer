@@ -41,17 +41,6 @@ impl ChunkManager {
                     status
                 }
                 Status::Ready(_) | Status::Visible(_) => status,
-                Status::ToGenerate => {
-                    let ((_x, _y), chunk) = Chunk::generate_from_biome(
-                        key.x(),
-                        key.y(),
-                        seed,
-                        BiomeConfig::default()
-                    );
-                    self.loaded_chunks.insert(key, Status::Ready(chunk));
-                    Status::Ready(chunk)
-                }
-
                 Status::Error(e) => panic!("{}", e.to_string()),
             }
         } else {

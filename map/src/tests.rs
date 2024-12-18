@@ -95,7 +95,7 @@ mod threads {
                 Status::Error(chunk_error) => {
                     panic!("{:?}", chunk_error);
                 }
-                Status::ToGenerate => {
+                Status::Pending => {
                     // osef
                 }
                 _ => {}

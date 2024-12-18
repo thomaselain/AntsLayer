@@ -80,7 +80,7 @@ fn chunk_file_operations() {
     // get chunk_2 from file (It should return a Status::ToGenerate)
     let ((_, _), status) = Chunk::load(path_2.clone(), TEST_SEED).unwrap();
     match status {
-        Status::ToGenerate => {
+        Status::Pending => {
             chunk_2 = Chunk::generate_default(path_2.1, path_2.2).1.get_chunk().unwrap();
         }
         _ => {panic!("!")}

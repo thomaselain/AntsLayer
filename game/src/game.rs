@@ -56,7 +56,7 @@ impl Game {
 
         Game {
             last_tick: Instant::now(),
-            tick_rate: Duration::new(1, 0) / 60, // 60 FPS par défaut
+            tick_rate: Duration::from_secs_f64(1.0 / 60.0), // 60 FPS par défaut
             chunk_manager: Arc::new(Mutex::new(ChunkManager::new())),
             renderer: Arc::new(Mutex::new(renderer)),
 
@@ -171,14 +171,6 @@ impl Game {
                         mngr.loaded_chunks.insert(key, status);
                     }
                 }
-                Status::ToGenerate => {
-                    Chunk::generate_async(
-                        key,
-                        self.map.clone().unwrap().seed,
-                        BiomeConfig::default(),
-                        sndr.clone()
-                    );
-                }
                 _ => {
                     eprintln!("Statut inconnu pour le chunk {:?}: {:?}", key, status);
                 }
@@ -203,7 +195,7 @@ impl Game {
                         Err(_) => status.clone(),
                     }
                 None => {
-                    self.sndr.send((key, Status::ToGenerate)).unwrap();
+                    self.sndr.send((key, Status::Pending)).unwrap();
                     Status::Pending
                 }
             };
