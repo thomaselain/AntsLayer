@@ -1,9 +1,9 @@
 use std::{ sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex }, time::Duration };
 
 use super::Map;
-use chunk::{ thread::{ ChunkKey, Status }, Chunk };
+use chunk::{ thread::Status, Chunk };
 use chunk_manager::ChunkManager;
-use crate::{ camera::Camera, renderer::Renderer, thread::MapStatus, WORLD_STARTING_AREA };
+use crate::{ renderer::Renderer, thread::MapStatus, WORLD_STARTING_AREA };
 
 use biomes::{ BiomeConfig, Config };
 
@@ -29,14 +29,14 @@ pub fn every_biomes() {
         let (sndr, rcvr): (Sender<MapStatus>, Receiver<MapStatus>) = mpsc::channel();
         let key = (0, 0);
 
-        let chunk_manager = chunk_manager.lock().expect("Failed to lock chunk manager");
+        let _chunk_manager = chunk_manager.lock().expect("Failed to lock chunk manager");
         Chunk::generate_async(key, map.seed, biome, sndr);
 
         while let Some((key, status)) = rcvr.recv_timeout(Duration::from_secs(1)).ok() {
             match status {
                 Status::Pending => {}
                 Status::Ready(chunk) => {
-                    map.add_chunk(key, chunk);
+                    map.add_chunk(key, chunk).unwrap();
                 }
                 _ => {
                     panic!("Error");
@@ -85,7 +85,7 @@ mod threads {
             Chunk::generate_async(key, 42, BiomeConfig::default(), sndr.clone());
         });
 
-        while let Some((key, status)) = rcvr.recv_timeout(Duration::from_secs(3)).ok() {
+        while let Some((key, status)) = rcvr.recv_timeout(Duration::from_secs(1)).ok() {
             match status {
                 Status::Ready(chunk) => {
                     eprintln!("{:?}", chunk);
@@ -94,9 +94,6 @@ mod threads {
                 Status::Pending => println!("Y'a pas le feu au lac, la ..."),
                 Status::Error(chunk_error) => {
                     panic!("{:?}", chunk_error);
-                }
-                Status::Pending => {
-                    // osef
                 }
                 _ => {}
             }

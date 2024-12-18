@@ -1,11 +1,17 @@
 use biomes::BiomeConfig;
-use chunk::thread::{ ChunkKey, Status, X, Y };
-use chunk::Chunk;
-use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{Receiver, Sender};
+use chunk::thread::{ ChunkError, ChunkKey, Status, X, Y };
+use chunk::{ Chunk, ChunkPath };
+use std::collections::{ HashMap, HashSet };
+use std::sync::mpsc::{ Receiver, Sender };
 use std::sync::{ mpsc, Arc, Mutex };
 
 use crate::ChunkManager;
+
+impl Default for ChunkManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ChunkManager {
     pub fn new() -> Self {
@@ -22,8 +28,8 @@ impl ChunkManager {
         }
     }
 
-    pub fn generate_chunk_no_thread(x: i32, y: i32, seed: u32, biome_config: BiomeConfig) -> Chunk {
-        let ((_x, _y), chunk) = Chunk::generate_from_biome(x, y, seed, biome_config);
+    pub fn generate_chunk_no_thread(key: ChunkKey, seed: u32, biome_config: BiomeConfig) -> Chunk {
+        let ((_x, _y), chunk) = Chunk::generate_from_biome(key, seed, biome_config);
         chunk
     }
 
@@ -33,26 +39,19 @@ impl ChunkManager {
     // chunk
     // }
 
-    pub fn load_chunk(&mut self, key: ChunkKey, seed: u32) -> Status {
+    pub fn load_chunk(&mut self, key: ChunkKey, seed: u32) -> Result<(ChunkKey,Status), (ChunkKey, ChunkError)> {
         if let Some(status) = self.loaded_chunks.get(&key).cloned() {
             match status {
                 Status::Pending => {
                     println!("Chunk {:?} est encore en attente...", key);
-                    status
+                    Ok((key, status))
                 }
-                Status::Ready(_) | Status::Visible(_) => status,
+                Status::Ready(_) | Status::Visible(_) => Ok((key, status)),
                 Status::Error(e) => panic!("{}", e.to_string()),
             }
         } else {
-            // println!("Génération du chunk ({}, {}) ...", x, y);
-            let ((_, _), chunk) = Chunk::generate_from_biome(
-                key.x(),
-                key.y(),
-                seed,
-                BiomeConfig::default()
-            );
-            self.loaded_chunks.insert(key, Status::Ready(chunk));
-            Status::Ready(chunk)
+            let path = ChunkPath::default();
+            Chunk::load(path)
         }
     }
 

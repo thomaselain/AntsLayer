@@ -9,12 +9,10 @@ pub mod world;
 pub extern crate chunk_manager;
 
 use std::collections::{ HashMap, HashSet };
-use std::fs::File;
 // use biomes::BiomeConfig;
 use camera::Camera;
-use chunk::thread::{ ChunkKey, Status, X, Y };
+use chunk::thread::{ ChunkKey, X, Y };
 use chunk::{ Chunk, CHUNK_SIZE };
-use crate::chunk_manager::ChunkManager;
 use serde::{ Serialize, Deserialize };
 
 pub const WORLD_STARTING_AREA: i32 = 4;

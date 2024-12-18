@@ -17,22 +17,29 @@ use std::io::{ self, Read, Seek, SeekFrom };
 pub const CHUNK_SIZE: usize = 20;
 
 #[derive(Clone)]
-pub struct ChunkPath(String, i32, i32);
-
+pub struct ChunkPath(String, ChunkKey);
+impl Default for ChunkPath {
+    fn default()-> Self {
+        Self::build("default", (0,0)).expect("Failed to create default world path")
+    }
+}
 impl ChunkPath {
-    fn new(path: String, x: i32, y: i32) -> Self {
-        Self { 0: path, 1: x, 2: y }
+    fn new(path: String, key: ChunkKey) -> Self {
+        Self(path, key)
     }
     pub fn to_string(self) -> String {
-        format!("{}/{}_{}.bin", self.0, self.1, self.2).to_string()
+        format!("{}/{}_{}.bin", self.0, self.1.0, self.1.1).to_string()
     }
-    pub fn build(path: String, x: i32, y: i32) -> std::io::Result<Self> {
+    pub fn chunk_key(&self) -> ChunkKey {
+        self.1
+    }
+    pub fn build(path: &str, key: ChunkKey) -> std::io::Result<Self> {
         let dir = path.clone();
         if !Path::new(&dir).exists() {
             fs::create_dir_all(dir)?;
         }
 
-        Ok(Self::new(path, x, y))
+        Ok(Self::new(path.to_string(), key))
     }
 }
 
@@ -42,6 +49,12 @@ pub struct Chunk {
     pub y: i32,
     pub is_dirty: bool,
     pub tiles: [[Tile; CHUNK_SIZE]; CHUNK_SIZE], // Stockage linéaire pour optimiser la mémoire cache
+}
+
+impl Default for Chunk {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Chunk {
@@ -56,23 +69,22 @@ impl Chunk {
     }
 
     /// Generate a chunk without multi threading
-    pub fn generate_default(x: i32, y: i32) -> ((i32, i32), Status) {
-        let ((_x, _y), chunk) = Self::generate_from_biome(x, y, 0, BiomeConfig::default());
+    pub fn generate_default(key: ChunkKey) -> (ChunkKey, Status) {
+        let ((_x, _y), chunk) = Self::generate_from_biome(key, 0, BiomeConfig::default());
 
-        ((x, y), Status::Ready(chunk))
+        (key, Status::Ready(chunk))
     }
 
     /// Génère un chunk basé sur la configuration d'un biome
     pub fn generate_from_biome(
-        x: i32,
-        y: i32,
+        key: ChunkKey,
         seed: u32,
         biome_config: BiomeConfig
-    ) -> ((i32, i32), Chunk) {
+    ) -> (ChunkKey, Chunk) {
         let mut chunk = Chunk::new();
         let perlin = noise::Perlin::new(seed);
-        let chunk_offset_x = x * (CHUNK_SIZE as i32);
-        let chunk_offset_y = y * (CHUNK_SIZE as i32);
+        let chunk_offset_x = key.0 * (CHUNK_SIZE as i32);
+        let chunk_offset_y = key.1 * (CHUNK_SIZE as i32);
 
         // sleep(Duration::new(0, 5_000));
 
@@ -118,7 +130,7 @@ impl Chunk {
                 );
             }
         }
-        ((x, y), chunk)
+        (key, chunk)
     }
 
     pub fn get_tile(&self, x: usize, y: usize) -> Result<&Tile, ()> {
@@ -144,31 +156,12 @@ impl Chunk {
         }
     }
 
-    pub fn load(path: ChunkPath, seed: u32) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
+    pub fn load(path: ChunkPath) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
         let chunk_file = File::open(path.clone().to_string());
-        let key= (path.1, path.2);
+        let key = path.chunk_key();
 
-        println!("{:?}", path.clone().to_string());
+        eprintln!("{:?}", path.clone().to_string());
 
-        if chunk_file.is_err() {
-            let (sender, receiver) = mpsc::channel();
-            Chunk::generate_async(key, seed, BiomeConfig::default(), sender);
-
-            while let Ok(((_x, _y), status)) = receiver.recv_timeout(Duration::new(5, 0)) {
-                match status {
-                    Status::Ready(_chunk) => {
-                        Chunk::save(&status.clone().get_chunk().ok().unwrap(), path.clone()).expect(
-                            "Failed to write new chunk file"
-                        );
-                    }
-                    Status::Error(e) => panic!("{:?}", e),
-                    _ => {}
-                }
-            }
-
-            // println!("{:?}", chunk_file);
-            // return Ok(((x, y), status));
-        }
         if let Ok(file) = chunk_file {
             Ok((
                 key,
@@ -183,7 +176,7 @@ impl Chunk {
                     .expect("Failed to deserialize"),
             ))
         } else {
-            println!("Failed to load chunk at {}", path.to_string());
+            eprintln!("Failed to load chunk at {}", path.to_string());
             Err((key, ChunkError::FailedToLoad))
         }
     }

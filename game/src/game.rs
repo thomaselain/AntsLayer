@@ -1,17 +1,15 @@
 use std::{
-    collections::HashMap,
     io::{ self, Write },
     sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex },
     time::{ Duration, Instant },
 };
 
-use chunk::{ thread::{ ChunkKey, Status }, Chunk };
+use chunk::thread::Status;
 #[allow(unused_imports)]
 use chunk_manager::Draw;
 #[allow(unused_imports)]
 use chunk_manager::DrawAll;
 use chunk_manager::ChunkManager;
-use chunk_manager::Update;
 
 use biomes::BiomeConfig;
 use sdl2::{ event::Event, keyboard::Keycode, Sdl };
@@ -95,7 +93,7 @@ impl Game {
 
             // Charger la carte avec le fichier donné
 
-            self.map = Some(Map::new(&file_name)).expect("Failed to create map").ok();
+            self.map = Map::new(&file_name).ok();
             Ok(())
         } else {
             Err(())
@@ -158,7 +156,6 @@ impl Game {
 
     // Mettre à jour les unités, la carte, les ressources, etc.
     fn update_game_logic(&mut self) {
-        let sndr = self.sndr.clone();
         let mut mngr = self.chunk_manager.lock().unwrap();
 
         // Vérifiez les chunks reçus via le receiver
@@ -188,14 +185,13 @@ impl Game {
         for key in chunk_manager.visible_chunks.clone() {
             let status = chunk_manager.loaded_chunks.get(&key.clone());
 
-            let status = match status.clone() {
+            let status = match status {
                 Some(status) =>
                     match status.clone().visible() {
                         Ok(status) => status,
                         Err(_) => status.clone(),
                     }
                 None => {
-                    self.sndr.send((key, Status::Pending)).unwrap();
                     Status::Pending
                 }
             };
@@ -205,10 +201,10 @@ impl Game {
     }
 
     fn render(&mut self) {
-        if let Some(map) = self.map.clone().as_mut() {
+        if let Some(_map) = self.map.clone().as_mut() {
             let mut chunk_manager = self.chunk_manager.lock().unwrap();
             let mut renderer = self.renderer.lock().unwrap();
-            // chunk_manager.draw_all(map, &mut renderer, &self.camera);
+            // chunk_manager.draw_all(_map, &mut renderer, &self.camera);
             chunk_manager.draw(&mut renderer, &self.camera);
         }
     }

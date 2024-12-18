@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
-use chunk::{ thread::{Status, X, Y}, CHUNK_SIZE };
-use chunk_manager::{ threads::{BuildThread, ReceiveStatus}, ChunkManager, Update };
+use chunk::CHUNK_SIZE;
 use coords::Coords;
 
-use crate::{ renderer::TILE_SIZE, Directions, Map };
+use crate::{ renderer::TILE_SIZE, Directions };
 
 const DEFAULT_RENDER_DISTANCE: usize = 3;
 const DEFAULT_SPEED: f32 = 0.5;

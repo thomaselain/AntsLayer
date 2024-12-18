@@ -24,6 +24,12 @@ pub struct Inputs {
     mouse_position: (i32, i32), // Position de la souris
 }
 
+impl Default for Inputs {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Inputs {
     // Crée un nouveau gestionnaire d'entrées
     pub fn new() -> Inputs {

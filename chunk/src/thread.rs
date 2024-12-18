@@ -1,4 +1,4 @@
-use std::{ sync::{ mpsc::Sender, Arc, Mutex }, thread };
+use std::{ sync::mpsc::Sender, thread };
 
 use biomes::BiomeConfig;
 use serde::{ Deserialize, Serialize };
@@ -18,9 +18,7 @@ pub enum ChunkError {
 }
 impl ChunkError {
     pub fn to_string(self) -> String {
-        let e = match self {
-            _ => "",
-        };
+        let e = "";
         e.to_string()
     }
 }
@@ -43,7 +41,7 @@ impl Status {
     }
     pub fn visible(self) -> Result<Self, ()> {
         match self {
-            Status::Ready(chunk) | Status::Visible(chunk) => Ok(Self::Visible(chunk.clone())),
+            Status::Ready(chunk) | Status::Visible(chunk) => Ok(Self::Visible(chunk)),
             _ => Err(()),
         }
     }
@@ -56,20 +54,18 @@ impl Chunk {
         biome_config: BiomeConfig,
         sender: Sender<(ChunkKey, Status)>
     ) {
-        let (x, y) = key;
-
         // Envoyer l'état Pending avant de commencer la génération
         sender
             .clone()
-            .send(((x, y), Status::Pending))
+            .send((key, Status::Pending))
             .unwrap();
 
         thread::spawn(move || {
-            let ((x, y), chunk) = Self::generate_from_biome(x, y, seed, biome_config);
+            let ((x, y), chunk) = Self::generate_from_biome(key, seed, biome_config);
             // let ((x, y), chunk) = Self::generate_from_biome(x, y, seed, biome_config)?;
 
             // Envoyer l'état Ready en verrouillant le Mutex
-            sender.send(((x as i32, y as i32), Status::Ready(chunk))).unwrap();
+            sender.send(((x, y), Status::Ready(chunk))).unwrap();
         });
     }
 }
