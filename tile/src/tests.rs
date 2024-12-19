@@ -3,9 +3,9 @@ use crate::{ Tile, TileType, TileFlags };
 
 #[test]
 fn tile_creation() {
-    let tile = Tile::new((0, 0), TileType::Floor, 1, TileFlags::TRAVERSABLE);
+    let tile = Tile::new((0, 0), TileType::Sand, 1, TileFlags::TRAVERSABLE);
     assert_eq!(tile.coords, (0, 0));
-    assert_eq!(tile.tile_type, TileType::Floor);
+    assert_eq!(tile.tile_type, TileType::Sand);
     assert_eq!(tile.material, 1);
     assert!(tile.flags.contains(TileFlags::TRAVERSABLE));
     assert_eq!(tile.hp, u8::MAX);

@@ -59,9 +59,10 @@ impl BiomeConfig {
                     "Grass" => TileType::Grass,
                     "Dirt" => TileType::Dirt,
                     "Wall" => TileType::Wall,
+                    "Sand" => TileType::Wall,
                     "Floor" => TileType::Floor,
                     "Empty" => TileType::Empty,
-                    _ => TileType::Custom(0), // Valeur personnalisée par défaut
+                    s => todo!("Cutom tile : {:?}",s), // Valeur personnalisée par défaut
                 };
             }
         }

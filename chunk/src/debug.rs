@@ -17,11 +17,12 @@ impl fmt::Debug for Chunk {
                     TileType::Floor => '_',
                     TileType::Rock => '&',
                     TileType::Grass => ',',
+                    TileType::Sand => 'X',
                     TileType::Dirt => '.',
                     TileType::Fluid(liquid) =>
                         match liquid {
-                            FluidType::Magma => '~',
-                            FluidType::Water => '~',
+                            FluidType::Magma => 'M',
+                            FluidType::Water => 'W',
                         }
                         TileType::Custom(_) => '?',
                 };

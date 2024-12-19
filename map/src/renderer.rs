@@ -5,7 +5,7 @@ use tile::{ FluidType, TileType };
 
 use crate::{ camera::Camera, Map };
 
-pub const TILE_SIZE: i32 = 1;
+pub const TILE_SIZE: i32 = 5;
 
 pub fn tile_screen_coords(
     chunk_key: ChunkKey,
@@ -94,19 +94,19 @@ impl Draw<Renderer, Camera> for Chunk {
                 let (screen_x, screen_y) = tile_screen_coords(self.key, x, y, offset_x, offset_y);
 
                 let color = match tile.tile_type {
-                    TileType::Floor => Color::WHITE,
                     TileType::Fluid(liquid) =>
                         match liquid {
                             FluidType::Magma => Color::RED,
                             FluidType::Water => Color::BLUE,
                         }
-                    TileType::Wall => Color::GRAY,
-                    TileType::Empty => Color::BLACK,
-                    TileType::Rock => Color::GREY,
+                    TileType::Empty => Color::RGB(10, 10, 15),
                     TileType::Dirt => Color::RGB(30, 200, 25),
+                    TileType::Sand => Color::RGB(200, 200, 25),
+                    TileType::Wall => Color::GRAY,
+                    TileType::Rock => Color::GREY,
                     TileType::Grass => Color::GREEN,
-                    TileType::Custom(_) => todo!(),
-                    // _ => Color::WHITE,
+                    TileType::Custom(_) => Color::CYAN,
+                     _ => Color::MAGENTA,
                 };
 
                 renderer.canvas.set_draw_color(color);

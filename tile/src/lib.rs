@@ -15,6 +15,20 @@ use serde::{ Serialize, Deserialize };
 // |                   |               | - degrade()                |
 // +-------------------+               +----------------------------+
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u16)]
+pub enum TileType {
+    Empty,
+    Wall,
+    Rock,
+    Sand,
+    Dirt,
+    Grass,
+    Floor,
+    Fluid(FluidType),
+    Custom(u8), //+ (types personnalisés)
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Tile {
     pub hp: u8,
@@ -64,6 +78,7 @@ pub enum FluidType {
     Magma,
     Water,
 }
+
 impl FluidType {
     pub fn flow_speed(self) -> u8 {
         match self {
@@ -77,17 +92,4 @@ impl FluidType {
             FluidType::Water => "Water".to_string(),
         }
     }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(u16)]
-pub enum TileType {
-    Empty,
-    Wall,
-    Rock,
-    Dirt,
-    Grass,
-    Floor,
-    Fluid(FluidType),
-    Custom(u8), //+ (types personnalisés)
 }
