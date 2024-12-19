@@ -25,6 +25,8 @@ pub struct Game {
     pub tick_rate: Duration, // Pour contrôler la fréquence des ticks (30 ou 60 fps)
 
     pub config: Config,
+    pub current_biome: usize,// TMP FOR TESTING BIOMES
+
     pub camera: Camera,
     pub sdl: Sdl,
     pub events: Vec<Event>,
@@ -58,6 +60,8 @@ impl Game {
             rcvr,
 
             config,
+            current_biome: 0,
+
             camera,
             sdl,
             events: Vec::new(),
@@ -81,7 +85,7 @@ impl Game {
                 Chunk::generate_async(
                     (x, y),
                     self.map.clone().unwrap().seed,
-                   self.config.biomes[0].clone(),
+                    self.config.biomes[self.current_biome].clone(),
                     sndr.clone()
                 );
             }
@@ -104,44 +108,6 @@ impl Game {
 
         // 4. Rendu graphique
         self.render();
-    }
-
-    // Gérer les événements (clavier, souris, etc.)
-    fn process_input(&mut self) -> Result<(), ()> {
-        self.inputs.update(&self.events);
-
-        if self.inputs.is_key_pressed(Keycode::KP_MINUS) && self.camera.speed > 0.1 {
-            self.camera.speed -= 0.01;
-            println!("Camera speed set to {}", self.camera.speed);
-        } else if self.inputs.is_key_pressed(Keycode::KP_PLUS) {
-            self.camera.speed += 0.01;
-            println!("Camera speed set to {}", self.camera.speed);
-        } else if self.inputs.is_key_pressed(Keycode::A) && self.camera.render_distance > 1 {
-            self.camera.render_distance -= 1;
-            println!("Camera zoom set to {}", self.camera.render_distance);
-        } else if self.inputs.is_key_pressed(Keycode::E) {
-            self.camera.render_distance += 1;
-            println!("Camera zoom set to {}", self.camera.render_distance);
-        }
-        if self.inputs.is_key_pressed(Keycode::R) {
-            self.create_world(self.sndr.clone()).expect("Failed to create new world");
-        }
-        if self.inputs.is_key_pressed(Keycode::L) {
-            // self.load_world()?;
-        }
-        if self.map.is_some() && self.inputs.is_key_pressed(Keycode::Space) {
-            self.map.as_ref().unwrap().save().expect("Failed to save map");
-            println!("Map saved !");
-        }
-
-        if let Some(key) = self.inputs.key_pressed.last() {
-            if let Ok(dir) = key.to_direction() {
-                self.camera.move_dir(dir);
-                self.inputs.key_pressed.pop();
-            }
-        }
-
-        Ok(())
     }
 
     // Mettre à jour les unités, la carte, les ressources, etc.

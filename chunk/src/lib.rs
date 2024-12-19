@@ -10,10 +10,10 @@ use biomes::BiomeConfig;
 use noise::NoiseFn;
 use serde::{ Deserialize, Serialize };
 use thread::{ ChunkError, ChunkKey, Status };
-use tile::{ FluidType, Tile, TileFlags, TileType };
+use tile::{ Tile, TileFlags, TileType };
 use std::io::{ self, Read, Seek, SeekFrom };
 
-pub const CHUNK_SIZE: usize = 16;
+pub const CHUNK_SIZE: usize = 32;
 
 #[derive(Clone)]
 pub struct ChunkPath(String, ChunkKey);
@@ -87,7 +87,7 @@ impl Chunk {
                 let ny = ((y as f64) + (chunk_offset_y as f64)) / (CHUNK_SIZE as f64);
 
                 // Générer un bruit avec plusieurs octaves
-                let noise_value = (
+                let mut noise_value = (
                     0.6 * perlin.get([nx * biome.scale, ny * biome.scale]) +
                     0.3 * perlin.get([2.0 * nx * biome.scale, 2.0 * ny * biome.scale]) +
                     0.1 * perlin.get([4.0 * nx * biome.scale, 4.0 * ny * biome.scale])
@@ -96,15 +96,14 @@ impl Chunk {
                 // Calculer l'altitude (ajustée selon le biome)
                 let height = base_height + noise_value * height_variation;
 
+                if let Some(params) = &biome.additional_params {
+                    if let Some(roughness) = params.roughness {
+                        noise_value *= roughness;
+                    }
+                }
+
                 // Déterminer le type de tuile selon l'altitude
-                let tile_type = match height {
-                    h if h > biome.rock_threshold => TileType::Rock,
-                    h if h > biome.grass_threshold => TileType::Grass,
-                    h if h > biome.dirt_threshold => TileType::Dirt,
-                    h if h > biome.water_threshold => TileType::Fluid(FluidType::Water),
-                    h if h > biome.magma_threshold => TileType::Fluid(FluidType::Magma),
-                    _ => TileType::Empty,
-                };
+                let tile_type = BiomeConfig::tile_type_from_noise(noise_value, &biome);
 
                 chunk.set_tile(
                     x,

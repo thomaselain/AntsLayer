@@ -1,35 +1,155 @@
 [[biomes]]
-name = "Plain"
-seed = 0
+name = "Mountain"
 scale = 0.3
-rock_threshold = 0.7
-grass_threshold = 0.2
-dirt_threshold = 0.0
-water_threshold = -0.5
-magma_threshold = -1.1
-base_height     = 0.5
-height_variation= 0.5
+base_height = 0.6
+height_variation = 0.7
+
+[[biomes.thresholds]]
+min = -1.0
+max = -0.9
+tile_type = "Fluid"
+fluid_type = "Water"
+
+[[biomes.thresholds]]
+min = -0.9
+max = 0.0
+tile_type = "Rock"
+
+[[biomes.thresholds]]
+min = 0.0
+max = 0.3
+tile_type = "Dirt"
+
+[[biomes.thresholds]]
+min = 0.3
+max = 0.65
+tile_type = "Grass"
+
+[[biomes.thresholds]]
+min = 0.65
+max = 0.7
+tile_type = "Fluid"
+fluid_type = "Water"
+
+[[biomes.thresholds]]
+min = 0.7
+max = 1.0
+tile_type = "Rock"
+
+
+
+
+
+
+
+
+[[biomes]]
+name = "Coast"
+scale = 0.5
+base_height = 0.0
+height_variation = 0.1
+
+[[biomes.thresholds]]
+min = -1.0
+max = 0.0
+tile_type = "Fluid"
+fluid_type = "Water"
+
+[[biomes.thresholds]]
+min = 0.0
+max = 0.1
+tile_type = "Dirt"
+
+[[biomes.thresholds]]
+min = 0.1
+max = 0.4
+tile_type = "Grass"
+
+[[biomes.thresholds]]
+min = 0.4
+max = 0.5
+tile_type = "Rock"
+fluid_type = "Magma"
+
+[[biomes.thresholds]]
+min = 0.5
+max = 1.0
+tile_type = "Rock"
+
+
+
+
+
+
+
+
+[[biomes]]
+name = "Ocean"
+scale = 0.7
+base_height = -0.3
+height_variation = 0.0
+
+[[biomes.thresholds]]
+min = -1.0
+max = 0.4
+tile_type = "Fluid"
+fluid_type = "Water"
+
+[[biomes.thresholds]]
+min = 0.4
+max = 0.5
+tile_type = "Dirt"
+
+[[biomes.thresholds]]
+min = 0.5
+max = 0.7
+tile_type = "Grass"
+
+[[biomes.thresholds]]
+min = 0.7
+max = 0.75
+tile_type = "Fluid"
+fluid_type = "Magma"
+
+[[biomes.thresholds]]
+min = 0.75
+max = 1.0
+tile_type = "Rock"
+
+
+
+
+
+
+
+
+
+
+
 
 [[biomes]]
 name = "Mountain"
-seed = 0
-scale = 0.6
-rock_threshold = 0.6
-grass_threshold = 0.3
-dirt_threshold = 0.0
-water_threshold = -0.2
-magma_threshold = -0.8
-base_height     = 0.5
-height_variation= 0.5
+scale = 0.5
+base_height = 0.3
+height_variation = 0.2
 
-[[biomes]]
-name = "Forest"
-seed = 0
-scale = 0.4
-rock_threshold = 0.5
-grass_threshold = 0.1
-dirt_threshold = -0.1
-water_threshold = -0.4
-magma_threshold = -0.9
-base_height     = 0.5
-height_variation= 0.5
+[[biomes.thresholds]]
+min = -0.3
+max = -1.0
+tile_type = "Fluid"
+fluid_type = "Water"
+
+[[biomes.thresholds]]
+min = 0.7
+max = 1.0
+tile_type = "Rock"
+
+[[biomes.thresholds]]
+min = 0.0
+max = 0.4
+tile_type = "Dirt"
+
+[[biomes.thresholds]]
+min = 0.4
+max = 0.7
+tile_type = "Grass"

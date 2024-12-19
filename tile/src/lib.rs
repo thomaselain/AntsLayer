@@ -71,6 +71,12 @@ impl FluidType {
             FluidType::Water => 3,
         }
     }
+    pub fn as_string(self) -> String {
+        match self {
+            FluidType::Magma => "Magma".to_string(),
+            FluidType::Water => "Water".to_string(),
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]

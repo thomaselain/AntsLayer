@@ -3,6 +3,8 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
 
+use crate::game::Game;
+
 pub trait ToDirection {
     fn to_direction(self) -> Result<Directions, Keycode>;
 }
@@ -49,7 +51,7 @@ impl Inputs {
             match event {
                 Event::KeyDown { keycode, .. } => {
                     if let Some(key) = keycode {
-                        if !self.is_key_pressed(*key){
+                        if !self.is_key_pressed(*key) {
                             self.key_pressed.push(*key);
                         }
                     }
@@ -90,5 +92,54 @@ impl Inputs {
     // Retourne la position de la souris
     pub fn mouse_position(&self) -> (i32, i32) {
         self.mouse_position
+    }
+}
+
+impl Game {
+    // Gérer les événements (clavier, souris, etc.)
+    pub fn process_input(&mut self) -> Result<(), ()> {
+        self.inputs.update(&self.events);
+
+        if self.inputs.is_key_pressed(Keycode::KP_MINUS) && self.camera.speed > 0.1 {
+            self.camera.speed -= 0.01;
+            println!("Camera speed set to {}", self.camera.speed);
+        } else if self.inputs.is_key_pressed(Keycode::KP_PLUS) {
+            self.camera.speed += 0.01;
+            println!("Camera speed set to {}", self.camera.speed);
+        } else if self.inputs.is_key_pressed(Keycode::A) && self.camera.render_distance > 1 {
+            self.camera.render_distance -= 1;
+            println!("Camera render distance set to {}", self.camera.render_distance);
+        } else if self.inputs.is_key_pressed(Keycode::E) {
+            self.camera.render_distance += 1;
+            println!("Camera render distance set to {}", self.camera.render_distance);
+        }
+        if self.inputs.is_key_pressed(Keycode::N) {
+            self.current_biome = if self.current_biome + 1 < self.config.biomes.len() {
+                self.current_biome + 1
+            } else {
+                0
+            };
+            println!("{:?}", self.config.biomes[self.current_biome].name);
+            self.create_world(self.sndr.clone()).unwrap();
+        }
+        if self.inputs.is_key_pressed(Keycode::R) {
+            self.create_world(self.sndr.clone()).unwrap();
+        }
+        if self.inputs.is_key_pressed(Keycode::L) {
+            // self.load_world()?;
+        }
+        if self.map.is_some() && self.inputs.is_key_pressed(Keycode::Space) {
+            self.map.as_ref().unwrap().save().expect("Failed to save map");
+            println!("Map saved !");
+        }
+
+        if let Some(key) = self.inputs.key_pressed.last() {
+            if let Ok(dir) = key.to_direction() {
+                self.camera.move_dir(dir);
+                self.inputs.key_pressed.pop();
+            }
+        }
+
+        Ok(())
     }
 }

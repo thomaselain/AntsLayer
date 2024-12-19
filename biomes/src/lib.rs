@@ -1,23 +1,22 @@
 #[cfg(test)]
 mod tests;
+mod noise;
+mod params;
 
+use params::{ AdditionalParams, Threshold };
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{ self, Read };
-use tile::{FluidType, TileType};
+use tile::{ FluidType, TileType };
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct BiomeConfig {
-    pub name: String,
-    pub scale: f64,
-    pub rock_threshold: f64,
-    pub grass_threshold: f64,
-    pub dirt_threshold: f64,
-    pub water_threshold: f64,
-    pub magma_threshold: f64,
-
-    pub base_height: f64,        // Par défaut : 0.0
-    pub height_variation: f64,  // Par défaut : 1.0
+    pub name: String, // Nom du biome
+    pub scale: f64, // Échelle de génération
+    pub base_height: f64, // Hauteur moyenne
+    pub height_variation: f64, // Variation de hauteur
+    pub thresholds: Vec<Threshold>, // Liste dynamique des seuils
+    pub additional_params: Option<AdditionalParams>, // Paramètres facultatifs
 }
 
 impl BiomeConfig {
@@ -25,33 +24,41 @@ impl BiomeConfig {
         BiomeConfig {
             name: "Default_biome".to_string(),
             scale: 1.0,
-            rock_threshold: 0.8,
-            grass_threshold: 0.4,
-            water_threshold: -0.4,
-            dirt_threshold: -0.8,
-            magma_threshold: -0.9,
             base_height: 0.5,
             height_variation: 0.5,
+            thresholds: Vec::new(),
+            additional_params: None,
         }
     }
     fn path() -> String {
         format!("config/biomes_config.toml")
     }
-
     pub fn tile_type_from_noise(noise_value: f64, biome: &BiomeConfig) -> TileType {
-        if noise_value > biome.rock_threshold {
-            TileType::Rock
-        } else if noise_value > biome.grass_threshold {
-            TileType::Grass
-        } else if noise_value > biome.dirt_threshold {
-            TileType::Dirt
-        } else if noise_value > biome.water_threshold {
-            TileType::Fluid(FluidType::Water)
-        } else if noise_value > biome.magma_threshold {
-            TileType::Fluid(FluidType::Magma)
-        } else {
-            TileType::Empty
+        for threshold in &biome.thresholds {
+            if noise_value >= threshold.min && noise_value < threshold.max {
+                if threshold.tile_type == "Fluid" {
+                    // Si c'est un fluide, vérifie le type de fluide
+                    if let Some(fluid_type) = &threshold.fluid_type {
+                        return match fluid_type.as_string().as_str() {
+                            "Water" => TileType::Fluid(FluidType::Water),
+                            "Magma" => TileType::Fluid(FluidType::Magma),
+                            _ => TileType::Empty, // En cas d'erreur ou type inconnu
+                        };
+                    }
+                }
+                // Retourne un type de tuile standard
+                return match threshold.tile_type.as_str() {
+                    "Rock" => TileType::Rock,
+                    "Grass" => TileType::Grass,
+                    "Dirt" => TileType::Dirt,
+                    "Wall" => TileType::Wall,
+                    "Floor" => TileType::Floor,
+                    "Empty" => TileType::Empty,
+                    _ => TileType::Custom(0), // Valeur personnalisée par défaut
+                };
+            }
         }
+        TileType::Empty // Par défaut si aucune correspondance
     }
     
 }
