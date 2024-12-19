@@ -15,7 +15,7 @@ use chunk::thread::{ ChunkKey, X, Y };
 use chunk::{ Chunk, CHUNK_SIZE };
 use serde::{ Serialize, Deserialize };
 
-pub const WORLD_STARTING_AREA: i32 = 4;
+pub const WORLD_STARTING_AREA: i32 = 100;
 pub const WORLDS_FOLDER: &str = "data/worlds/";
 
 #[derive(Clone, Serialize, Deserialize)]

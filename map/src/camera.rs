@@ -3,8 +3,8 @@ use coords::Coords;
 
 use crate::{ renderer::TILE_SIZE, Directions };
 
-const DEFAULT_RENDER_DISTANCE: usize = 3;
-const DEFAULT_SPEED: f32 = 0.5;
+const DEFAULT_RENDER_DISTANCE: usize = 10;
+const DEFAULT_SPEED: f32 = 5.0;
 const DEFAULT_ZOOM: f32 = 1.0;
 
 pub struct Camera {
