@@ -136,11 +136,11 @@ impl Game {
             // self.load_world()?;
         }
 
-        if &self.inputs.wheel_dir > &0 {
+        if self.inputs.wheel_dir > 0 {
             self.camera.zoom *= 1.1;
             eprintln!("WHEEL UP : zoom set to :{}", self.camera.zoom);
             self.inputs.wheel_dir = 0;
-        } else if &self.inputs.wheel_dir < &0 {
+        } else if self.inputs.wheel_dir < 0 {
             self.camera.zoom /= 1.1;
             eprintln!("WHEEL DOWN : zoom set to :{}", self.camera.zoom);
             self.inputs.wheel_dir = 0;

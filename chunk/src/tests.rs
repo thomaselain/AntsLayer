@@ -7,7 +7,7 @@ fn chunk_serialization() {
     let key = (0, 0);
 
     let (key, status) = Chunk::generate_default(key);
-    let chunk = status.get_chunk().expect(&ChunkError::FailedToGenerate.to_string());
+    let chunk = status.get_chunk().unwrap_or_else(|_| { panic!("{}", ChunkError::FailedToGenerate.to_string()) });
 
     let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
 
@@ -29,7 +29,7 @@ fn read_write_chunk() {
         .get_chunk()
         .expect("Chunk failed to generate")
         .save(path.clone())
-        .expect(&format!("Failed to save chunk at {:?}", &path.clone().to_string()));
+        .unwrap_or_else(|_| panic!("Failed to save chunk at {:?}", &path.clone().to_string()));
 
     println!("Generated chunk : {:?}", status.get_chunk().unwrap());
 
@@ -75,11 +75,11 @@ fn chunk_file_operations() {
     Chunk::generate_async(key, 0, BiomeConfig::default(), sndr.clone());
 
     let rc = rcvr.recv_timeout(Duration::from_secs(1)).ok();
-    assert_eq!(rc.is_some(), true);
+    assert!(rc.is_some());
 
     let chunk = rc.unwrap().1.get_chunk();
     eprintln!("Status received : {:?}", chunk);
-    assert_eq!(chunk.is_ok(), true);
+    assert!(chunk.is_ok());
 
     chunk.unwrap().save(path_1.clone()).unwrap();
 

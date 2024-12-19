@@ -36,8 +36,8 @@ mod tests_states {
         let coords = Coords::new(0.0, 0.0);
         let  unit = Unit::new(coords, 1.0);
 
-        assert_eq!(unit.has_state(MOVING), false); // Initialement, l'unité n'est pas en mouvement
-        assert_eq!(unit.has_state(ATTACKING), false); // L'unité n'attaque pas
+        assert!(!unit.has_state(MOVING)); // Initialement, l'unité n'est pas en mouvement
+        assert!(!unit.has_state(ATTACKING)); // L'unité n'attaque pas
     }
 
     #[test]
@@ -46,7 +46,7 @@ mod tests_states {
         let mut unit = Unit::new(coords, 1.0);
 
         unit.set_state(MOVING); // On définit l'état de mouvement
-        assert_eq!(unit.has_state(MOVING), true);
+        assert!(unit.has_state(MOVING));
     }
 
     #[test]
@@ -55,10 +55,10 @@ mod tests_states {
         let mut unit = Unit::new(coords, 1.0);
 
         unit.set_state(MOVING);
-        assert_eq!(unit.has_state(MOVING), true);
+        assert!(unit.has_state(MOVING));
 
         unit.clear_state(MOVING); // On retire l'état de mouvement
-        assert_eq!(unit.has_state(MOVING), false);
+        assert!(!unit.has_state(MOVING));
     }
 
     #[test]
@@ -67,7 +67,7 @@ mod tests_states {
         let mut unit = Unit::new(coords, 1.0);
 
         unit.set_state(MOVING | ATTACKING); // On définit à la fois les états de mouvement et d'attaque
-        assert_eq!(unit.has_state(MOVING), true);
-        assert_eq!(unit.has_state(ATTACKING), true);
+        assert!(unit.has_state(MOVING));
+        assert!(unit.has_state(ATTACKING));
     }
 }

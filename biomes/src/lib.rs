@@ -31,7 +31,7 @@ impl BiomeConfig {
         }
     }
     fn path() -> String {
-        format!("config/biomes_config.toml")
+        "config/biomes_config.toml".to_string()
     }
     pub fn tile_type_from_noise(noise_value: f64, biome: &BiomeConfig) -> TileType {
         for threshold in &biome.thresholds {
@@ -66,6 +66,12 @@ impl BiomeConfig {
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub biomes: Vec<BiomeConfig>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Config {
