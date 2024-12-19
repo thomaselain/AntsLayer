@@ -6,8 +6,6 @@ pub mod thread;
 
 use std::fs::{ self, File };
 use std::path::Path;
-use std::sync::mpsc::{ self };
-use std::time::Duration;
 use biomes::BiomeConfig;
 use serde::{ Deserialize, Serialize };
 use thread::{ ChunkError, ChunkKey, Status };
@@ -19,8 +17,8 @@ pub const CHUNK_SIZE: usize = 20;
 #[derive(Clone)]
 pub struct ChunkPath(String, ChunkKey);
 impl Default for ChunkPath {
-    fn default()-> Self {
-        Self::build("default", (0,0)).expect("Failed to create default world path")
+    fn default() -> Self {
+        Self::build("default", (0, 0)).expect("Failed to create default world path")
     }
 }
 impl ChunkPath {
@@ -34,7 +32,7 @@ impl ChunkPath {
         self.1
     }
     pub fn build(path: &str, key: ChunkKey) -> std::io::Result<Self> {
-        let dir = path.clone();
+        let dir = path;
         if !Path::new(&dir).exists() {
             fs::create_dir_all(dir)?;
         }
@@ -156,7 +154,8 @@ impl Chunk {
         }
     }
 
-    pub fn load(path: ChunkPath) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
+    pub fn load(self, world_name: String) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
+        let path = ChunkPath::build(&world_name, (self.x, self.y)).ok().unwrap();
         let chunk_file = File::open(path.clone().to_string());
         let key = path.chunk_key();
 

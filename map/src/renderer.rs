@@ -58,12 +58,9 @@ impl DrawAll<Map, Renderer, Camera> for ChunkManager {
 
 impl Draw<Renderer, Camera> for ChunkManager {
     fn draw(&self, renderer: &mut Renderer, camera: &Camera) {
-
-        for (x, y) in &self.visible_chunks {
-            if let Some(status) = self.loaded_chunks.get(&(*x, *y)) {
-                if let Ok(chunk) = status.clone().get_chunk() {
-                    chunk.draw(renderer, camera);
-                }
+        for (_, status) in self.loaded_chunks.clone() {
+            if let Ok(chunk) = status.clone().get_chunk() {
+                chunk.draw(renderer, camera);
             }
         }
         renderer.canvas.set_draw_color(Color::BLACK);

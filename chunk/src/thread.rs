@@ -15,6 +15,7 @@ pub enum ChunkError {
     FailedToGenerate,
     FailedToOpenFile,
     NotVisible,
+    StillLoading,
 }
 impl ChunkError {
     pub fn to_string(self) -> String {

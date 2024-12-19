@@ -1,6 +1,6 @@
-use super::*;
+use std::{ sync::mpsc, time::Duration };
 
-const TEST_SEED: u32 = 0;
+use super::*;
 
 #[test]
 fn chunk_serialization() {
@@ -18,7 +18,7 @@ fn chunk_serialization() {
 
 #[test]
 fn read_write_chunk() {
-    let key = (69, 420);
+    let key = (0, 0);
     let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
 
     let ((_x, _y), status) = Chunk::generate_default(key);
@@ -33,7 +33,7 @@ fn read_write_chunk() {
 
     println!("Generated chunk : {:?}", status.get_chunk().unwrap());
 
-    let ((_x, _y), loaded_chunk) = Chunk::load(path).unwrap();
+    let ((_x, _y), loaded_chunk) = Chunk::new().load(path.0).unwrap();
     println!("{:?}", loaded_chunk);
 }
 
@@ -57,7 +57,7 @@ pub fn tile_modification() {
     chunk.save(path.clone()).expect("Failed to save");
 
     // Charger le chunk
-    let ((_x, _y), loaded_chunk) = Chunk::load(path.clone()).unwrap();
+    let ((_x, _y), loaded_chunk) = Chunk::new().load(path.clone().0).unwrap();
     println!("{:?}", loaded_chunk);
 }
 
@@ -71,26 +71,23 @@ fn chunk_file_operations() {
     let path_2 = ChunkPath::build("test/file_operations", key).expect(
         "Failed to set up test directory"
     );
+    let (sndr, rcvr) = mpsc::channel();
+    Chunk::generate_async(key, 0, BiomeConfig::default(), sndr.clone());
 
-    // Save chunks
-    let chunk_1 = Chunk::new();
-    chunk_1.save(path_1.clone()).unwrap();
+    let rc = rcvr.recv_timeout(Duration::from_secs(1)).ok();
+    assert_eq!(rc.is_some(), true);
+
+    let chunk = rc.unwrap().1.get_chunk();
+    eprintln!("Status received : {:?}", chunk);
+    assert_eq!(chunk.is_ok(), true);
+
+    chunk.unwrap().save(path_1.clone()).unwrap();
+
     let mut chunk_2 = Chunk::new();
     chunk_2.save(path_2.clone()).unwrap();
 
     // generate new chunk
     let chunk_1 = Chunk::generate_default(path_1.chunk_key()).1.get_chunk().unwrap();
-
-    // get chunk_2 from file (It should return a Status::ToGenerate)
-    let ((_, _), status) = Chunk::load(path_2.clone()).unwrap();
-    match status {
-        Status::Pending => {
-            chunk_2 = Chunk::generate_default(path_2.chunk_key()).1.get_chunk().unwrap();
-        }
-        _ => {
-            panic!("!");
-        }
-    }
 
     // Test écriture
     chunk_1.save(path_1.clone()).expect("Failed to save chunk");

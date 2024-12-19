@@ -20,8 +20,7 @@ pub fn game() {
     }
 
     let mut game = Game::new(sdl2::init().unwrap());
-    game.map = Some(Map::new("default").expect("Failed to create default map"));
-    game.map.clone().unwrap().create_world(game.sndr.clone()).unwrap();
+    game.create_world(game.sndr.clone()).unwrap();
 
     // Boucle de jeu
     'running: loop {

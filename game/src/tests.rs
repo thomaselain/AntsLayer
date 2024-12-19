@@ -9,7 +9,7 @@ use crate::game::Game;
 fn create_map_with_threads() {
     let mut map = Map::new("map_creation_with_threads").unwrap();
     let mut game = Game::new(sdl2::init().unwrap());
-    map.create_world(game.sndr.clone()).unwrap();
+    game.create_world(game.sndr.clone()).unwrap();
 
     game.map = Some(map);
 

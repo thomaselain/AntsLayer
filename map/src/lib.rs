@@ -33,6 +33,10 @@ pub enum Directions {
 }
 
 impl Map {
+    pub fn new(name: &str) -> Result<Self, String> {
+        Self::init_world_folder(name)?;
+        Self::init_world(name)
+    }
     // Ajouter un chunk
     pub fn add_chunk(&mut self, key: ChunkKey, chunk: Chunk) -> std::io::Result<()> {
         self.chunks.insert((key.x(), key.y()), chunk);

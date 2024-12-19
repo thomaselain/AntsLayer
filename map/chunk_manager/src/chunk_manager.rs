@@ -39,7 +39,11 @@ impl ChunkManager {
     // chunk
     // }
 
-    pub fn load_chunk(&mut self, key: ChunkKey, seed: u32) -> Result<(ChunkKey,Status), (ChunkKey, ChunkError)> {
+    pub fn load_chunk(
+        &mut self,
+        key: ChunkKey,
+        world_name: String
+    ) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
         if let Some(status) = self.loaded_chunks.get(&key).cloned() {
             match status {
                 Status::Pending => {
@@ -49,9 +53,14 @@ impl ChunkManager {
                 Status::Ready(_) | Status::Visible(_) => Ok((key, status)),
                 Status::Error(e) => panic!("{}", e.to_string()),
             }
+        } else if let Ok((key, status)) = Chunk::new().load(world_name.clone()) {
+            match status {
+                Status::Visible(_) | Status::Ready(_) => Ok((key, status)),
+                Status::Pending => { Err((key, ChunkError::StillLoading)) }
+                Status::Error(_) => todo!(),
+            }
         } else {
-            let path = ChunkPath::default();
-            Chunk::load(path)
+            Err((key, ChunkError::FailedToLoad))
         }
     }
 

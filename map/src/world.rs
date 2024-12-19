@@ -7,7 +7,7 @@ use rand::Rng;
 use crate::{ Map, WORLDS_FOLDER, WORLD_STARTING_AREA };
 
 impl Map {
-    fn init_world_folder(name: &str) -> Result<(), String> {
+    pub fn init_world_folder(name: &str) -> Result<(), String> {
         // Vérifier si le dossier "data/worlds" existe, sinon le créer
         if !std::fs::metadata(format!("{}{}", WORLDS_FOLDER, name).to_string()).is_ok() {
             // Créer le dossier "data/"
@@ -24,7 +24,7 @@ impl Map {
         Ok(())
     }
 
-    fn init_world(name: &str) -> Result<Self, String> {
+    pub fn init_world(name: &str) -> Result<Self, String> {
         let mut rng = rand::thread_rng();
         let seed = rng.gen_range(0..10);
 
@@ -33,23 +33,6 @@ impl Map {
             path: format!("{}{}", WORLDS_FOLDER, name).to_string(),
             chunks: HashMap::new(),
         })
-    }
-
-    pub fn create_world(&mut self, sndr: Sender<(ChunkKey, Status)>) -> Result<(), String> {
-        let half_size = WORLD_STARTING_AREA / 2;
-
-        for x in -half_size..=half_size {
-            for y in -half_size..=half_size {
-                Chunk::generate_async((x,y), self.seed, BiomeConfig::default(),sndr.clone());
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn new(name: &str) -> Result<Self, String> {
-        Self::init_world_folder(name)?;
-        Self::init_world(name)
     }
 
     // Sauvegarder la map entière
