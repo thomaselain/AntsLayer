@@ -15,6 +15,9 @@ pub struct BiomeConfig {
     pub dirt_threshold: f64,
     pub water_threshold: f64,
     pub magma_threshold: f64,
+
+    pub base_height: f64,        // Par défaut : 0.0
+    pub height_variation: f64,  // Par défaut : 1.0
 }
 
 impl BiomeConfig {
@@ -27,6 +30,8 @@ impl BiomeConfig {
             water_threshold: -0.4,
             dirt_threshold: -0.8,
             magma_threshold: -0.9,
+            base_height: 0.5,
+            height_variation: 0.5,
         }
     }
     fn path() -> String {

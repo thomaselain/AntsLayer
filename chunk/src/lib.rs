@@ -7,6 +7,7 @@ pub mod thread;
 use std::fs::{ self, File };
 use std::path::Path;
 use biomes::BiomeConfig;
+use noise::NoiseFn;
 use serde::{ Deserialize, Serialize };
 use thread::{ ChunkError, ChunkKey, Status };
 use tile::{ FluidType, Tile, TileFlags, TileType };
@@ -70,53 +71,39 @@ impl Chunk {
 
         (key, Status::Ready(chunk))
     }
-
-    /// Génère un chunk basé sur la configuration d'un biome
-    pub fn generate_from_biome(
-        key: ChunkKey,
-        seed: u32,
-        biome_config: BiomeConfig
-    ) -> (ChunkKey, Chunk) {
+    pub fn generate_from_biome(key: ChunkKey, seed: u32, biome: BiomeConfig) -> (ChunkKey, Chunk) {
         let mut chunk = Chunk::new(key);
         let perlin = noise::Perlin::new(seed);
         let chunk_offset_x = key.0 * (CHUNK_SIZE as i32);
         let chunk_offset_y = key.1 * (CHUNK_SIZE as i32);
 
-        // sleep(Duration::new(0, 5_000));
+        // Paramètres spécifiques au biome
+        let base_height = biome.base_height; // Hauteur moyenne
+        let height_variation = biome.height_variation; // Variation
 
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
                 let nx = ((x as f64) + (chunk_offset_x as f64)) / (CHUNK_SIZE as f64);
                 let ny = ((y as f64) + (chunk_offset_y as f64)) / (CHUNK_SIZE as f64);
 
-                // Utilise le bruit pour déterminer la valeur de la tuile
-                // Avec des octaves
-                let value =
-                    (noise::NoiseFn::get(&perlin, [
-                        nx * biome_config.scale,
-                        ny * biome_config.scale,
-                    ]) +
-                        0.5 *
-                            noise::NoiseFn::get(&perlin, [
-                                2.0 * nx * biome_config.scale,
-                                2.0 * ny * biome_config.scale,
-                            ])) /
-                    1.5;
-                // let value = (value / 1.5).clamp(-1.0, 1.0);
+                // Générer un bruit avec plusieurs octaves
+                let noise_value = (
+                    0.6 * perlin.get([nx * biome.scale, ny * biome.scale]) +
+                    0.3 * perlin.get([2.0 * nx * biome.scale, 2.0 * ny * biome.scale]) +
+                    0.1 * perlin.get([4.0 * nx * biome.scale, 4.0 * ny * biome.scale])
+                ).clamp(-1.0, 1.0);
 
-                // Attribue des types de tuiles selon les seuils du biome
-                let tile_type = if value < biome_config.magma_threshold {
-                    TileType::Fluid(FluidType::Magma)
-                } else if value < biome_config.water_threshold {
-                    TileType::Fluid(FluidType::Water)
-                } else if value < biome_config.grass_threshold {
-                    TileType::Grass
-                } else if value < biome_config.dirt_threshold {
-                    TileType::Dirt
-                } else if value < biome_config.rock_threshold {
-                    TileType::Rock
-                } else {
-                    TileType::Floor
+                // Calculer l'altitude (ajustée selon le biome)
+                let height = base_height + noise_value * height_variation;
+
+                // Déterminer le type de tuile selon l'altitude
+                let tile_type = match height {
+                    h if h > biome.rock_threshold => TileType::Rock,
+                    h if h > biome.grass_threshold => TileType::Grass,
+                    h if h > biome.dirt_threshold => TileType::Dirt,
+                    h if h > biome.water_threshold => TileType::Fluid(FluidType::Water),
+                    h if h > biome.magma_threshold => TileType::Fluid(FluidType::Magma),
+                    _ => TileType::Empty,
                 };
 
                 chunk.set_tile(

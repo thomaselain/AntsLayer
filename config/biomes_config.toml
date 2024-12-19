@@ -7,6 +7,8 @@ grass_threshold = 0.2
 dirt_threshold = 0.0
 water_threshold = -0.5
 magma_threshold = -1.1
+base_height     = 0.5
+height_variation= 0.5
 
 [[biomes]]
 name = "Mountain"
@@ -17,6 +19,8 @@ grass_threshold = 0.3
 dirt_threshold = 0.0
 water_threshold = -0.2
 magma_threshold = -0.8
+base_height     = 0.5
+height_variation= 0.5
 
 [[biomes]]
 name = "Forest"
@@ -27,3 +31,5 @@ grass_threshold = 0.1
 dirt_threshold = -0.1
 water_threshold = -0.4
 magma_threshold = -0.9
+base_height     = 0.5
+height_variation= 0.5
