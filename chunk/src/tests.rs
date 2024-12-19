@@ -83,7 +83,7 @@ fn chunk_file_operations() {
 
     chunk.unwrap().save(path_1.clone()).unwrap();
 
-    let mut chunk_2 = Chunk::new();
+    let chunk_2 = Chunk::new();
     chunk_2.save(path_2.clone()).unwrap();
 
     // generate new chunk

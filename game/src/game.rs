@@ -179,7 +179,7 @@ impl Game {
 
     fn render(&mut self) {
         if self.map.is_some() {
-            let mut chunk_manager = self.chunk_manager.lock().unwrap();
+            let chunk_manager = self.chunk_manager.lock().unwrap();
             let mut renderer = self.renderer.lock().unwrap();
             // chunk_manager.draw_all(&mut self.map.clone().unwrap(), &mut renderer, &self.camera);
             chunk_manager.draw(&mut renderer, &self.camera);

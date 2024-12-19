@@ -1,10 +1,9 @@
-use std::{ collections::HashMap, sync::mpsc::Sender };
+use std::collections::HashMap;
 
-use biomes::BiomeConfig;
-use chunk::{ thread::{ ChunkKey, Status }, Chunk, ChunkPath };
+use chunk::ChunkPath;
 use rand::Rng;
 
-use crate::{ Map, WORLDS_FOLDER, WORLD_STARTING_AREA };
+use crate::{ Map, WORLDS_FOLDER };
 
 impl Map {
     pub fn init_world_folder(name: &str) -> Result<(), String> {

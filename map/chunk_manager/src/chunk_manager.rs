@@ -1,6 +1,6 @@
 use biomes::BiomeConfig;
-use chunk::thread::{ ChunkError, ChunkKey, Status, X, Y };
-use chunk::{ Chunk, ChunkPath };
+use chunk::thread::{ ChunkError, ChunkKey, Status };
+use chunk::Chunk;
 use std::collections::{ HashMap, HashSet };
 use std::sync::mpsc::{ Receiver, Sender };
 use std::sync::{ mpsc, Arc, Mutex };

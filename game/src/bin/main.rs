@@ -1,6 +1,4 @@
-use biomes::BiomeConfig;
 use game::game::Game;
-use map::Map;
 use sdl2::{ keyboard::Keycode, pixels::Color };
 use menu::main_menu;
 
