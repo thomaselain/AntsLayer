@@ -7,7 +7,9 @@ fn chunk_serialization() {
     let key = (0, 0);
 
     let (key, status) = Chunk::generate_default(key);
-    let chunk = status.get_chunk().unwrap_or_else(|_| { panic!("{}", ChunkError::FailedToGenerate.to_string()) });
+    let chunk = status
+        .get_chunk()
+        .unwrap_or_else(|_| { panic!("{}", ChunkError::FailedToGenerate.to_string()) });
 
     let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
 
@@ -42,12 +44,12 @@ pub fn tile_modification() {
     let key = (0, 0);
     let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
 
-    let mut chunk = Chunk::new(key);
-    let (_x, _y) = key;
+    let (_, mut chunk) = Chunk::generate_from_biome(key, 0, BiomeConfig::default());
+
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
             if x == y {
-                let new_tile = Tile::new((0, 0), TileType::Floor, 0, TileFlags::empty());
+                let new_tile = Tile::new(key, TileType::Grass, 0, TileFlags::empty());
                 chunk.set_tile(x, y, new_tile);
             }
         }
@@ -55,6 +57,7 @@ pub fn tile_modification() {
 
     // Sauvegarder le chunk
     chunk.save(path.clone()).expect("Failed to save");
+    println!("{:?}", chunk);
 
     // Charger le chunk
     let ((_x, _y), loaded_chunk) = Chunk::new(key).load(path.clone().0).unwrap();

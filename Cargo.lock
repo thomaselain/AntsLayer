@@ -22,6 +22,7 @@ name = "biomes"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "noise",
  "serde",
  "tile",
  "toml",
@@ -60,7 +61,6 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "biomes",
- "noise",
  "rand",
  "serde",
  "tile",

@@ -7,7 +7,6 @@ pub mod thread;
 use std::fs::{ self, File };
 use std::path::Path;
 use biomes::BiomeConfig;
-use noise::NoiseFn;
 use serde::{ Deserialize, Serialize };
 use thread::{ ChunkError, ChunkKey, Status };
 use tile::{ Tile, TileFlags, TileType };
@@ -71,50 +70,38 @@ impl Chunk {
 
         (key, Status::Ready(chunk))
     }
-    pub fn generate_from_biome(key: ChunkKey, seed: u32, biome: BiomeConfig) -> (ChunkKey, Chunk) {
+    pub fn generate_from_biome(
+        key: ChunkKey,
+        seed: u32,
+        biome: BiomeConfig,
+    ) -> (ChunkKey, Chunk) {
         let mut chunk = Chunk::new(key);
-        let perlin = noise::Perlin::new(seed);
+        let perlin = BiomeConfig::noise_from_seed(seed);
         let chunk_offset_x = key.0 * (CHUNK_SIZE as i32);
         let chunk_offset_y = key.1 * (CHUNK_SIZE as i32);
-
-        // Paramètres spécifiques au biome
-        let base_height = biome.base_height; // Hauteur moyenne
-        let height_variation = biome.height_variation; // Variation
-
+    
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
                 let nx = ((x as f64) + (chunk_offset_x as f64)) / (CHUNK_SIZE as f64);
                 let ny = ((y as f64) + (chunk_offset_y as f64)) / (CHUNK_SIZE as f64);
-
-                // Générer un bruit avec plusieurs octaves
-                let mut noise_value = (
-                    0.6 * perlin.get([nx * biome.scale, ny * biome.scale]) +
-                    0.3 * perlin.get([2.0 * nx * biome.scale, 2.0 * ny * biome.scale]) +
-                    0.1 * perlin.get([4.0 * nx * biome.scale, 4.0 * ny * biome.scale])
-                ).clamp(-1.0, 1.0);
-
-                // Calculer l'altitude (ajustée selon le biome)
-                let height = base_height + noise_value * height_variation;
-
-                if let Some(params) = &biome.additional_params {
-                    if let Some(roughness) = params.roughness {
-                        noise_value *= roughness;
-                    }
-                }
-
-                // Déterminer le type de tuile selon l'altitude
-                let tile_type = BiomeConfig::tile_type_from_noise(noise_value, &biome);
-
+    
+                // Combinaison des couches de bruit
+                let value = biome.combined_noise(&perlin, nx, ny);
+    
+                // Détermine le type de tuile
+                let tile_type = BiomeConfig::tile_type_from_noise(value, &biome);
+    
                 chunk.set_tile(
                     x,
                     y,
-                    Tile::new((x as i32, y as i32), tile_type, 0, TileFlags::empty())
+                    Tile::new((x as i32, y as i32), tile_type, 0, TileFlags::empty()),
                 );
             }
         }
+    
         (key, chunk)
     }
-
+    
     pub fn get_tile(&self, x: usize, y: usize) -> Result<&Tile, ()> {
         if x < CHUNK_SIZE && y < CHUNK_SIZE { Ok(&self.tiles[x][y]) } else { Err(()) }
     }
