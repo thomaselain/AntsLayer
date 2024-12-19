@@ -42,7 +42,7 @@ mod tests {
     #[test]
     fn chunk_debug_printing() {
         // Crée un Chunk pour vérifier l'implémentation Debug
-        let chunk = Chunk::new();
+        let chunk = Chunk::default();
 
         // Vérifie que l'implémentation Debug fonctionne en affichant dans le terminal
         println!("{:?}", chunk); // Cela devrait afficher les informations de Chunk

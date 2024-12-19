@@ -58,7 +58,7 @@ fn create_and_save() {
     let map = Map::new("save_test");
 
     let (x, y) = (WORLD_STARTING_AREA * 2, WORLD_STARTING_AREA * 2);
-    let chunk = Chunk::new();
+    let chunk = Chunk::default();
 
     let mut map = map.expect("Map creation failed");
     map.add_chunk((x, y), chunk).expect("Failed to add chunk to map");

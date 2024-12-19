@@ -43,24 +43,22 @@ impl ChunkPath {
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub struct Chunk {
-    pub x: i32,
-    pub y: i32,
+    pub key: ChunkKey,
     pub is_dirty: bool,
     pub tiles: [[Tile; CHUNK_SIZE]; CHUNK_SIZE], // Stockage linéaire pour optimiser la mémoire cache
 }
 
 impl Default for Chunk {
     fn default() -> Self {
-        Self::new()
+        Self::new(ChunkKey::default())
     }
 }
 
 impl Chunk {
-    pub fn new() -> Self {
+    pub fn new(key: ChunkKey) -> Self {
         let default_tile = Tile::new((0, 0), TileType::Empty, 0, TileFlags::empty());
         Self {
-            x: 0,
-            y: 0,
+            key,
             is_dirty: true,
             tiles: [[default_tile; CHUNK_SIZE]; CHUNK_SIZE],
         }
@@ -79,7 +77,7 @@ impl Chunk {
         seed: u32,
         biome_config: BiomeConfig
     ) -> (ChunkKey, Chunk) {
-        let mut chunk = Chunk::new();
+        let mut chunk = Chunk::new(key);
         let perlin = noise::Perlin::new(seed);
         let chunk_offset_x = key.0 * (CHUNK_SIZE as i32);
         let chunk_offset_y = key.1 * (CHUNK_SIZE as i32);
@@ -155,7 +153,7 @@ impl Chunk {
     }
 
     pub fn load(self, world_name: String) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
-        let path = ChunkPath::build(&world_name, (self.x, self.y)).ok().unwrap();
+        let path = ChunkPath::build(&world_name, (self.key.0, self.key.1)).ok().unwrap();
         let chunk_file = File::open(path.clone().to_string());
         let key = path.chunk_key();
 

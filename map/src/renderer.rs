@@ -1,4 +1,4 @@
-use chunk::{ Chunk, CHUNK_SIZE };
+use chunk::{ thread::ChunkKey, Chunk, CHUNK_SIZE };
 use chunk_manager::{ ChunkManager, Draw, DrawAll };
 use sdl2::{ pixels::Color, rect::Rect, Sdl };
 use tile::{ FluidType, TileType };
@@ -8,15 +8,14 @@ use crate::{ camera::Camera, Map };
 pub const TILE_SIZE: i32 = 10;
 
 pub fn tile_screen_coords(
-    x_chunk: i32,
-    y_chunk: i32,
+    chunk_key: ChunkKey,
     x: usize,
     y: usize,
     offset_x: i32,
     offset_y: i32
 ) -> (i32, i32) {
-    let rect_x = (x_chunk * (CHUNK_SIZE as i32) + (x as i32)) * TILE_SIZE - offset_x;
-    let rect_y = (y_chunk * (CHUNK_SIZE as i32) + (y as i32)) * TILE_SIZE - offset_y;
+    let rect_x = (chunk_key.0 * (CHUNK_SIZE as i32) + (x as i32)) * TILE_SIZE - offset_x;
+    let rect_y = (chunk_key.1 * (CHUNK_SIZE as i32) + (y as i32)) * TILE_SIZE - offset_y;
     (rect_x, rect_y)
 }
 
@@ -73,8 +72,6 @@ impl Draw<Renderer, Camera> for ChunkManager {
             if let Some(status) = status {
                 match status.clone().get_chunk() {
                     Ok(chunk) => {
-                        eprintln!("{:?}", key);
-                        eprintln!("{:?}", chunk);
                         chunk.draw(renderer, camera);
                     }
                     Err(e) => {
@@ -94,14 +91,7 @@ impl Draw<Renderer, Camera> for Chunk {
 
         for (x, row) in self.tiles.clone().iter().enumerate() {
             for (y, tile) in row.iter().enumerate() {
-                let (screen_x, screen_y) = tile_screen_coords(
-                    self.x,
-                    self.y,
-                    x,
-                    y,
-                    offset_x,
-                    offset_y
-                );
+                let (screen_x, screen_y) = tile_screen_coords(self.key, x, y, offset_x, offset_y);
 
                 let color = match tile.tile_type {
                     TileType::Floor => Color::WHITE,

@@ -33,7 +33,7 @@ fn read_write_chunk() {
 
     println!("Generated chunk : {:?}", status.get_chunk().unwrap());
 
-    let ((_x, _y), loaded_chunk) = Chunk::new().load(path.0).unwrap();
+    let ((_x, _y), loaded_chunk) = Chunk::default().load(path.0).unwrap();
     println!("{:?}", loaded_chunk);
 }
 
@@ -42,7 +42,7 @@ pub fn tile_modification() {
     let key = (0, 0);
     let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
 
-    let mut chunk = Chunk::new();
+    let mut chunk = Chunk::new(key);
     let (x, y) = key;
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
@@ -57,7 +57,7 @@ pub fn tile_modification() {
     chunk.save(path.clone()).expect("Failed to save");
 
     // Charger le chunk
-    let ((_x, _y), loaded_chunk) = Chunk::new().load(path.clone().0).unwrap();
+    let ((_x, _y), loaded_chunk) = Chunk::new(key).load(path.clone().0).unwrap();
     println!("{:?}", loaded_chunk);
 }
 
@@ -83,7 +83,7 @@ fn chunk_file_operations() {
 
     chunk.unwrap().save(path_1.clone()).unwrap();
 
-    let chunk_2 = Chunk::new();
+    let chunk_2 = Chunk::new(key);
     chunk_2.save(path_2.clone()).unwrap();
 
     // generate new chunk

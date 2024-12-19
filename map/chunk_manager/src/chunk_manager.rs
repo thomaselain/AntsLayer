@@ -51,7 +51,7 @@ impl ChunkManager {
                 Some(chunk) => { Ok((key, Status::Ready(chunk))) }
                 None => { Err((key, ChunkError::FailedToLoad))}
             }
-        } else if let Ok((key, status)) = Chunk::new().load(world_name.clone()) {
+        } else if let Ok((key, status)) = Chunk::new(key).load(world_name.clone()) {
             match status {
                 Status::Visible(_) | Status::Ready(_) => Ok((key, status)),
                 Status::Pending => { Err((key, ChunkError::StillLoading)) }
