@@ -85,7 +85,7 @@ mod threads {
             Chunk::generate_async(key, 42, BiomeConfig::default(), sndr.clone());
         });
 
-        while let Some((key, status)) = rcvr.recv_timeout(Duration::from_secs(1)).ok() {
+        while let Some((_key, status)) = rcvr.recv_timeout(Duration::from_secs(1)).ok() {
             match status {
                 Status::Ready(chunk) => {
                     eprintln!("{:?}", chunk);

@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use tile::{FluidType, TileType};
+use tile::FluidType;
 
 
 #[derive(Deserialize, Debug, Clone)]

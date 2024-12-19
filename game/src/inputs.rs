@@ -1,7 +1,7 @@
 use map::Directions;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::mouse::{ MouseButton, MouseWheelDirection };
+use sdl2::mouse::MouseButton;
 
 use crate::game::Game;
 
@@ -44,12 +44,6 @@ impl Inputs {
             mouse_position: (0, 0),
             wheel_dir: 0,
         }
-    }
-
-    fn clear(&mut self) {
-        self.key_pressed.clear();
-        self.mouse_pressed.clear();
-        self.wheel_dir = 0;
     }
 
     // Met à jour l'état des entrées en fonction des événements

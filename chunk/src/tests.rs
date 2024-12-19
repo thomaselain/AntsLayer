@@ -43,7 +43,7 @@ pub fn tile_modification() {
     let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
 
     let mut chunk = Chunk::new(key);
-    let (x, y) = key;
+    let (_x, _y) = key;
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
             if x == y {

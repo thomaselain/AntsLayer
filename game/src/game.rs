@@ -7,14 +7,14 @@ use chunk_manager::Draw;
 use chunk_manager::DrawAll;
 use chunk_manager::ChunkManager;
 
-use biomes::{ BiomeConfig, Config };
-use sdl2::{ event::Event, keyboard::Keycode, Sdl };
+use biomes::Config;
+use sdl2::{ event::Event, Sdl };
 use map::{ camera::Camera, renderer::Renderer, thread::MapStatus, Map, WORLD_STARTING_AREA };
 
 #[allow(unused_imports)]
 use unit::{ Unit, MOVING };
 
-use crate::inputs::{ Inputs, ToDirection };
+use crate::inputs::Inputs;
 pub const WIN_DEFAULT_WIDTH: u32 = 1000;
 pub const WIN_DEFAULT_HEIGHT: u32 = 800;
 
