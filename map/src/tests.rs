@@ -18,7 +18,7 @@ pub fn map_creation_and_loading() {
 
 #[test]
 pub fn every_biomes() {
-    let config = Config::load().unwrap();
+    let config = Config::new();
 
     for biome in config.biomes {
         let chunk_manager = Arc::new(Mutex::new(ChunkManager::new()));

@@ -7,7 +7,7 @@ use chunk_manager::Draw;
 use chunk_manager::DrawAll;
 use chunk_manager::ChunkManager;
 
-use biomes::BiomeConfig;
+use biomes::{ BiomeConfig, Config };
 use sdl2::{ event::Event, keyboard::Keycode, Sdl };
 use map::{ camera::Camera, renderer::Renderer, thread::MapStatus, Map, WORLD_STARTING_AREA };
 
@@ -24,7 +24,7 @@ pub struct Game {
     pub last_tick: Instant,
     pub tick_rate: Duration, // Pour contrôler la fréquence des ticks (30 ou 60 fps)
 
-    pub biome_config: BiomeConfig,
+    pub config: Config,
     pub camera: Camera,
     pub sdl: Sdl,
     pub events: Vec<Event>,
@@ -44,7 +44,7 @@ impl Game {
             WIN_DEFAULT_WIDTH,
             WIN_DEFAULT_HEIGHT
         ).expect("Failed to create game renderer");
-        let biome_config = BiomeConfig::default();
+        let config = Config::new();
         let camera = Camera::new(0.0, 0.0);
         let (sndr, rcvr) = mpsc::channel();
 
@@ -57,7 +57,7 @@ impl Game {
             sndr,
             rcvr,
 
-            biome_config,
+            config,
             camera,
             sdl,
             events: Vec::new(),
@@ -81,7 +81,7 @@ impl Game {
                 Chunk::generate_async(
                     (x, y),
                     self.map.clone().unwrap().seed,
-                    BiomeConfig::default(),
+                   self.config.biomes[0].clone(),
                     sndr.clone()
                 );
             }

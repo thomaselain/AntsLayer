@@ -4,6 +4,7 @@ mod tests;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{ self, Read };
+use tile::{FluidType, TileType};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct BiomeConfig {
@@ -28,6 +29,26 @@ impl BiomeConfig {
             magma_threshold: -0.9,
         }
     }
+    fn path() -> String {
+        format!("config/biomes_config.toml")
+    }
+
+    pub fn tile_type_from_noise(noise_value: f64, biome: &BiomeConfig) -> TileType {
+        if noise_value > biome.rock_threshold {
+            TileType::Rock
+        } else if noise_value > biome.grass_threshold {
+            TileType::Grass
+        } else if noise_value > biome.dirt_threshold {
+            TileType::Dirt
+        } else if noise_value > biome.water_threshold {
+            TileType::Fluid(FluidType::Water)
+        } else if noise_value > biome.magma_threshold {
+            TileType::Fluid(FluidType::Magma)
+        } else {
+            TileType::Empty
+        }
+    }
+    
 }
 
 #[derive(Deserialize, Debug)]
@@ -36,12 +57,29 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn load() -> Result<Config, io::Error> {
-        let mut file = File::open("config/biomes_config.toml")?;
+    pub fn new() -> Self {
+        Self::load().expect("Failed to load config")
+    }
+
+    pub fn get_biome(self, name: &str) -> BiomeConfig {
+        for biome in self.biomes {
+            if biome.name == name {
+                return biome;
+            }
+        }
+        eprintln!("Biome \"{}\" not found, set to default", name);
+        BiomeConfig::default()
+    }
+    fn load_biomes() -> Result<Config, io::Error> {
+        let mut file = File::open(BiomeConfig::path())?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
         // Désérialisation du fichier TOML en struct Config
         toml::de::from_str(&contents).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    }
+
+    fn load() -> Result<Config, io::Error> {
+        Self::load_biomes()
     }
 }
