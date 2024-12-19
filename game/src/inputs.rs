@@ -1,7 +1,7 @@
 use map::Directions;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::mouse::MouseButton;
+use sdl2::mouse::{ MouseButton, MouseWheelDirection };
 
 use crate::game::Game;
 
@@ -20,10 +20,13 @@ impl ToDirection for Keycode {
         }
     }
 }
+
+#[derive(Clone)]
 pub struct Inputs {
     pub key_pressed: Vec<Keycode>, // Clés actuellement enfoncées
     mouse_pressed: Vec<MouseButton>, // Boutons de la souris enfoncés
     mouse_position: (i32, i32), // Position de la souris
+    wheel_dir: i32,
 }
 
 impl Default for Inputs {
@@ -39,7 +42,14 @@ impl Inputs {
             key_pressed: Vec::new(),
             mouse_pressed: Vec::new(),
             mouse_position: (0, 0),
+            wheel_dir: 0,
         }
+    }
+
+    fn clear(&mut self) {
+        self.key_pressed.clear();
+        self.mouse_pressed.clear();
+        self.wheel_dir = 0;
     }
 
     // Met à jour l'état des entrées en fonction des événements
@@ -73,6 +83,9 @@ impl Inputs {
                 }
                 Event::MouseMotion { x, y, .. } => {
                     self.mouse_position = (*x, *y);
+                }
+                Event::MouseWheel { y, .. } => {
+                    self.wheel_dir = *y;
                 }
                 _ => {}
             }
@@ -128,6 +141,16 @@ impl Game {
         if self.inputs.is_key_pressed(Keycode::L) {
             // self.load_world()?;
         }
+
+        if &self.inputs.wheel_dir > &0 {
+            self.camera.zoom *= 1.1;
+            eprintln!("WHEEL UP : zoom set to :{}", self.camera.zoom);
+            self.inputs.wheel_dir = 0;
+        } else if &self.inputs.wheel_dir < &0 {
+            self.camera.zoom /= 1.1;
+            eprintln!("WHEEL DOWN : zoom set to :{}", self.camera.zoom);
+            self.inputs.wheel_dir = 0;
+        }
         if self.map.is_some() && self.inputs.is_key_pressed(Keycode::Space) {
             self.map.as_ref().unwrap().save().expect("Failed to save map");
             println!("Map saved !");
@@ -139,7 +162,7 @@ impl Game {
                 self.inputs.key_pressed.pop();
             }
         }
-
+        // self.inputs.clear();
         Ok(())
     }
 }
