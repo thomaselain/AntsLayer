@@ -45,13 +45,11 @@ impl ChunkManager {
         world_name: String
     ) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
         if let Some(status) = self.loaded_chunks.get(&key).cloned() {
-            match status {
-                Status::Pending => {
-                    println!("Chunk {:?} est encore en attente...", key);
-                    Ok((key, status))
-                }
-                Status::Ready(_) | Status::Visible(_) => Ok((key, status)),
-                Status::Error(e) => panic!("{}", e.to_string()),
+            let chunk = status.get_chunk().ok();
+
+            match chunk {
+                Some(chunk) => { Ok((key, Status::Ready(chunk))) }
+                None => { Err((key, ChunkError::FailedToLoad))}
             }
         } else if let Ok((key, status)) = Chunk::new().load(world_name.clone()) {
             match status {
@@ -60,11 +58,8 @@ impl ChunkManager {
                 Status::Error(_) => todo!(),
             }
         } else {
+            eprintln!("OK");
             Err((key, ChunkError::FailedToLoad))
         }
-    }
-
-    pub fn has(&self, x: i32, y: i32) -> Option<Status> {
-        self.loaded_chunks.get(&(x, y)).cloned()
     }
 }

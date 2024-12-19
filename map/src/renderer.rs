@@ -49,8 +49,17 @@ impl Renderer {
 impl DrawAll<Map, Renderer, Camera> for ChunkManager {
     fn draw_all(&mut self, map: &mut Map, renderer: &mut Renderer, camera: &Camera) {
         // map.generate_visible_chunks(camera, self);
-        for (_, chunk) in &map.chunks {
-            chunk.draw(renderer, camera);
+        for key in map.chunks.keys() {
+            let status = self.loaded_chunks.get(&key);
+
+            if let Some(status) = status {
+                match status.clone().get_chunk() {
+                    Ok(chunk) => chunk.draw(renderer, camera),
+                    Err(e) => {
+                        eprintln!("{:?}", e);
+                    }
+                }
+            }
         }
         renderer.canvas.set_draw_color(Color::BLACK);
     }
@@ -58,9 +67,20 @@ impl DrawAll<Map, Renderer, Camera> for ChunkManager {
 
 impl Draw<Renderer, Camera> for ChunkManager {
     fn draw(&self, renderer: &mut Renderer, camera: &Camera) {
-        for (_, status) in self.loaded_chunks.clone() {
-            if let Ok(chunk) = status.clone().get_chunk() {
-                chunk.draw(renderer, camera);
+        for key in self.visible_chunks.clone() {
+            let status = self.loaded_chunks.get(&key);
+
+            if let Some(status) = status {
+                match status.clone().get_chunk() {
+                    Ok(chunk) => {
+                        eprintln!("{:?}", key);
+                        eprintln!("{:?}", chunk);
+                        chunk.draw(renderer, camera);
+                    }
+                    Err(e) => {
+                        eprintln!("{:?}", e);
+                    }
+                }
             }
         }
         renderer.canvas.set_draw_color(Color::BLACK);

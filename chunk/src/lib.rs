@@ -159,7 +159,7 @@ impl Chunk {
         let chunk_file = File::open(path.clone().to_string());
         let key = path.chunk_key();
 
-        eprintln!("{:?}", path.clone().to_string());
+        // eprintln!("{:?}", path.clone().to_string());
 
         if let Ok(file) = chunk_file {
             Ok((

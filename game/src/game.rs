@@ -146,20 +146,22 @@ impl Game {
 
     // Mettre à jour les unités, la carte, les ressources, etc.
     fn update_game_logic(&mut self) {
-        let mut mngr = self.chunk_manager.lock().unwrap();
+        if self.map.is_some() {
+            let mut mngr = self.chunk_manager.lock().unwrap();
 
-        // Vérifiez les chunks reçus via le receiver
-        while let Ok((key, status)) = self.rcvr.recv_timeout(self.tick_rate) {
-            mngr.loaded_chunks.insert(key, status.clone());
-            match status {
-                Status::Ready(chunk) | Status::Visible(chunk) => {
-                    let mut map = self.map.clone().unwrap();
-                    chunk.save(ChunkPath::build(&map.path, key).unwrap()).unwrap();
-                    map.add_chunk(key, chunk).unwrap();
-                }
-                Status::Pending => {}
-                _ => {
-                    eprintln!("Statut inconnu pour le chunk {:?}: {:?}", key, status);
+            // Vérifiez les chunks reçus via le receiver
+            while let Ok((key, status)) = self.rcvr.recv_timeout(self.tick_rate) {
+                match status {
+                    Status::Ready(chunk) | Status::Visible(chunk) => {
+                        let mut map = self.map.clone().unwrap();
+                        chunk.save(ChunkPath::build(&map.path, key).unwrap()).unwrap();
+                        mngr.loaded_chunks.insert(key, status.clone());
+                        map.add_chunk(key, chunk).unwrap();
+                    }
+                    Status::Pending => {}
+                    _ => {
+                        eprintln!("Statut inconnu pour le chunk {:?}: {:?}", key, status);
+                    }
                 }
             }
         }
@@ -172,7 +174,13 @@ impl Game {
             let mut mngr = self.chunk_manager.lock().unwrap();
             mngr.visible_chunks = Map::visible_chunks(&self.camera);
             for key in mngr.visible_chunks.clone() {
-                mngr.load_chunk(key, self.map.clone().unwrap().path);
+                // eprintln!("{:?}", key);
+                match mngr.load_chunk(key, self.map.clone().unwrap().path) {
+                    Ok((key, status)) => {
+                        mngr.loaded_chunks.insert(key, status);
+                    }
+                    Err(_e) => {}
+                }
             }
         }
     }
