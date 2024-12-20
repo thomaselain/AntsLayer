@@ -50,6 +50,7 @@ impl Game {
         }
 
         // 2. Mettre à jour la logique du jeu (mouvement, IA, gestion des ressources, etc.)
+        self.receive_chunks();
         self.update_game_logic();
 
         // 3. Mettre à jour les animations et états visuels

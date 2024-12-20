@@ -14,25 +14,28 @@ pub fn main_test() {
     game.run();
 }
 
+// Add unit in chunk (0,0)
 #[allow(dead_code)]
 pub fn add_unit(game: &mut Game) {
-    // Add unit in middle chunk
+    use chunk::thread::Status;
+
     let pos = TilePos::new(0, 0);
     game.camera.center_on(0, 0);
     game.receive_chunks();
     let unit = Unit::new(pos, 1);
 
-    let mngr = game.chunk_manager.lock().unwrap();
+    let mut mngr = game.chunk_manager.lock().unwrap();
     match mngr.loaded_chunks.get(&pos) {
         Some(status) => {
             let chunk = status.clone().get_chunk().ok();
 
             if let Some(mut chunk) = chunk {
                 chunk.units.insert(pos, unit);
+                mngr.loaded_chunks.insert(pos, Status::Ready(chunk));
             }
         }
         None => todo!(),
-    };
+    }
     eprintln!("Unit created at {:?}", unit.pos);
 }
 

@@ -14,6 +14,14 @@ pub fn tile_screen_coords(chunk_key: TilePos, pos: TilePos, offset: TilePos) -> 
         (chunk_key.y() * (CHUNK_SIZE as i32) + (pos.y() as i32)) * TILE_SIZE - offset.y()
     )
 }
+pub fn screen_coords_tile(chunk_key: TilePos, pos: TilePos, offset: TilePos) -> TilePos {
+    TilePos::new(
+        (chunk_key.x() / (CHUNK_SIZE as i32) + (pos.x() as i32)) / TILE_SIZE - offset.x(),
+        (chunk_key.y() / (CHUNK_SIZE as i32) + (pos.y() as i32)) / TILE_SIZE - offset.y()
+    )
+}
+
+
 
 pub struct Renderer {
     pub canvas: sdl2::render::Canvas<sdl2::video::Window>,
@@ -105,7 +113,7 @@ impl Draw<Renderer, Camera> for Chunk {
                         }
                     TileType::Empty => Color::RGB(10, 10, 15),
                     TileType::Dirt => Color::RGB(30, 200, 25),
-                    TileType::Sand => Color::RGB(200, 200, 25),
+                    TileType::Sand => Color::YELLOW,
                     TileType::Wall => Color::GRAY,
                     TileType::Rock => Color::GREY,
                     TileType::Grass => Color::GREEN,
@@ -115,8 +123,9 @@ impl Draw<Renderer, Camera> for Chunk {
                 renderer.draw_tile(screen_coords, color);
             }
         }
-        for (pos, unit) in self.units.clone() {
-            let screen_coords = tile_screen_coords(self.key, pos, offset);
+        for (_pos, unit) in self.units.clone() {
+            let screen_coords = tile_screen_coords(self.key, unit.pos, offset);
+            eprintln!("{:?}", _pos);
             renderer.draw_tile(screen_coords, Color::MAGENTA);
         }
     }

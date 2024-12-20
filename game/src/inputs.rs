@@ -1,3 +1,4 @@
+use coords::Coords;
 use map::Directions;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -25,7 +26,7 @@ impl ToDirection for Keycode {
 pub struct Inputs {
     pub key_pressed: Vec<Keycode>, // Clés actuellement enfoncées
     mouse_pressed: Vec<MouseButton>, // Boutons de la souris enfoncés
-    mouse_position: (i32, i32), // Position de la souris
+    mouse_position: Coords<i32>, // Position de la souris
     wheel_dir: i32,
 }
 
@@ -41,7 +42,7 @@ impl Inputs {
         Inputs {
             key_pressed: Vec::new(),
             mouse_pressed: Vec::new(),
-            mouse_position: (0, 0),
+            mouse_position: Coords::default(),
             wheel_dir: 0,
         }
     }
@@ -67,16 +68,14 @@ impl Inputs {
                         }
                     }
                 }
-                Event::MouseButtonDown { mouse_btn, .. } => {
+                Event::MouseButtonDown { mouse_btn, x, y, .. } => {
                     self.mouse_pressed.push(*mouse_btn);
+                    self.mouse_position = Coords::new(*x, *y);
                 }
                 Event::MouseButtonUp { mouse_btn, .. } => {
                     if let Some(pos) = self.mouse_pressed.iter().position(|x| x == mouse_btn) {
                         self.mouse_pressed.remove(pos);
                     }
-                }
-                Event::MouseMotion { x, y, .. } => {
-                    self.mouse_position = (*x, *y);
                 }
                 Event::MouseWheel { y, .. } => {
                     self.wheel_dir = *y;
@@ -97,7 +96,7 @@ impl Inputs {
     }
 
     // Retourne la position de la souris
-    pub fn mouse_position(&self) -> (i32, i32) {
+    pub fn mouse_position(&self) -> Coords<i32> {
         self.mouse_position
     }
 }
@@ -158,7 +157,6 @@ impl Game {
                 self.inputs.key_pressed.pop();
             }
         }
-        // self.inputs.clear();
         Ok(())
     }
 }

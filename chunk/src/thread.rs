@@ -30,6 +30,13 @@ pub enum Status {
 }
 
 impl Status {
+    pub fn update_chunk(&self, new: Chunk) -> Self {
+        match self {
+            Status::Visible(_) => { Status::Visible(new) }
+            Status::Ready(_) => { Status::Ready(new) }
+            _ => panic!("Status does not have a chunk"),
+        }
+    }
     pub fn get_chunk(self) -> Result<Chunk, Self> {
         match self {
             Status::Ready(chunk) | Status::Visible(chunk) => Ok(chunk),
