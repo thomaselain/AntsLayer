@@ -8,16 +8,10 @@ use crate::{ camera::Camera, Map };
 
 pub const TILE_SIZE: i32 = 5;
 
-pub fn tile_screen_coords(
-    chunk_key: TilePos,
-    x: usize,
-    y: usize,
-    offset_x: i32,
-    offset_y: i32
-) -> TilePos {
+pub fn tile_screen_coords(chunk_key: TilePos, pos: TilePos, offset: TilePos) -> TilePos {
     TilePos::new(
-        (chunk_key.x() * (CHUNK_SIZE as i32) + (x as i32)) * TILE_SIZE - offset_x,
-        (chunk_key.y() * (CHUNK_SIZE as i32) + (y as i32)) * TILE_SIZE - offset_y
+        (chunk_key.x() * (CHUNK_SIZE as i32) + (pos.x() as i32)) * TILE_SIZE - offset.x(),
+        (chunk_key.y() * (CHUNK_SIZE as i32) + (pos.y() as i32)) * TILE_SIZE - offset.y()
     )
 }
 
@@ -26,6 +20,13 @@ pub struct Renderer {
 }
 
 impl Renderer {
+    pub fn draw_tile(&mut self, pos: TilePos, color: Color) {
+        self.canvas.set_draw_color(color);
+        self.canvas
+            .fill_rect(Rect::new(pos.x(), pos.y(), TILE_SIZE as u32, TILE_SIZE as u32))
+            .expect("Failed to draw tile");
+    }
+
     pub fn new(sdl: &Sdl, title: &str, width: u32, height: u32) -> Result<Self, String> {
         let video_subsystem = sdl.video()?;
         let window = video_subsystem
@@ -89,11 +90,12 @@ impl Draw<Renderer, Camera> for ChunkManager {
 impl Draw<Renderer, Camera> for Chunk {
     fn draw(&self, renderer: &mut Renderer, camera: &Camera) {
         let (window_width, window_height) = renderer.get_window_size();
-        let (offset_x, offset_y) = camera.get_offset(window_width, window_height);
+        let offset = camera.get_offset((window_width, window_height));
 
         for (x, row) in self.tiles.clone().iter().enumerate() {
             for (y, tile) in row.iter().enumerate() {
-                let screen_coords = tile_screen_coords(self.key, x, y, offset_x, offset_y);
+                let pos = TilePos::new(x as i32, y as i32);
+                let screen_coords = tile_screen_coords(self.key, pos, offset);
 
                 let color = match tile.tile_type {
                     TileType::Fluid(liquid) =>
@@ -110,19 +112,12 @@ impl Draw<Renderer, Camera> for Chunk {
                     TileType::Custom(_) => Color::CYAN,
                     _ => Color::MAGENTA,
                 };
-
-                renderer.canvas.set_draw_color(color);
-                renderer.canvas
-                    .fill_rect(
-                        Rect::new(
-                            screen_coords.x(),
-                            screen_coords.y(),
-                            TILE_SIZE as u32,
-                            TILE_SIZE as u32
-                        )
-                    )
-                    .expect("Failed to draw tile");
+                renderer.draw_tile(screen_coords, color);
             }
+        }
+        for (pos, unit) in self.units.clone() {
+            let screen_coords = tile_screen_coords(self.key, pos, offset);
+            renderer.draw_tile(screen_coords, Color::MAGENTA);
         }
     }
 }

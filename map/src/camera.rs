@@ -25,14 +25,13 @@ impl Camera {
     }
 
     /// Calcule le décalage de rendu pour la caméra en pixels
-    pub fn get_offset(&self, window_width: u32, window_height: u32) -> (i32, i32) {
-        let half_width = (window_width as i32) / 2;
-        let half_height = (window_height as i32) / 2;
+    pub fn get_offset(&self, dim: (u32, u32)) -> Coords<i32> {
+        let half_dim = Coords::new((dim.0 as i32) / 2, (dim.1 as i32) / 2);
 
-        let offset_x = ((self.coords.x() * (TILE_SIZE as f32)) as i32) - half_width;
-        let offset_y = ((self.coords.y() * (TILE_SIZE as f32)) as i32) - half_height;
-
-        (offset_x, offset_y)
+        Coords::new(
+            (self.coords.x() * (TILE_SIZE as f32)) as i32,
+            (self.coords.y() * (TILE_SIZE as f32)) as i32
+        ) - half_dim
     }
 
     /// Centre la caméra autour d'une position donnée
