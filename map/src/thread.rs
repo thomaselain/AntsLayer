@@ -1,3 +1,1 @@
-use chunk::thread::{ChunkKey, Status};
-
-pub type MapStatus = (ChunkKey, Status);
+pub type MapStatus = (coords::Coords<i32>, chunk::thread::Status);

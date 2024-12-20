@@ -1,6 +1,6 @@
 use std::{ sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex }, time::{ Duration, Instant } };
 
-use chunk::{ thread::{ ChunkKey, Status }, Chunk, ChunkPath };
+use chunk::{ thread::Status, Chunk, ChunkPath };
 #[allow(unused_imports)]
 use chunk_manager::Draw;
 #[allow(unused_imports)]
@@ -8,6 +8,7 @@ use chunk_manager::DrawAll;
 use chunk_manager::ChunkManager;
 
 use biomes::Config;
+use coords::aliases::TilePos;
 use sdl2::{ event::Event, Sdl };
 use map::{ camera::Camera, renderer::Renderer, thread::MapStatus, Map, WORLD_STARTING_AREA };
 
@@ -76,14 +77,14 @@ impl Game {
     //     // Ok(Map::load(path).expect(&format!("Failed to load map at '{}'", path)))
     // }
 
-    pub fn create_world(&mut self, sndr: Sender<(ChunkKey, Status)>) -> Result<(), String> {
+    pub fn create_world(&mut self, sndr: Sender<(TilePos, Status)>) -> Result<(), String> {
         self.map = Some(Map::new("default").unwrap());
         let half_size = WORLD_STARTING_AREA / 2;
 
         for x in -half_size..=half_size {
             for y in -half_size..=half_size {
                 Chunk::generate_async(
-                    (x, y),
+                    TilePos::new(x, y),
                     self.map.clone().unwrap().seed,
                     self.config.biomes[self.current_biome].clone(),
                     sndr.clone()
@@ -118,11 +119,11 @@ impl Game {
             // Vérifiez les chunks reçus via le receiver
             while let Ok((key, status)) = self.rcvr.recv_timeout(self.tick_rate) {
                 match status {
-                    Status::Ready(chunk) | Status::Visible(chunk) => {
+                    Status::Ready(ref chunk) | Status::Visible(ref chunk) => {
                         let mut map = self.map.clone().unwrap();
                         chunk.save(ChunkPath::build(&map.path, key).unwrap()).unwrap();
                         mngr.loaded_chunks.insert(key, status.clone());
-                        map.add_chunk(key, chunk).unwrap();
+                        map.add_chunk(key, chunk.clone()).unwrap();
                     }
                     Status::Pending => {}
                     _ => {

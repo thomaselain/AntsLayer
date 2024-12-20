@@ -1,12 +1,12 @@
-use coords::Coords;
+use coords::aliases::TilePos;
 
 use crate::Unit;
 
 impl Unit {
-    pub fn new(coords: Coords<f32>, speed: f32) -> Unit {
+    pub fn new(pos: TilePos, speed: u32) -> Unit {
         Unit {
-            action_dest:None,
-            coords,
+            action_dest: TilePos::default(),
+            pos,
             speed,
             state: 0, // Tous les bits sont à 0, donc l'unité est inactive
         }
@@ -24,6 +24,6 @@ impl Unit {
 
     // Vérifier si un état est actif (en utilisant un masque)
     pub fn has_state(&self, mask: u32) -> bool {
-        self.state & mask != 0
+        (self.state & mask) != 0
     }
 }

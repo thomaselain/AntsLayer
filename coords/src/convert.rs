@@ -1,6 +1,6 @@
 #[allow(unused_imports)]
 /// This module provides conversion traits and methods for coordinates.
-use crate::Coords;
+use crate::aliases::TilePos;
 
 /// Trait to convert a type to `i32`.
 pub trait Toi32 {
@@ -26,7 +26,7 @@ impl Tof32 for i32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::Coords;
+    use crate::coords::Coords;
 
     #[test]
     fn coords_conversion() {

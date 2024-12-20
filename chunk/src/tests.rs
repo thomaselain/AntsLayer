@@ -4,7 +4,7 @@ use super::*;
 
 #[test]
 fn chunk_serialization() {
-    let key = (0, 0);
+    let key = TilePos::new(0,0);
 
     let (key, status) = Chunk::generate_default(key);
     let chunk = status
@@ -20,10 +20,10 @@ fn chunk_serialization() {
 
 #[test]
 fn read_write_chunk() {
-    let key = (0, 0);
+    let key = TilePos::new(0,0);
     let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
 
-    let ((_x, _y), status) = Chunk::generate_default(key);
+    let (_key, status) = Chunk::generate_default(key);
 
     // Save new chunk
     status
@@ -35,13 +35,13 @@ fn read_write_chunk() {
 
     println!("Generated chunk : {:?}", status.get_chunk().unwrap());
 
-    let ((_x, _y), loaded_chunk) = Chunk::default().load(path.0).unwrap();
+    let (_key, loaded_chunk) = Chunk::default().load(path.0).unwrap();
     println!("{:?}", loaded_chunk);
 }
 
 #[test]
 pub fn tile_modification() {
-    let key = (0, 0);
+    let key = TilePos::new(0,0);
     let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
 
     let (_, mut chunk) = Chunk::generate_from_biome(key, 0, BiomeConfig::default());
@@ -60,13 +60,13 @@ pub fn tile_modification() {
     println!("{:?}", chunk);
 
     // Charger le chunk
-    let ((_x, _y), loaded_chunk) = Chunk::new(key).load(path.clone().0).unwrap();
+    let (_key, loaded_chunk) = Chunk::new(key).load(path.clone().0).unwrap();
     println!("{:?}", loaded_chunk);
 }
 
 #[test]
 fn chunk_file_operations() {
-    let key = (0, 0);
+    let key = TilePos::new(0,0);
     // Build chunks paths
     let path_1 = ChunkPath::build("test/file_operations", key).expect(
         "Failed to set up test directory"
@@ -101,7 +101,7 @@ fn chunk_file_operations() {
 
 #[test]
 fn skip_in_file() {
-    let key = (0, 0);
+    let key = TilePos::new(0,0);
     ChunkPath::build("test", key).expect("Failed to set up test directory");
     use std::io::Cursor;
 

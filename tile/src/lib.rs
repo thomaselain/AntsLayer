@@ -1,5 +1,6 @@
 mod tests;
 
+use coords::aliases::TilePos;
 use serde::{ Serialize, Deserialize };
 
 // Chatgpt le goat
@@ -29,10 +30,10 @@ pub enum TileType {
     Custom(u8), //+ (types personnalisés)
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Tile {
     pub hp: u8,
-    pub coords: (i32, i32),
+    pub coords: TilePos,
     pub tile_type: TileType, // Le type de la tuile
     pub flags: TileFlags, // États dynamiques (traversable, liquide, etc.)
     pub material: u16, // Index ou ID du matériau (roche, métal, etc.)
@@ -40,7 +41,7 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub fn new(coords: (i32, i32), tile_type: TileType, material: u16, flags: TileFlags) -> Self {
+    pub fn new(coords: TilePos, tile_type: TileType, material: u16, flags: TileFlags) -> Self {
         Self {
             hp: u8::MAX,
             coords,

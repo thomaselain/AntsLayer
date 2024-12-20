@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 sdl2 = "0.37"
 biomes = { path="../../biomes"}
+coords = { path="../../coords"}
 chunk = { path="../../chunk"}
 tile = { path="../../tile"}
 rand = "0.8.5"

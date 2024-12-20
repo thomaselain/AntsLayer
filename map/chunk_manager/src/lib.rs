@@ -1,6 +1,7 @@
 use std::{ collections::{HashMap, HashSet}, sync::{ mpsc::{ Receiver, Sender }, Arc, Mutex } };
 
-use chunk::thread::{ ChunkKey, Status };
+use chunk::thread::Status;
+use coords::aliases::TilePos;
 
 pub mod chunk_manager;
 pub mod threads;
@@ -22,8 +23,8 @@ pub trait DrawAll<Map, Renderer, Camera> {
 
 /// #
 pub struct ChunkManager {
-    pub sndr: Arc<Mutex<Sender<(ChunkKey, Status)>>>, 
-    pub rcvr :Arc<Mutex<Receiver<(ChunkKey, Status)>>>,
-    pub loaded_chunks: HashMap<(i32, i32), Status>,
-    pub visible_chunks: HashSet<ChunkKey>,
+    pub sndr: Arc<Mutex<Sender<(TilePos, Status)>>>, 
+    pub rcvr :Arc<Mutex<Receiver<(TilePos, Status)>>>,
+    pub loaded_chunks: HashMap<TilePos, Status>,
+    pub visible_chunks: HashSet<TilePos>,
 }

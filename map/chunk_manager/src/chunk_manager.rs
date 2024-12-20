@@ -1,6 +1,7 @@
 use biomes::BiomeConfig;
-use chunk::thread::{ ChunkError, ChunkKey, Status };
+use chunk::thread::{ ChunkError, Status };
 use chunk::Chunk;
+use coords::aliases::TilePos;
 use std::collections::{ HashMap, HashSet };
 use std::sync::mpsc::{ Receiver, Sender };
 use std::sync::{ mpsc, Arc, Mutex };
@@ -16,8 +17,8 @@ impl Default for ChunkManager {
 impl ChunkManager {
     pub fn new() -> Self {
         let (sndr, rcvr): (
-            Sender<(ChunkKey, Status)>,
-            Receiver<(ChunkKey, Status)>,
+            Sender<(TilePos, Status)>,
+            Receiver<(TilePos, Status)>,
         ) = mpsc::channel();
 
         ChunkManager {
@@ -28,8 +29,8 @@ impl ChunkManager {
         }
     }
 
-    pub fn generate_chunk_no_thread(key: ChunkKey, seed: u32, biome_config: BiomeConfig) -> Chunk {
-        let ((_x, _y), chunk) = Chunk::generate_from_biome(key, seed, biome_config);
+    pub fn generate_chunk_no_thread(key: TilePos, seed: u32, biome_config: BiomeConfig) -> Chunk {
+        let (_key, chunk) = Chunk::generate_from_biome(key, seed, biome_config);
         chunk
     }
 
@@ -41,9 +42,9 @@ impl ChunkManager {
 
     pub fn load_chunk(
         &mut self,
-        key: ChunkKey,
+        key: TilePos,
         world_name: String
-    ) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
+    ) -> Result<(TilePos, Status), (TilePos, ChunkError)> {
         if let Some(status) = self.loaded_chunks.get(&key).cloned() {
             let chunk = status.get_chunk().ok();
 

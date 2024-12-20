@@ -4,34 +4,37 @@ mod tests;
 pub mod debug;
 pub mod thread;
 
+use std::collections::HashMap;
 use std::fs::{ self, File };
 use std::path::Path;
 use biomes::BiomeConfig;
+use coords::aliases::TilePos;
 use serde::{ Deserialize, Serialize };
-use thread::{ ChunkError, ChunkKey, Status };
+use thread::{ ChunkError, Status };
 use tile::{ Tile, TileFlags, TileType };
+use unit::Unit;
 use std::io::{ self, Read, Seek, SeekFrom };
 
 pub const CHUNK_SIZE: usize = 32;
-
 #[derive(Clone)]
-pub struct ChunkPath(String, ChunkKey);
+pub struct ChunkPath(String, TilePos);
+
 impl Default for ChunkPath {
     fn default() -> Self {
-        Self::build("default", (0, 0)).expect("Failed to create default world path")
+        Self::build("default", TilePos::new(0, 0)).expect("Failed to create default world path")
     }
 }
 impl ChunkPath {
-    fn new(path: String, key: ChunkKey) -> Self {
+    fn new(path: String, key: TilePos) -> Self {
         Self(path, key)
     }
     pub fn to_string(self) -> String {
-        format!("{}/{}_{}.bin", self.0, self.1.0, self.1.1).to_string()
+        format!("{:?}/{:?}_{:?}.bin", self.0, self.1.x(), self.1.y()).to_string()
     }
-    pub fn chunk_key(&self) -> ChunkKey {
+    pub fn chunk_key(&self) -> TilePos {
         self.1
     }
-    pub fn build(path: &str, key: ChunkKey) -> std::io::Result<Self> {
+    pub fn build(path: &str, key: TilePos) -> std::io::Result<Self> {
         let dir = path;
         if !Path::new(&dir).exists() {
             fs::create_dir_all(dir)?;
@@ -41,46 +44,50 @@ impl ChunkPath {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct Chunk {
-    pub key: ChunkKey,
+    pub key: TilePos,
+    pub units: HashMap<TilePos, Unit>,
     pub is_dirty: bool,
     pub tiles: [[Tile; CHUNK_SIZE]; CHUNK_SIZE], // Stockage linéaire pour optimiser la mémoire cache
 }
 
 impl Default for Chunk {
     fn default() -> Self {
-        Self::new(ChunkKey::default())
+        Self::new(TilePos::default())
     }
 }
 
 impl Chunk {
-    pub fn new(key: ChunkKey) -> Self {
-        let default_tile = Tile::new((0, 0), TileType::Empty, 0, TileFlags::empty());
+    pub fn new(key: TilePos) -> Self {
+        let default_tile = Tile::new(key, TileType::Empty, 0, TileFlags::empty());
         Self {
             key,
+            units: HashMap::new(),
             is_dirty: true,
             tiles: [[default_tile; CHUNK_SIZE]; CHUNK_SIZE],
         }
     }
 
     /// Generate a chunk without multi threading
-    pub fn generate_default(key: ChunkKey) -> (ChunkKey, Status) {
-        let ((_x, _y), chunk) = Self::generate_from_biome(key, 0, BiomeConfig::default());
+    pub fn generate_default(pos: TilePos) -> (TilePos, Status) {
+        let (pos, chunk) = Self::generate_from_biome(pos, 0, BiomeConfig::default());
 
-        (key, Status::Ready(chunk))
+        (pos, Status::Ready(chunk))
     }
-    
-    pub fn generate_from_biome(key: ChunkKey, seed: u32, biome: BiomeConfig) -> (ChunkKey, Chunk) {
+
+    pub fn generate_from_biome(key: TilePos, seed: u32, biome: BiomeConfig) -> (TilePos, Chunk) {
         let mut chunk = Chunk::new(key);
         let perlin = BiomeConfig::noise_from_seed(seed);
-        let chunk_offset_x = key.0 * (CHUNK_SIZE as i32);
-        let chunk_offset_y = key.1 * (CHUNK_SIZE as i32);
+        let chunk_offset = TilePos::new(
+            key.x() * (CHUNK_SIZE as i32),
+            key.y() * (CHUNK_SIZE as i32)
+        );
 
         for x in 0..CHUNK_SIZE {
             for y in 0..CHUNK_SIZE {
-                let nx = ((x as f64) + (chunk_offset_x as f64)) / (CHUNK_SIZE as f64);
-                let ny = ((y as f64) + (chunk_offset_y as f64)) / (CHUNK_SIZE as f64);
+                let nx = ((x as f64) + (chunk_offset.x() as f64)) / (CHUNK_SIZE as f64);
+                let ny = ((y as f64) + (chunk_offset.y() as f64)) / (CHUNK_SIZE as f64);
 
                 // Combinaison des couches de bruit
                 let value = biome.combined_noise(&perlin, nx, ny);
@@ -91,7 +98,7 @@ impl Chunk {
                 chunk.set_tile(
                     x,
                     y,
-                    Tile::new((x as i32, y as i32), tile_type, 0, TileFlags::empty())
+                    Tile::new(key, tile_type, 0, TileFlags::empty())
                 );
             }
         }
@@ -122,8 +129,8 @@ impl Chunk {
         }
     }
 
-    pub fn load(self, world_name: String) -> Result<(ChunkKey, Status), (ChunkKey, ChunkError)> {
-        let path = ChunkPath::build(&world_name, (self.key.0, self.key.1)).ok().unwrap();
+    pub fn load(self, world_name: String) -> Result<(TilePos, Status), (TilePos, ChunkError)> {
+        let path = ChunkPath::build(&world_name, self.key).ok().unwrap();
         let chunk_file = File::open(path.clone().to_string());
         let key = path.chunk_key();
 

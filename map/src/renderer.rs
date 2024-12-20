@@ -1,5 +1,6 @@
-use chunk::{ thread::ChunkKey, Chunk, CHUNK_SIZE };
+use chunk::{ Chunk, CHUNK_SIZE };
 use chunk_manager::{ ChunkManager, Draw, DrawAll };
+use coords::aliases::TilePos;
 use sdl2::{ pixels::Color, rect::Rect, Sdl };
 use tile::{ FluidType, TileType };
 
@@ -8,15 +9,16 @@ use crate::{ camera::Camera, Map };
 pub const TILE_SIZE: i32 = 5;
 
 pub fn tile_screen_coords(
-    chunk_key: ChunkKey,
+    chunk_key: TilePos,
     x: usize,
     y: usize,
     offset_x: i32,
     offset_y: i32
-) -> (i32, i32) {
-    let rect_x = (chunk_key.0 * (CHUNK_SIZE as i32) + (x as i32)) * TILE_SIZE - offset_x;
-    let rect_y = (chunk_key.1 * (CHUNK_SIZE as i32) + (y as i32)) * TILE_SIZE - offset_y;
-    (rect_x, rect_y)
+) -> TilePos {
+    TilePos::new(
+        (chunk_key.x() * (CHUNK_SIZE as i32) + (x as i32)) * TILE_SIZE - offset_x,
+        (chunk_key.y() * (CHUNK_SIZE as i32) + (y as i32)) * TILE_SIZE - offset_y
+    )
 }
 
 pub struct Renderer {
@@ -91,7 +93,7 @@ impl Draw<Renderer, Camera> for Chunk {
 
         for (x, row) in self.tiles.clone().iter().enumerate() {
             for (y, tile) in row.iter().enumerate() {
-                let (screen_x, screen_y) = tile_screen_coords(self.key, x, y, offset_x, offset_y);
+                let screen_coords = tile_screen_coords(self.key, x, y, offset_x, offset_y);
 
                 let color = match tile.tile_type {
                     TileType::Fluid(liquid) =>
@@ -106,12 +108,19 @@ impl Draw<Renderer, Camera> for Chunk {
                     TileType::Rock => Color::GREY,
                     TileType::Grass => Color::GREEN,
                     TileType::Custom(_) => Color::CYAN,
-                     _ => Color::MAGENTA,
+                    _ => Color::MAGENTA,
                 };
 
                 renderer.canvas.set_draw_color(color);
                 renderer.canvas
-                    .fill_rect(Rect::new(screen_x, screen_y, TILE_SIZE as u32, TILE_SIZE as u32))
+                    .fill_rect(
+                        Rect::new(
+                            screen_coords.x(),
+                            screen_coords.y(),
+                            TILE_SIZE as u32,
+                            TILE_SIZE as u32
+                        )
+                    )
                     .expect("Failed to draw tile");
             }
         }

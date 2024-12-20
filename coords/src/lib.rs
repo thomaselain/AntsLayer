@@ -1,5 +1,7 @@
 pub mod coords;
 pub mod convert;
+pub mod aliases;
+pub mod serialize;
 
 pub use crate::coords::Coords;
 

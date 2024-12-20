@@ -3,6 +3,7 @@ use std::{ sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex }, time::Duratio
 use super::Map;
 use chunk::{ thread::Status, Chunk };
 use chunk_manager::ChunkManager;
+use coords::aliases::TilePos;
 use crate::{ renderer::Renderer, thread::MapStatus, WORLD_STARTING_AREA };
 
 use biomes::{ BiomeConfig, Config };
@@ -27,7 +28,7 @@ pub fn every_biomes() {
 
         let mut map = Map::new(&biome.name).unwrap();
         let (sndr, rcvr): (Sender<MapStatus>, Receiver<MapStatus>) = mpsc::channel();
-        let key = (0, 0);
+        let key = TilePos::new(0, 0);
 
         let _chunk_manager = chunk_manager.lock().expect("Failed to lock chunk manager");
         Chunk::generate_async(key, map.seed, biome, sndr);
@@ -57,11 +58,11 @@ pub fn every_biomes() {
 fn create_and_save() {
     let map = Map::new("save_test");
 
-    let (x, y) = (WORLD_STARTING_AREA * 2, WORLD_STARTING_AREA * 2);
+    let key = TilePos::new(WORLD_STARTING_AREA * 2, WORLD_STARTING_AREA * 2);
     let chunk = Chunk::default();
 
     let mut map = map.expect("Map creation failed");
-    map.add_chunk((x, y), chunk).expect("Failed to add chunk to map");
+    map.add_chunk(key, chunk).expect("Failed to add chunk to map");
     map.save().expect("Map saving failed");
 }
 
@@ -78,7 +79,7 @@ mod threads {
 
     #[test]
     fn test_map_channel() {
-        let key = (1, 1);
+        let key = TilePos::new(1, 1);
         let (sndr, rcvr): (Sender<MapStatus>, Receiver<MapStatus>) = mpsc::channel();
 
         thread::spawn(move || {
@@ -108,8 +109,8 @@ mod threads {
         let mngr = Arc::new(Mutex::new(ChunkManager::new()));
 
         // Size of the created zone
-        let size = 30;
-        let range = -(size / 2)..size / 2;
+        let size = &30;
+        let range = (-1i32 *size / 2)..size / 2;
 
         eprintln!("Going to generate {} chunks, this may take a while ...", size * size);
 
@@ -123,7 +124,7 @@ mod threads {
                 let chunk_manager = mngr.lock().unwrap();
                 let sndr = chunk_manager.sndr.lock().unwrap().clone();
 
-                Chunk::generate_async((x, y), seed, BiomeConfig::default(), sndr.clone());
+                Chunk::generate_async(TilePos::new(x,y), seed, BiomeConfig::default(), sndr.clone());
             });
 
         let chunk_manager = mngr.lock().expect("Chunk manager was not ready !");
@@ -131,22 +132,22 @@ mod threads {
 
         // Boucle principale pour surveiller les chunks générés
         while
-            let Ok(((x, y), status)) = chunk_manager.rcvr
+            let Ok((key, status)) = chunk_manager.rcvr
                 .lock()
                 .unwrap()
                 .recv_timeout(Duration::from_secs(1))
         {
             match status.clone().get_chunk() {
                 Ok(chunk) => {
-                    println!("Chunk {:?} prêt.", (x, y));
-                    chunks.push(chunk);
+                    println!("Chunk {:?} prêt.", key);
+                    chunks.push(chunk.clone());
 
                     eprintln!("{:?}", chunk);
                 }
                 Err(status) => {
                     match status {
                         Status::Pending => {
-                            eprintln!("Attends frero prends ton temps ... ({},{})", x, y);
+                            eprintln!("Attends frero prends ton temps ... ({:?})", key);
                         }
                         _ => todo!(),
                     }
