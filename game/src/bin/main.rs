@@ -6,7 +6,7 @@ pub fn main() {
         todo!("main_menu returned Error!");
     }
 
-    let mut game = Game::new(sdl2::init().unwrap());
+    let mut game = Game::new();
     game.create_world(game.sndr.clone()).unwrap();
     game.camera.center_on(0, 0);
 

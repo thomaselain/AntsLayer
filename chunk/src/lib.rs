@@ -29,7 +29,7 @@ impl ChunkPath {
         Self(path, key)
     }
     pub fn to_string(self) -> String {
-        format!("{:?}/{:?}_{:?}.bin", self.0, self.1.x(), self.1.y()).to_string()
+        format!("./{:?}/{:?}_{:?}.bin", self.0, self.1.x(), self.1.y())
     }
     pub fn chunk_key(&self) -> TilePos {
         self.1
@@ -40,7 +40,7 @@ impl ChunkPath {
             fs::create_dir_all(dir)?;
         }
 
-        Ok(Self::new(path.to_string(), key))
+        Ok(Self::new(path, key))
     }
 }
 

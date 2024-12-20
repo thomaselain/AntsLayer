@@ -4,14 +4,14 @@ use super::*;
 
 #[test]
 fn chunk_serialization() {
-    let key = TilePos::new(0,0);
+    let key = TilePos::new(0, 0);
 
     let (key, status) = Chunk::generate_default(key);
     let chunk = status
         .get_chunk()
         .unwrap_or_else(|_| { panic!("{}", ChunkError::FailedToGenerate.to_string()) });
 
-    let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
+    let path = ChunkPath::build("test/", key).expect("Failed to set up test directory");
 
     chunk.save(path.clone()).expect("Failed to save chunk");
 
@@ -20,8 +20,8 @@ fn chunk_serialization() {
 
 #[test]
 fn read_write_chunk() {
-    let key = TilePos::new(0,0);
-    let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
+    let key = TilePos::new(0, 0);
+    let path = ChunkPath::build("test/", key).expect("Failed to set up test directory");
 
     let (_key, status) = Chunk::generate_default(key);
 
@@ -41,8 +41,8 @@ fn read_write_chunk() {
 
 #[test]
 pub fn tile_modification() {
-    let key = TilePos::new(0,0);
-    let path = ChunkPath::build("test", key).expect("Failed to set up test directory");
+    let key = TilePos::new(0, 0);
+    let path = ChunkPath::build("test/", key).expect("Failed to set up test directory");
 
     let (_, mut chunk) = Chunk::generate_from_biome(key, 0, BiomeConfig::default());
 
@@ -66,7 +66,7 @@ pub fn tile_modification() {
 
 #[test]
 fn chunk_file_operations() {
-    let key = TilePos::new(0,0);
+    let key = TilePos::new(0, 0);
     // Build chunks paths
     let path_1 = ChunkPath::build("test/file_operations", key).expect(
         "Failed to set up test directory"
@@ -77,14 +77,22 @@ fn chunk_file_operations() {
     let (sndr, rcvr) = mpsc::channel();
     Chunk::generate_async(key, 0, BiomeConfig::default(), sndr.clone());
 
-    let rc = rcvr.recv_timeout(Duration::from_secs(1)).ok();
-    assert!(rc.is_some());
 
-    let chunk = rc.unwrap().1.get_chunk();
-    eprintln!("Status received : {:?}", chunk);
-    assert!(chunk.is_ok());
+    let chunk: Chunk = loop {
+        if let Ok((pos, status)) = rcvr.recv_timeout(Duration::from_secs(2)) {
+            match status {
+                Status::Ready(chunk) => {
+                    eprintln!("Chunk received from channel : {:?}", chunk);
+                    break chunk;
+                }
+                _ => {}
+            }
+        } else {
+            panic!();
+        }
+    };
 
-    chunk.unwrap().save(path_1.clone()).unwrap();
+    chunk.save(path_1.clone()).unwrap();
 
     let chunk_2 = Chunk::new(key);
     chunk_2.save(path_2.clone()).unwrap();
@@ -101,7 +109,7 @@ fn chunk_file_operations() {
 
 #[test]
 fn skip_in_file() {
-    let key = TilePos::new(0,0);
+    let key = TilePos::new(0, 0);
     ChunkPath::build("test", key).expect("Failed to set up test directory");
     use std::io::Cursor;
 

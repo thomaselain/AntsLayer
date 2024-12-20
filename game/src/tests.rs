@@ -7,7 +7,7 @@ use crate::Game;
 #[test]
 // #[ignore = "Runs the whole game"]
 pub fn main_test() {
-    let mut game = Game::new(sdl2::init().unwrap());
+    let mut game = Game::new_with_test_settings();
     game.create_world(game.sndr.clone()).unwrap();
     add_unit(&mut game);
 
@@ -41,13 +41,12 @@ pub fn add_unit(game: &mut Game) {
 
 #[test]
 fn create_map_with_threads() {
-    let map = Map::new("map_creation_with_threads").unwrap();
-    let mut game = Game::new(sdl2::init().unwrap());
+    let mut game = Game::new_with_test_settings();
+    game.map = Some(Map::new("map_creation_with_threads").unwrap());
+
     game.create_world(game.sndr.clone()).unwrap();
+    game.receive_chunks();
 
-    game.map = Some(map);
-
-    game.tick();
     game.map.clone().unwrap().save().unwrap();
     let mut mngr = game.chunk_manager.lock().unwrap();
     while let Ok((key, status)) = game.rcvr.recv_timeout(std::time::Duration::from_secs(1)) {
@@ -57,4 +56,9 @@ fn create_map_with_threads() {
     for (_key, status) in mngr.loaded_chunks.clone() {
         eprintln!("{:?}", status.get_chunk());
     }
+}
+
+#[test]
+fn unit_movement_in_game(){
+    let mut game = Game::new_with_test_settings();
 }

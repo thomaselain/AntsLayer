@@ -43,29 +43,57 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(sdl: Sdl) -> Game {
+    pub fn new_with_test_settings() -> Game {
+        let sdl = sdl2::init().unwrap();
+        let (sndr, rcvr) = mpsc::channel();
+        let camera = Camera::new(0.0, 0.0);
+        let config = Config::new();
+        let renderer = Renderer::new(
+            &sdl,
+            "Ants Layer (test settings)",
+            game::WIN_DEFAULT_WIDTH,
+            game::WIN_DEFAULT_HEIGHT
+        ).unwrap();
+        let map = Some(Map::default());
+
+        Self {
+            last_tick: Instant::now(),
+            tick_rate: Duration::from_secs_f64(1.0 / 60.0), // 60 FPS par défaut
+            chunk_manager: Arc::new(Mutex::new(ChunkManager::new())),
+            renderer: Arc::new(Mutex::new(renderer)),
+            sndr,
+            rcvr,
+            config,
+            current_biome: 0,
+            camera,
+            sdl,
+            events: Vec::new(),
+            inputs: Inputs::new(),
+            map,
+        }
+    }
+    pub fn new() -> Game {
+        let sdl = sdl2::init().unwrap();
         let renderer = Renderer::new(
             &sdl,
             "Ants Layer",
             game::WIN_DEFAULT_WIDTH,
             game::WIN_DEFAULT_HEIGHT
         ).expect("Failed to create game renderer");
+
         let config = Config::new();
-        let camera = Camera::new(0.0, 0.0);
         let (sndr, rcvr) = mpsc::channel();
+        let camera = Camera::new(0.0, 0.0);
 
         Game {
             last_tick: Instant::now(),
             tick_rate: Duration::from_secs_f64(1.0 / 60.0), // 60 FPS par défaut
             chunk_manager: Arc::new(Mutex::new(ChunkManager::new())),
             renderer: Arc::new(Mutex::new(renderer)),
-
             sndr,
             rcvr,
-
             config,
             current_biome: 0,
-
             camera,
             sdl,
             events: Vec::new(),
