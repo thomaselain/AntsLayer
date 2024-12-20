@@ -8,16 +8,16 @@ use crate::{ Map, WORLDS_FOLDER };
 impl Map {
     pub fn init_world_folder(name: &str) -> Result<(), String> {
         // Vérifier si le dossier "data/worlds" existe, sinon le créer
-        if !std::fs::metadata(format!("{}{}", WORLDS_FOLDER, name).to_string()).is_ok() {
+        if !std::fs::metadata(format!("{}/{}", WORLDS_FOLDER, name)).is_ok() {
             // Créer le dossier "data/"
             if
                 let Err(e) = std::fs::DirBuilder
                     ::new()
                     .recursive(true)
-                    .create(format!("{}{}", WORLDS_FOLDER, name).to_string())
+                    .create(format!("{}/{}", WORLDS_FOLDER, name))
             {
                 eprintln!("Erreur lors de la création du dossier '{}': {}", WORLDS_FOLDER, e);
-                return Err(format!("{}{}", WORLDS_FOLDER, name).to_string());
+                return Err(format!("{}/{}", WORLDS_FOLDER, name));
             }
         }
         Ok(())
@@ -29,15 +29,15 @@ impl Map {
 
         Ok(Self {
             seed,
-            path: format!("{}{}", WORLDS_FOLDER, name).to_string(),
+            path: format!("{}/{}", WORLDS_FOLDER, name),
             chunks: HashMap::new(),
         })
     }
 
     // Sauvegarder la map entière
-    pub fn save(&self) -> std::io::Result<()> {
-        for (key, chunk) in &self.chunks {
-            chunk.save(ChunkPath::build(&self.path.clone(), *key).expect("Failed to save chunk"))?;
+    pub fn save(self) -> std::io::Result<()> {
+        for (key, chunk) in self.chunks {
+            chunk.save(ChunkPath::build(&self.path.clone(), key).expect("Failed to save chunk"))?;
         }
         Ok(())
     }

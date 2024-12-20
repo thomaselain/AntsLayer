@@ -1,4 +1,4 @@
-use std:: sync:: mpsc:: Sender   ;
+use std::sync::mpsc::Sender;
 
 use chunk::{ thread::Status, Chunk };
 #[allow(unused_imports)]
@@ -8,7 +8,7 @@ use chunk_manager::DrawAll;
 
 use coords::aliases::TilePos;
 use sdl2::{ keyboard::Keycode, pixels::Color };
-use map::{  Map, WORLD_STARTING_AREA };
+use map::{ Map, WORLD_STARTING_AREA };
 
 #[allow(unused_imports)]
 use unit::{ Unit, MOVING };
@@ -17,7 +17,7 @@ use crate::Game;
 
 pub const WIN_DEFAULT_WIDTH: u32 = 1000;
 pub const WIN_DEFAULT_HEIGHT: u32 = 800;
-impl Game{
+impl Game {
     // pub fn load_world(&mut self) -> Result<Map, ()> {
     //     let path = "./data/test_world";
     //     println!("Loading {}", path);
@@ -25,7 +25,8 @@ impl Game{
     // }
 
     pub fn create_world(&mut self, sndr: Sender<(TilePos, Status)>) -> Result<(), String> {
-        self.map = Some(Map::new("default").unwrap());
+        self.map = Some(Map::init_test());
+
         let half_size = WORLD_STARTING_AREA / 2;
 
         for x in -half_size..=half_size {

@@ -15,6 +15,7 @@ pub const RESTING: u32 = 1 << 3; // 1000 : L'unité est en train de se reposer
 #[derive(Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
 pub struct Unit {
     pub pos: TilePos,
+    // pub id: u8,
     action_dest: TilePos, // Destination pour une action
     speed: u32,
     state: u32, // Utilisation d'un masque de 32 bits

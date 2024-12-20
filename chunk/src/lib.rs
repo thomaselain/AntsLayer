@@ -150,7 +150,7 @@ impl Chunk {
                     .expect("Failed to deserialize"),
             ))
         } else {
-            eprintln!("Failed to load chunk at {}", path.to_string());
+            // eprintln!("Failed to load chunk at {}", path.to_string());
             Err((key, ChunkError::FailedToLoad))
         }
     }

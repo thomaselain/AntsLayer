@@ -2,8 +2,17 @@ use coords::aliases::TilePos;
 
 use crate::Unit;
 
+impl Default for Unit {
+    fn default() -> Self {
+        let pos = TilePos::new(0, 0);
+        let speed = 1;
+
+        Self::new(pos, speed)
+    }
+}
+
 impl Unit {
-    pub fn new(pos: TilePos, speed: u32) -> Unit {
+    pub fn new(pos: TilePos, speed: u32) -> Self {
         Unit {
             action_dest: TilePos::default(),
             pos,
@@ -25,5 +34,9 @@ impl Unit {
     // Vérifier si un état est actif (en utilisant un masque)
     pub fn has_state(&self, mask: u32) -> bool {
         (self.state & mask) != 0
+    }
+
+    pub fn tick(&mut self) {
+        self.pos += TilePos::new(0, 1);
     }
 }

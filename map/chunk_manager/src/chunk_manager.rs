@@ -59,7 +59,6 @@ impl ChunkManager {
                 Status::Error(_) => todo!(),
             }
         } else {
-            eprintln!("OK");
             Err((key, ChunkError::FailedToLoad))
         }
     }

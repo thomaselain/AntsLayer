@@ -145,9 +145,11 @@ impl Game {
             eprintln!("WHEEL DOWN : zoom set to :{}", self.camera.zoom);
             self.inputs.wheel_dir = 0;
         }
-        if self.map.is_some() && self.inputs.is_key_pressed(Keycode::Space) {
-            self.map.as_ref().unwrap().save().expect("Failed to save map");
-            println!("Map saved !");
+        if let Some(map) = &self.map {
+            if self.inputs.is_key_pressed(Keycode::Space) {
+                map.clone().save().unwrap();
+                println!("Map saved !");
+            }
         }
 
         if let Some(key) = self.inputs.key_pressed.last() {

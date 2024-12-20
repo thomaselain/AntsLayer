@@ -31,11 +31,20 @@ pub enum Directions {
     South,
     West,
 }
+impl Default for Map{
+    fn default() -> Self {
+        Self::new("default").ok().expect("Failed to create default map")
+    }
+}
 
 impl Map {
+    pub fn init_test() -> Self{
+        Self::new("test").ok().unwrap()
+    }
     pub fn new(name: &str) -> Result<Self, String> {
         Self::init_world_folder(name)?;
-        Self::init_world(name)
+
+        Ok(Self::init_world(name).ok().expect("Failed to generate starting zone"))
     }
     // Ajouter un chunk
     pub fn add_chunk(&mut self, key: TilePos, chunk: Chunk) -> std::io::Result<()> {
