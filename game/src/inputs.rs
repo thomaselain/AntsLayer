@@ -3,7 +3,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
 
-use crate::game::Game;
+use crate::Game;
 
 pub trait ToDirection {
     fn to_direction(self) -> Result<Directions, Keycode>;

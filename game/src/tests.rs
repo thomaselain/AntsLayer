@@ -1,6 +1,40 @@
-use crate::game;
+use coords::aliases::TilePos;
+use map::Map;
+use unit::Unit;
 
-use {map::Map, game::Game};
+use crate::Game;
+
+#[test]
+// #[ignore = "Runs the whole game"]
+pub fn main_test() {
+    let mut game = Game::new(sdl2::init().unwrap());
+    game.create_world(game.sndr.clone()).unwrap();
+    add_unit(&mut game);
+
+    game.run();
+}
+
+#[allow(dead_code)]
+pub fn add_unit(game: &mut Game) {
+    // Add unit in middle chunk
+    let pos = TilePos::new(0, 0);
+    game.camera.center_on(0, 0);
+    game.receive_chunks();
+    let unit = Unit::new(pos, 1);
+
+    let mngr = game.chunk_manager.lock().unwrap();
+    match mngr.loaded_chunks.get(&pos) {
+        Some(status) => {
+            let chunk = status.clone().get_chunk().ok();
+
+            if let Some(mut chunk) = chunk {
+                chunk.units.insert(pos, unit);
+            }
+        }
+        None => todo!(),
+    };
+    eprintln!("Unit created at {:?}", unit.pos);
+}
 
 #[test]
 fn create_map_with_threads() {
@@ -16,7 +50,6 @@ fn create_map_with_threads() {
     while let Ok((key, status)) = game.rcvr.recv_timeout(std::time::Duration::from_secs(1)) {
         mngr.loaded_chunks.insert(key, status);
     }
-
 
     for (_key, status) in mngr.loaded_chunks.clone() {
         eprintln!("{:?}", status.get_chunk());

@@ -15,7 +15,7 @@ use tile::{ Tile, TileFlags, TileType };
 use unit::Unit;
 use std::io::{ self, Read, Seek, SeekFrom };
 
-pub const CHUNK_SIZE: usize = 32;
+pub const CHUNK_SIZE: usize = 16;
 #[derive(Clone)]
 pub struct ChunkPath(String, TilePos);
 

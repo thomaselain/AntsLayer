@@ -15,5 +15,5 @@ fn combined_noise() {
     let perlin = BiomeConfig::noise_from_seed(0);
     let value = biome.combined_noise(&perlin, 0.5, 0.5);
 
-    assert!(value >= -1.0 && value <= 1.0, "Noise value out of range");
+    assert!((-1.0..=1.0).contains(&value), "Noise value out of range");
 }
