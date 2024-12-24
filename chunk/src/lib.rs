@@ -5,6 +5,7 @@ pub mod debug;
 pub mod thread;
 
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::fs::{ self, File };
 use std::path::Path;
 use biomes::BiomeConfig;
@@ -16,31 +17,31 @@ use unit::Unit;
 use std::io::{ self, Read, Seek, SeekFrom };
 
 pub const CHUNK_SIZE: usize = 16;
+
 #[derive(Clone)]
 pub struct ChunkPath(String, TilePos);
 
+impl Display for ChunkPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f,"{}/{}_{}.bin", self.0.as_str(), self.1.x(), self.1.y())
+    }
+}
+impl Into<String> for ChunkPath {
+    fn into(self) -> String {
+        format!("{}", self)
+    }
+}
 impl Default for ChunkPath {
     fn default() -> Self {
-        Self::build("default", TilePos::new(0, 0)).expect("Failed to create default world path")
+        Self::new("default", TilePos::new(0, 0))
     }
 }
 impl ChunkPath {
-    fn new(path: String, key: TilePos) -> Self {
-        Self(path, key)
-    }
-    pub fn to_string(self) -> String {
-        format!("{:?}/{:?}_{:?}.bin", self.0, self.1.x(), self.1.y()).to_string()
+    pub fn new(path: &str, key: TilePos) -> Self {
+        Self(path.trim().to_string(), key)
     }
     pub fn chunk_key(&self) -> TilePos {
         self.1
-    }
-    pub fn build(path: &str, key: TilePos) -> std::io::Result<Self> {
-        let dir = path;
-        if !Path::new(&dir).exists() {
-            fs::create_dir_all(dir)?;
-        }
-
-        Ok(Self::new(path.to_string(), key))
     }
 }
 
@@ -95,11 +96,7 @@ impl Chunk {
                 // Détermine le type de tuile
                 let tile_type = BiomeConfig::tile_type_from_noise(value, &biome);
 
-                chunk.set_tile(
-                    x,
-                    y,
-                    Tile::new(key, tile_type, 0, TileFlags::empty())
-                );
+                chunk.set_tile(x, y, Tile::new(key, tile_type, 0, TileFlags::empty()));
             }
         }
 
@@ -117,11 +114,28 @@ impl Chunk {
     }
 
     pub fn save(&self, path: ChunkPath) -> Result<(), std::io::Error> {
+        println!("Saving chunk at {}", path);
+        let binding = path.to_string();
+        let path = binding.as_str();
+        println!("path as str: {}", path);
+
+
         if self.is_dirty {
-            if let Some(parent) = Path::new(&path.clone().to_string()).parent() {
+            let p = Path::new(path);
+
+            if let Some(parent) = p.parent() {
                 fs::create_dir_all(parent)?;
             }
-            let file = std::fs::File::create(path.to_string())?;
+            let str_path: String = path.into();
+
+            let file = match std::fs::File::create(str_path.clone()) {
+                Ok(file) => { file }
+                Err(e) => {
+                    println!("Chunk::save() failed to create file at {}\nreason :{}", str_path, e);
+                    return Err(e);
+                }
+            };
+
             bincode::serialize_into(file, self).expect("Failed to serialize");
             Ok(())
         } else {
@@ -129,8 +143,9 @@ impl Chunk {
         }
     }
 
-    pub fn load(self, world_name: String) -> Result<(TilePos, Status), (TilePos, ChunkError)> {
-        let path = ChunkPath::build(&world_name, self.key).ok().unwrap();
+    pub fn load(
+      path: ChunkPath,
+    ) -> Result<(TilePos, Status), (TilePos, ChunkError)> {
         let chunk_file = File::open(path.clone().to_string());
         let key = path.chunk_key();
 
@@ -154,6 +169,7 @@ impl Chunk {
             Err((key, ChunkError::FailedToLoad))
         }
     }
+
     pub fn skip_in_file<R: Read + Seek>(reader: &mut R) -> io::Result<()> {
         // Calcule la taille d'un chunk en octets
         let chunk_size_in_bytes = CHUNK_SIZE * CHUNK_SIZE * std::mem::size_of::<Tile>();

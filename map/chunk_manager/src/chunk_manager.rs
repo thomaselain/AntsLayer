@@ -1,6 +1,6 @@
 use biomes::BiomeConfig;
 use chunk::thread::{ ChunkError, Status };
-use chunk::Chunk;
+use chunk::{Chunk, ChunkPath};
 use coords::aliases::TilePos;
 use std::collections::{ HashMap, HashSet };
 use std::sync::mpsc::{ Receiver, Sender };
@@ -42,9 +42,10 @@ impl ChunkManager {
 
     pub fn load_chunk(
         &mut self,
-        key: TilePos,
-        world_name: String
+        path:ChunkPath,
     ) -> Result<(TilePos, Status), (TilePos, ChunkError)> {
+        let key = path.chunk_key();
+        
         if let Some(status) = self.loaded_chunks.get(&key).cloned() {
             let chunk = status.get_chunk().ok();
 
@@ -52,7 +53,7 @@ impl ChunkManager {
                 Some(chunk) => { Ok((key, Status::Ready(chunk))) }
                 None => { Err((key, ChunkError::FailedToLoad))}
             }
-        } else if let Ok((key, status)) = Chunk::new(key).load(world_name.clone()) {
+        } else if let Ok((key, status)) = Chunk::load(path) {
             match status {
                 Status::Visible(_) | Status::Ready(_) => Ok((key, status)),
                 Status::Pending => { Err((key, ChunkError::StillLoading)) }

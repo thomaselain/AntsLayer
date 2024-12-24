@@ -30,11 +30,11 @@ pub enum Status {
 }
 
 impl Status {
-    pub fn get_chunk(self) -> Result<Chunk, Self> {
+    pub fn get_chunk(&self) -> Result<Chunk, Self> {
         match self {
-            Status::Ready(chunk) | Status::Visible(chunk) => Ok(chunk),
-            Status::Pending => Err(self),
-            _ => Err(self),
+            Status::Ready(chunk) | Status::Visible(chunk) => Ok(chunk.clone()),
+            Status::Pending => Err(self.clone()),
+            _ => Err(self.clone()),
         }
     }
     pub fn visible(self) -> Result<Self, ()> {

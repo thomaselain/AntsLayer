@@ -12,7 +12,7 @@ impl Game {
             match status {
                 Status::Ready(ref chunk) | Status::Visible(ref chunk) => {
                     let mut map = self.map.clone().unwrap();
-                    chunk.save(ChunkPath::build(&map.path, key).unwrap()).unwrap();
+                    chunk.save(ChunkPath::new(&map.path, key)).unwrap();
                     mngr.loaded_chunks.insert(key, status.clone());
                     map.add_chunk(key, chunk.clone()).unwrap();
                 }
@@ -37,8 +37,10 @@ impl Game {
             let mut mngr = self.chunk_manager.lock().unwrap();
             mngr.visible_chunks = Map::visible_chunks(&self.camera);
             for key in mngr.visible_chunks.clone() {
+                let path = ChunkPath::new(&self.map.clone().unwrap().path, key);
                 // eprintln!("{:?}", key);
-                match mngr.load_chunk(key, self.map.clone().unwrap().path) {
+                
+                match mngr.load_chunk(path) {
                     Ok((key, status)) => {
                         mngr.loaded_chunks.insert(key, status);
                     }

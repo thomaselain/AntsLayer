@@ -37,7 +37,7 @@ impl Map {
     // Sauvegarder la map entière
     pub fn save(self) -> std::io::Result<()> {
         for (key, chunk) in self.chunks {
-            chunk.save(ChunkPath::build(&self.path.clone(), key).expect("Failed to save chunk"))?;
+            chunk.save(ChunkPath::new(&self.path, key))?;
         }
         Ok(())
     }
