@@ -142,7 +142,7 @@ impl Chunk {
     }
 
     pub fn load(path: ChunkPath) -> Result<(TilePos, Status), (TilePos, ChunkError)> {
-        println!("Loading chunk at {}", path);
+        // println!("Loading chunk at {}", path);
         let chunk_file = File::open(path.clone().to_string());
         let key = path.chunk_key();
 
@@ -152,7 +152,7 @@ impl Chunk {
 
             match file_chunk {
                 Ok(chunk) => {
-                    println!("{:?}", chunk);
+                    // println!("{:?}", chunk);
                     Ok((key, Status::Ready(chunk)))
                 }
                 Err(_) => { Err((key, ChunkError::FailedToLoad)) }

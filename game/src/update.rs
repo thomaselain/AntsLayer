@@ -47,7 +47,7 @@ impl Game {
                         mngr.loaded_chunks.insert(key, Status::Ready(chunk));
                     }
                     Err((key, _e)) => {
-                        eprintln!("Cannot load {}, generating new chunk", key);
+                        // eprintln!("Cannot load {}, generating new chunk", key);
                         Chunk::generate_async(
                             key,
                             self.map.clone().unwrap().seed,
