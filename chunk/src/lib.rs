@@ -16,7 +16,7 @@ use tile::{ Tile, TileFlags, TileType };
 use unit::Unit;
 use std::io::{ self, Error, Read, Seek, SeekFrom };
 
-pub const CHUNK_SIZE: usize = 16;
+pub const CHUNK_SIZE: usize = 32;
 
 #[derive(Clone)]
 pub struct ChunkPath(String, TilePos);
@@ -113,10 +113,10 @@ impl Chunk {
     }
 
     pub fn save(&self, path: ChunkPath) -> Result<(), std::io::Error> {
-        println!("Saving chunk at {}", path);
+        // eprintln!("Saving chunk at {}", path);
         let binding = path.to_string();
         let path = binding.as_str();
-        // println!("path as str: {}", path);
+        // eprintln!("path as str: {}", path);
 
         if self.is_dirty {
             let p = Path::new(path);
@@ -129,7 +129,7 @@ impl Chunk {
             let file = match std::fs::File::create(str_path.clone()) {
                 Ok(file) => { file }
                 Err(e) => {
-                    println!("Chunk::save() failed to create file at {}\nreason :{}", str_path, e);
+                    // println!("Chunk::save() failed to create file at {}\nreason :{}", str_path, e);
                     return Err(e);
                 }
             };

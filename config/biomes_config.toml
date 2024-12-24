@@ -1,11 +1,43 @@
 [[biomes]]
-name = "Mountain"
+name= "Default"
 base_height = 0.7
 height_variation = 1.2
 
 [[biomes.noise_layers]]
-scale = 32.0  # Plus large pour les montagnes
-weight = 1.0
+scale = 0.35
+weight = 0.5
+
+[[biomes.thresholds]]
+min = -0.5
+max = 0.0
+tile_type = "Fluid"
+fluid_type = "Water"
+
+[[biomes.thresholds]]
+min = 0.0
+max = -0.2
+tile_type = "Dirt"
+
+[[biomes.thresholds]]
+min = -0.2
+max = 0.05
+tile_type = "Rock"
+
+[[biomes.thresholds]]
+min = 0.05
+max = 0.2
+tile_type = "Grass"
+
+[[biomes.thresholds]]
+min = 0.2
+max = 1.0
+tile_type = "Rock"
+
+
+[[biomes]]
+name = "Mountain"
+base_height = 0.7
+height_variation = 1.2
 
 [[biomes.noise_layers]]
 scale = 8.0   # Couches fines pour détails locaux

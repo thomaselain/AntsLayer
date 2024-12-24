@@ -18,7 +18,7 @@ impl Game {
                     self.map.clone().unwrap().add_chunk(key, chunk.clone()).unwrap();
                 }
                 Status::Pending => {
-                    eprintln!("chunk ({},{}) is still waiting", key.x(), key.y());
+                    // eprintln!("chunk ({},{}) is still waiting", key.x(), key.y());
                 }
                 _ => {
                     eprintln!("Statut inconnu pour le chunk {:?}: {:?}", key, status);

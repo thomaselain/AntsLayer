@@ -6,7 +6,7 @@ use tile::{ FluidType, TileType };
 
 use crate::{ camera::Camera, Map };
 
-pub const TILE_SIZE: i32 = 5;
+pub const TILE_SIZE: i32 = 1;
 
 pub fn tile_screen_coords(
     chunk_key: TilePos,
@@ -101,12 +101,12 @@ impl Draw<Renderer, Camera> for Chunk {
                             FluidType::Magma => Color::RED,
                             FluidType::Water => Color::BLUE,
                         }
-                    TileType::Empty => Color::RGB(10, 100, 150),
-                    TileType::Dirt => Color::RGB(30, 200, 25),
-                    TileType::Sand => Color::RGB(200, 200, 25),
+                    TileType::Empty => Color::RGB(10, 10, 10),
+                    TileType::Sand => Color::RGB(255, 255, 100),
                     TileType::Wall => Color::GRAY,
                     TileType::Rock => Color::GREY,
-                    TileType::Grass => Color::GREEN,
+                    TileType::Dirt => Color::RGB(50, 220, 50),
+                    TileType::Grass => Color::RGB(75, 255, 75),
                     TileType::Custom(_) => Color::CYAN,
                     _ => Color::MAGENTA,
                 };

@@ -44,6 +44,7 @@ impl BiomeConfig {
     }
 
     pub fn tile_type_from_noise(noise_value: f64, biome: &BiomeConfig) -> TileType {
+        // eprintln!("{.2}", noise_value);
         for threshold in &biome.thresholds {
             if noise_value >= threshold.min && noise_value < threshold.max {
                 if threshold.tile_type == "Fluid" {
@@ -77,7 +78,7 @@ impl BiomeConfig {
 pub struct Config {
     pub biomes: Vec<BiomeConfig>,
 }
-const DEFAULT_BIOME_NAME: &str = "Hill";
+const DEFAULT_BIOME_NAME: &str = "Default";
 
 impl Into<BiomeConfig> for Config {
     fn into(self) -> BiomeConfig {
