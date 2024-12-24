@@ -21,22 +21,25 @@ pub struct BiomeConfig {
     pub noise_layers: Vec<NoiseLayer>, // Nouvelles couches de bruit
 }
 
-impl BiomeConfig {
-    pub fn default() -> BiomeConfig {
-        BiomeConfig {
-            name: "Default_biome".to_string(),
-            height_variation: 0.5,
-            base_height:0.5,
-            thresholds: Vec::new(),
-            noise_layers: Vec::new(),
-            additional_params: None,
+impl Default for BiomeConfig {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            base_height: Default::default(),
+            height_variation: Default::default(),
+            thresholds: Default::default(),
+            additional_params: Default::default(),
+            noise_layers: Default::default(),
         }
     }
+}
+
+impl BiomeConfig {
     fn path() -> String {
         "config/biomes_config.toml".to_string()
     }
 
-    pub fn noise_from_seed(seed:u32) -> Perlin {
+    pub fn noise_from_seed(seed: u32) -> Perlin {
         Perlin::new(seed)
     }
 
@@ -62,7 +65,7 @@ impl BiomeConfig {
                     "Sand" => TileType::Wall,
                     "Floor" => TileType::Floor,
                     "Empty" => TileType::Empty,
-                    s => todo!("Cutom tile : {:?}",s), // Valeur personnalisée par défaut
+                    s => todo!("Cutom tile : {:?}", s), // Valeur personnalisée par défaut
                 };
             }
         }
@@ -70,9 +73,16 @@ impl BiomeConfig {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct Config {
     pub biomes: Vec<BiomeConfig>,
+}
+const DEFAULT_BIOME_NAME: &str = "Hill";
+
+impl Into<BiomeConfig> for Config {
+    fn into(self) -> BiomeConfig {
+        self.get_biome(DEFAULT_BIOME_NAME)
+    }
 }
 
 impl Default for Config {
@@ -85,7 +95,9 @@ impl Config {
     pub fn new() -> Self {
         Self::load().expect("Failed to load config")
     }
-
+    pub fn default_biome(self) -> BiomeConfig {
+        self.get_biome(DEFAULT_BIOME_NAME)
+    }
     pub fn get_biome(self, name: &str) -> BiomeConfig {
         for biome in self.biomes {
             if biome.name == name {
@@ -93,8 +105,9 @@ impl Config {
             }
         }
         eprintln!("Biome \"{}\" not found, set to default", name);
-        BiomeConfig::default()
+        todo!("Default biome");
     }
+
     fn load_biomes() -> Result<Config, io::Error> {
         let mut file = File::open(BiomeConfig::path())?;
         let mut contents = String::new();

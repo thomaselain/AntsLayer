@@ -1,4 +1,4 @@
-use biomes::BiomeConfig;
+use biomes::{BiomeConfig, Config};
 use chunk::{ thread::Status, Chunk, ChunkPath };
 use map::Map;
 
@@ -51,7 +51,7 @@ impl Game {
                         Chunk::generate_async(
                             key,
                             self.map.clone().unwrap().seed,
-                            BiomeConfig::default(),
+                            self.config.clone().default_biome(),
                             self.sndr.clone()
                         );
                     }

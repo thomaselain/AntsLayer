@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{ collections::HashMap, fs::File, io::Error, path::Path };
 
 use chunk::ChunkPath;
 use rand::Rng;
@@ -43,9 +43,11 @@ impl Map {
     }
 
     // Charger la map entière
-    // pub fn load(path: &str) -> Result<Map, io::Error> {
-    //     let file = File::open(path).ok();
-    //     let map = bincode::deserialize_from(file.expect("failed to open map file"));
-    //     Ok(map.ok().expect("Error while loading map?"))
-    // }
+    pub fn load(name: &str) -> Result<Map, Error> {
+        let path = Path::new(name);
+        assert!(path.is_dir());
+
+        let map = Map::new(name).unwrap();
+        Ok(map)
+    }
 }

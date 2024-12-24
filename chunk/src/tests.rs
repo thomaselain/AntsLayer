@@ -1,30 +1,38 @@
 use std::{ sync::mpsc, time::Duration };
 
+use biomes::Config;
+
 use super::*;
+
+#[cfg(test)]
+fn load_default_biome() -> BiomeConfig {
+    let cfg = biomes::Config::new();
+    cfg.get_biome("Hill")
+}
+
 #[test]
 fn chunk_serialization() {
     const PATH: &str = "test/serialize";
     let key = TilePos::new(0, 0);
     let path = ChunkPath::new(PATH, key);
 
-    let (_, status) = Chunk::generate_default(key);
+    let (_, chunk) = Chunk::generate_from_biome(key, 0, load_default_biome());
 
-    let chunk = status.get_chunk();
-    assert!(chunk.is_ok());
-    let chunk = chunk.unwrap();
+    let chunk = chunk;
+    eprintln!("Chunk to save :\n{:?}", chunk);
 
     let saved = chunk.save(path.clone());
     assert!(saved.is_ok());
-
-    let deserialize = Chunk::load(path);
-    assert!(deserialize.is_ok());
-    let _loaded_chunk = deserialize.unwrap();
-    // println!("{:?}", _loaded_chunk);
 
     let serialize = bincode::serialize::<Chunk>(&chunk);
     assert!(serialize.is_ok());
     let _saved_chunk = serialize.unwrap();
     // println!("{:?}", _saved_chunk);
+
+    let deserialize = Chunk::load(path);
+    assert!(deserialize.is_ok());
+    let _loaded_chunk = deserialize.unwrap();
+    // eprintln!("loaded_chunk{:?}", _loaded_chunk);
 }
 
 #[test]
@@ -56,7 +64,7 @@ pub fn tile_modification() {
     let key = TilePos::new(0, 0);
     let path = ChunkPath::new(PATH, key);
 
-    let (_, mut chunk) = Chunk::generate_from_biome(key, 0, BiomeConfig::default());
+    let (_, mut chunk) = Chunk::generate_from_biome(key, 0, load_default_biome());
 
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
@@ -79,13 +87,14 @@ pub fn tile_modification() {
 #[test]
 fn chunk_file_operations() {
     const PATH: &str = "test/file_operations";
+    let cfg = Config::new();
 
     let key = TilePos::new(0, 0);
     // new chunks paths
     let path = ChunkPath::new(PATH, key);
 
     let (sndr, rcvr) = mpsc::channel();
-    Chunk::generate_async(key, 0, BiomeConfig::default(), sndr.clone());
+    Chunk::generate_async(key, 0, cfg.default_biome(), sndr.clone());
 
     let mut status = Status::Pending;
     while let Ok((_c, s)) = rcvr.recv_timeout(Duration::from_secs(2)) {
@@ -99,7 +108,6 @@ fn chunk_file_operations() {
 
     // Test écriture
     chunk.save(path.clone()).unwrap();
-
 }
 
 #[test]

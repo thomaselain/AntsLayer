@@ -73,7 +73,6 @@ impl Chunk {
     /// Generate a chunk without multi threading
     pub fn generate_default(pos: TilePos) -> (TilePos, Status) {
         let (pos, chunk) = Self::generate_from_biome(pos, 0, BiomeConfig::default());
-
         (pos, Status::Ready(chunk))
     }
 
@@ -152,7 +151,10 @@ impl Chunk {
             let file_chunk = bincode::deserialize_from::<File, Chunk>(file);
 
             match file_chunk {
-                Ok(chunk) => Ok((key, Status::Ready(chunk))),
+                Ok(chunk) => {
+                    println!("{:?}", chunk);
+                    Ok((key, Status::Ready(chunk)))
+                }
                 Err(_) => { Err((key, ChunkError::FailedToLoad)) }
             }
         } else {

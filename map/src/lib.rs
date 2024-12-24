@@ -11,7 +11,7 @@ pub extern crate chunk_manager;
 use std::collections::{ HashMap, HashSet };
 // use biomes::BiomeConfig;
 use camera::Camera;
-use chunk::{ Chunk, CHUNK_SIZE };
+use chunk::{ Chunk, ChunkPath, CHUNK_SIZE };
 use coords::aliases::TilePos;
 use serde::{ Serialize, Deserialize };
 
@@ -31,26 +31,29 @@ pub enum Directions {
     South,
     West,
 }
-impl Default for Map{
+impl Default for Map {
     fn default() -> Self {
-        Self::new("default").ok().expect("Failed to create default map")
+        Self::new("default").ok().unwrap()
     }
 }
 
 impl Map {
-    pub fn init_test() -> Self{
+    pub fn init_test() -> Self {
         Self::new("test").ok().unwrap()
     }
+
     pub fn new(name: &str) -> Result<Self, String> {
         Self::init_world_folder(name)?;
 
         Ok(Self::init_world(name).ok().expect("Failed to generate starting zone"))
     }
-    
+
     // Ajouter un chunk
     pub fn add_chunk(&mut self, key: TilePos, chunk: Chunk) -> std::io::Result<()> {
-        self.chunks.insert(key, chunk);
-        // chunk.save(ChunkPath::build(self.path.clone(), x, y).expect("Failed to save chunk"))?;
+        let path = ChunkPath::new(&self.path, key);
+        self.chunks.insert(key, chunk.clone());
+
+        chunk.save(path)?;
         Ok(())
     }
 

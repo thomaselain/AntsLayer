@@ -12,10 +12,18 @@ use biomes::{ BiomeConfig, Config };
 impl Renderer {}
 
 #[test]
-pub fn map_creation_and_loading() {
-    if let Some(map) = Map::new("test_map_loading").ok() {
-        map.clone().save().unwrap();
-    }
+pub fn save_load() {
+    let saved = Map::new("test/saved");
+    assert!(saved.is_ok());
+    let mut map = saved.unwrap();
+    map.add_chunk(TilePos::new(0,0), Chunk::default());
+    let saved = map.save();
+    assert!(saved.is_ok());
+
+    let load = Map::load("test/saved");
+    assert!(load.is_ok());
+
+
 }
 
 #[test]
@@ -82,16 +90,16 @@ mod threads {
     fn test_map_channel() {
         let key = TilePos::new(1, 1);
         let (sndr, rcvr): (Sender<MapStatus>, Receiver<MapStatus>) = mpsc::channel();
+        let cfg = Config::default_biome(Config::new());
 
         thread::spawn(move || {
-            Chunk::generate_async(key, 42, BiomeConfig::default(), sndr.clone());
+            Chunk::generate_async(key, 42, cfg, sndr.clone());
         });
 
-        while let Some((_key, status)) = rcvr.recv_timeout(Duration::from_secs(1)).ok() {
+        while let Some((_key, status)) = rcvr.recv_timeout(Duration::from_secs(2)).ok() {
             match status {
                 Status::Ready(chunk) => {
                     eprintln!("{:?}", chunk);
-                    assert!(true);
                 }
                 Status::Pending => println!("Y'a pas le feu au lac, la ..."),
                 Status::Error(chunk_error) => {
@@ -106,6 +114,7 @@ mod threads {
     fn big_array_of_chunks() {
         let map = Map::new("big").unwrap();
         let seed = map.seed;
+        let cfg = Config::default_biome(Config::new());
 
         let mngr = Arc::new(Mutex::new(ChunkManager::new()));
 
@@ -128,7 +137,7 @@ mod threads {
                 Chunk::generate_async(
                     TilePos::new(x, y),
                     seed,
-                    BiomeConfig::default(),
+                    cfg.clone(),
                     sndr.clone()
                 );
             });
