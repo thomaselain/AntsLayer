@@ -101,7 +101,7 @@ impl Draw<Renderer, Camera> for Chunk {
                             FluidType::Magma => Color::RED,
                             FluidType::Water => Color::BLUE,
                         }
-                    TileType::Empty => Color::RGB(10, 10, 15),
+                    TileType::Empty => Color::RGB(10, 100, 150),
                     TileType::Dirt => Color::RGB(30, 200, 25),
                     TileType::Sand => Color::RGB(200, 200, 25),
                     TileType::Wall => Color::GRAY,

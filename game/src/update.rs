@@ -1,4 +1,5 @@
-use chunk::{ thread::Status, ChunkPath };
+use biomes::BiomeConfig;
+use chunk::{ thread::Status, Chunk, ChunkPath };
 use map::Map;
 
 use crate::Game;
@@ -11,12 +12,14 @@ impl Game {
         while let Ok((key, status)) = self.rcvr.recv_timeout(self.tick_rate) {
             match status {
                 Status::Ready(ref chunk) | Status::Visible(ref chunk) => {
-                    let mut map = self.map.clone().unwrap();
-                    chunk.save(ChunkPath::new(&map.path, key)).unwrap();
+                    // let mut map = self.map.clone().unwrap();
+                    chunk.save(ChunkPath::new(&self.map.clone().unwrap().path, key)).unwrap();
                     mngr.loaded_chunks.insert(key, status.clone());
-                    map.add_chunk(key, chunk.clone()).unwrap();
+                    self.map.clone().unwrap().add_chunk(key, chunk.clone()).unwrap();
                 }
-                Status::Pending => {}
+                Status::Pending => {
+                    eprintln!("chunk ({},{}) is still waiting", key.x(), key.y());
+                }
                 _ => {
                     eprintln!("Statut inconnu pour le chunk {:?}: {:?}", key, status);
                 }
@@ -38,13 +41,20 @@ impl Game {
             mngr.visible_chunks = Map::visible_chunks(&self.camera);
             for key in mngr.visible_chunks.clone() {
                 let path = ChunkPath::new(&self.map.clone().unwrap().path, key);
-                // eprintln!("{:?}", key);
-                
+
                 match mngr.load_chunk(path) {
-                    Ok((key, status)) => {
-                        mngr.loaded_chunks.insert(key, status);
+                    Ok((key, chunk)) => {
+                        mngr.loaded_chunks.insert(key, Status::Ready(chunk));
                     }
-                    Err(_e) => {}
+                    Err((key, _e)) => {
+                        eprintln!("Cannot load {}, generating new chunk", key);
+                        Chunk::generate_async(
+                            key,
+                            self.map.clone().unwrap().seed,
+                            BiomeConfig::default(),
+                            self.sndr.clone()
+                        );
+                    }
                 }
             }
         }

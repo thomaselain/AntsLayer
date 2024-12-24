@@ -15,7 +15,7 @@ use chunk::{ Chunk, CHUNK_SIZE };
 use coords::aliases::TilePos;
 use serde::{ Serialize, Deserialize };
 
-pub const WORLD_STARTING_AREA: i32 = 100;
+pub const WORLD_STARTING_AREA: i32 = 10;
 pub const WORLDS_FOLDER: &str = "data/worlds/";
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -46,6 +46,7 @@ impl Map {
 
         Ok(Self::init_world(name).ok().expect("Failed to generate starting zone"))
     }
+    
     // Ajouter un chunk
     pub fn add_chunk(&mut self, key: TilePos, chunk: Chunk) -> std::io::Result<()> {
         self.chunks.insert(key, chunk);

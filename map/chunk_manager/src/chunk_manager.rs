@@ -43,19 +43,19 @@ impl ChunkManager {
     pub fn load_chunk(
         &mut self,
         path:ChunkPath,
-    ) -> Result<(TilePos, Status), (TilePos, ChunkError)> {
+    ) -> Result<(TilePos, Chunk), (TilePos, ChunkError)> {
         let key = path.chunk_key();
         
         if let Some(status) = self.loaded_chunks.get(&key).cloned() {
             let chunk = status.get_chunk().ok();
 
             match chunk {
-                Some(chunk) => { Ok((key, Status::Ready(chunk))) }
+                Some(chunk) => { Ok((key, chunk)) }
                 None => { Err((key, ChunkError::FailedToLoad))}
             }
         } else if let Ok((key, status)) = Chunk::load(path) {
             match status {
-                Status::Visible(_) | Status::Ready(_) => Ok((key, status)),
+                Status::Visible(chunk) | Status::Ready(chunk) => Ok((key, chunk)),
                 Status::Pending => { Err((key, ChunkError::StillLoading)) }
                 Status::Error(_) => todo!(),
             }

@@ -14,7 +14,7 @@ use serde::{ Deserialize, Serialize };
 use thread::{ ChunkError, Status };
 use tile::{ Tile, TileFlags, TileType };
 use unit::Unit;
-use std::io::{ self, Read, Seek, SeekFrom };
+use std::io::{ self, Error, Read, Seek, SeekFrom };
 
 pub const CHUNK_SIZE: usize = 16;
 
@@ -23,7 +23,7 @@ pub struct ChunkPath(String, TilePos);
 
 impl Display for ChunkPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,"{}/{}_{}.bin", self.0.as_str(), self.1.x(), self.1.y())
+        write!(f, "{}/{}_{}.bin", self.0.as_str(), self.1.x(), self.1.y())
     }
 }
 impl Into<String> for ChunkPath {
@@ -117,8 +117,7 @@ impl Chunk {
         println!("Saving chunk at {}", path);
         let binding = path.to_string();
         let path = binding.as_str();
-        println!("path as str: {}", path);
-
+        // println!("path as str: {}", path);
 
         if self.is_dirty {
             let p = Path::new(path);
@@ -143,31 +142,24 @@ impl Chunk {
         }
     }
 
-    pub fn load(
-      path: ChunkPath,
-    ) -> Result<(TilePos, Status), (TilePos, ChunkError)> {
+    pub fn load(path: ChunkPath) -> Result<(TilePos, Status), (TilePos, ChunkError)> {
+        println!("Loading chunk at {}", path);
         let chunk_file = File::open(path.clone().to_string());
         let key = path.chunk_key();
 
         // eprintln!("{:?}", path.clone().to_string());
-
         if let Ok(file) = chunk_file {
-            Ok((
-                key,
-                bincode
-                    ::deserialize_from(file)
-                    .map_err(|e| {
-                        std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            format!("Deserialization error for chunk {:?}:\n{}\n", key, e)
-                        )
-                    })
-                    .expect("Failed to deserialize"),
-            ))
+            let file_chunk = bincode::deserialize_from::<File, Chunk>(file);
+
+            match file_chunk {
+                Ok(chunk) => Ok((key, Status::Ready(chunk))),
+                Err(_) => { Err((key, ChunkError::FailedToLoad)) }
+            }
         } else {
-            // eprintln!("Failed to load chunk at {}", path.to_string());
-            Err((key, ChunkError::FailedToLoad))
+            return Err((key, ChunkError::NoFile));
         }
+
+        // eprintln!("Failed to load chunk at {}", path.to_string());
     }
 
     pub fn skip_in_file<R: Read + Seek>(reader: &mut R) -> io::Result<()> {

@@ -1,6 +1,9 @@
+use std::fmt::Display;
+
 #[allow(unused_imports)]
 /// This module provides conversion traits and methods for coordinates.
 use crate::aliases::TilePos;
+use crate::Coords;
 
 /// Trait to convert a type to `i32`.
 pub trait Toi32 {
@@ -21,6 +24,12 @@ pub trait Tof32 {
 impl Tof32 for i32 {
     fn to_f32(&self) -> f32 {
         *self as f32
+    }
+}
+
+impl Display for Coords<i32> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({},{})", self.x(), self.x())
     }
 }
 

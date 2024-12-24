@@ -6,11 +6,13 @@ use serde::{ Deserialize, Serialize };
 
 use crate::Chunk;
 
+// type ChunkKey = TilePos;
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum ChunkError {
     FailedToLoad,
     FailedToGenerate,
-    FailedToOpenFile,
+    NoFile,
     NotVisible,
     StillLoading,
 }
