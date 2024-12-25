@@ -1,75 +1,36 @@
 [[biomes]]
-name= "Default"
-base_height = 0.7
-height_variation = 1.2
+name= "Ocean"
+base_height = 0.0
+height_variation = 0.0
 
 [[biomes.noise_layers]]
-scale = 0.35
+scale = 0.05
+weight = 0.7
+[[biomes.noise_layers]]
+scale = 2.0
 weight = 0.5
-
-[[biomes.thresholds]]
-min = -0.5
-max = 0.0
-tile_type = "Fluid"
-fluid_type = "Water"
-
-[[biomes.thresholds]]
-min = 0.0
-max = -0.2
-tile_type = "Dirt"
-
-[[biomes.thresholds]]
-min = -0.2
-max = 0.05
-tile_type = "Rock"
-
-[[biomes.thresholds]]
-min = 0.05
-max = 0.2
-tile_type = "Grass"
-
-[[biomes.thresholds]]
-min = 0.2
-max = 1.0
-tile_type = "Rock"
-
-
-[[biomes]]
-name = "Mountain"
-base_height = 0.7
-height_variation = 1.2
-
 [[biomes.noise_layers]]
-scale = 8.0   # Couches fines pour détails locaux
-weight = 0.5
-
-[[biomes.noise_layers]]
-scale = 2.0   # Couches fines supplémentaires pour ajouter des détails
-weight = 0.2
+scale =1.0
+weight = 0.1
 
 [[biomes.thresholds]]
 min = -1.0
-max = -0.4
+max = 0.5
 tile_type = "Fluid"
 fluid_type = "Water"
 
 [[biomes.thresholds]]
-min = -0.4
-max = -0.1
+min = 0.5
+max = 0.6
 tile_type = "Sand"
 
 [[biomes.thresholds]]
-min = -0.1
-max = 0.2
-tile_type = "Rock"
-
-[[biomes.thresholds]]
-min = 0.2
-max = 0.5
+min = 0.6
+max = 0.7
 tile_type = "Dirt"
 
 [[biomes.thresholds]]
-min = 0.5
+min = 0.7
 max = 0.8
 tile_type = "Grass"
 
@@ -79,97 +40,136 @@ max = 1.0
 tile_type = "Rock"
 
 
+
+
+
 [[biomes]]
-name = "Coast"
-base_height = -0.3
+name= "Mountain"
+base_height = 0.3
 height_variation = 0.5
 
 [[biomes.noise_layers]]
-scale = 16.0  # Plus large pour la côte
+scale = 1.0
+weight = 0.5
+[[biomes.noise_layers]]
+scale = 5.0
 weight = 1.0
 
-[[biomes.noise_layers]]
-scale = 4.0   # Moins de détails fins pour l'eau
-weight = 0.7
-
-[[biomes.noise_layers]]
-scale = 2.0   # Détails fins pour plages et terres
-weight = 0.3
 
 [[biomes.thresholds]]
 min = -1.0
-max = -0.4
+max = -0.5
 tile_type = "Fluid"
-fluid_type = "Water"
+fluid_type = "Magma"
+
 
 [[biomes.thresholds]]
-min = -0.4
-max = -0.1
-tile_type = "Sand"
-
-[[biomes.thresholds]]
-min = -0.1
-max = 0.1
+min = -0.5
+max = 0.0
 tile_type = "Dirt"
 
 [[biomes.thresholds]]
-min = 0.1
-max = 0.3
+min = 0.0
+max = 0.2
 tile_type = "Grass"
 
 [[biomes.thresholds]]
-min = 0.3
-max = 0.6
-tile_type = "Rock"
-
-[[biomes.thresholds]]
-min = 0.6
+min = 0.2
 max = 1.0
 tile_type = "Rock"
 
 
+
+
 [[biomes]]
-name = "Ocean"
-base_height = -1.0
-height_variation = 0.1
+name= "Coast"
+base_height = 0.0
+height_variation = 0.0
 
 [[biomes.noise_layers]]
-scale = 64.0  # Très large pour l'océan
+scale = 0.08
 weight = 1.0
-
 [[biomes.noise_layers]]
-scale = 8.0   # Quelques petites îles
-weight = 0.4
-
-[[biomes.noise_layers]]
-scale = 2.0   # Détails fins pour îles
+scale = 8.0
 weight = 0.2
 
 [[biomes.thresholds]]
 min = -1.0
-max = -0.3
+max = 0.5
 tile_type = "Fluid"
 fluid_type = "Water"
 
 [[biomes.thresholds]]
-min = -0.3
-max = 0.0
+min = 0.5
+max = 0.6
 tile_type = "Sand"
 
 [[biomes.thresholds]]
-min = 0.0
-max = 0.1
+min = 0.6
+max = 0.7
 tile_type = "Dirt"
 
 [[biomes.thresholds]]
-min = 0.1
-max = 0.3
+min = 0.7
+max = 0.8
 tile_type = "Grass"
 
 [[biomes.thresholds]]
-min = 0.3
+min = 0.8
 max = 1.0
 tile_type = "Rock"
+
+
+
+
+
+
+[[biomes]]
+name= "Ocean"
+base_height = 0.0
+height_variation = 0.0
+
+[[biomes.noise_layers]]
+scale = 0.05
+weight = 0.7
+[[biomes.noise_layers]]
+scale = 2.0
+weight = 0.5
+[[biomes.noise_layers]]
+scale =1.0
+weight = 0.1
+
+[[biomes.thresholds]]
+min = -1.0
+max = 0.5
+tile_type = "Fluid"
+fluid_type = "Water"
+
+[[biomes.thresholds]]
+min = 0.5
+max = 0.6
+tile_type = "Sand"
+
+[[biomes.thresholds]]
+min = 0.6
+max = 0.7
+tile_type = "Dirt"
+
+[[biomes.thresholds]]
+min = 0.7
+max = 0.8
+tile_type = "Grass"
+
+[[biomes.thresholds]]
+min = 0.8
+max = 1.0
+tile_type = "Rock"
+
+
+
+
+
+
 
 
 [[biomes]]
