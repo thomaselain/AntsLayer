@@ -9,7 +9,6 @@ use params::{ AdditionalParams, Threshold };
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{ self, Read };
-use std::slice::SliceIndex;
 use std::str::FromStr;
 use tile::{ FluidType, TileType };
 
@@ -29,38 +28,44 @@ impl Default for BiomeConfig {
             name: String::from_str(DEFAULT_BIOME_NAME).unwrap(),
             base_height: 0.0,
             height_variation: 0.0,
+            noise_layers: vec![
+                NoiseLayer { scale: 0.5, weight: 1.0 },
+                NoiseLayer { scale: 2.0, weight: 0.7 },
+                NoiseLayer { scale: 1.0, weight: 0.2 }
+            ],
             thresholds: vec![
                 Threshold {
                     min: -1.0,
                     max: -0.5,
-                    tile_type: TileType::Fluid(FluidType::Water),
+                    tile_type: TileType::Fluid(FluidType::Water).into(),
                     fluid_type: Some(FluidType::Water),
                 },
                 Threshold {
                     min: -0.5,
                     max: 0.0,
-                    tile_type: TileType::Sand,
+                    tile_type: TileType::Sand.into(),
                     fluid_type: None,
                 },
                 Threshold {
                     min: 0.0,
                     max: 0.5,
-                    tile_type: TileType::Dirt,
+                    tile_type: TileType::Dirt.into(),
                     fluid_type: None,
-                }, Threshold {
+                },
+                Threshold {
                     min: 0.5,
                     max: 0.75,
-                    tile_type: TileType::Grass,
+                    tile_type: TileType::Grass.into(),
                     fluid_type: None,
-                },Threshold {
+                },
+                Threshold {
                     min: 0.75,
                     max: 1.0,
-                    tile_type: TileType::Rock,
+                    tile_type: TileType::Rock.into(),
                     fluid_type: None,
                 }
             ],
-            additional_params: Default::default(),
-            noise_layers: Default::default(),
+            additional_params: None,
         }
     }
 }
@@ -78,7 +83,7 @@ impl BiomeConfig {
         // eprintln!("{.2}", noise_value);
         for threshold in &self.thresholds {
             if noise_value >= threshold.min && noise_value < threshold.max {
-                return threshold.tile_type;
+                return TileType::from(threshold.tile_type.as_str());
             }
         }
         TileType::Empty // Par défaut si aucune correspondance
@@ -129,12 +134,15 @@ impl Config {
     }
 
     fn load_biomes() -> Result<Config, io::Error> {
-        let mut file = File::open(BiomeConfig::path())?;
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
+        let file_content = include_str!("../config/biomes_config.toml");
 
         // Désérialisation du fichier TOML en struct Config
-        toml::de::from_str(&contents).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        let biomes: Result<Config, toml::de::Error> = toml::de::from_str(&file_content);
+
+        match biomes {
+            Ok(cfg) => { Ok(cfg) }
+            Err(e) => panic!("{}",e),
+        }
     }
 
     fn load() -> Result<Config, io::Error> {

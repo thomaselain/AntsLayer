@@ -1,18 +1,18 @@
-use std::str::FromStr;
-
 use serde::Deserialize;
 use tile::{ FluidType, TileType };
+
+type TileTypeStr = String;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Threshold {
     pub min: f64, // Valeur minimale du bruit pour ce type de tuile
     pub max: f64, // Valeur maximale du bruit
-    pub tile_type: TileType, // Type de tuile associé
+    pub tile_type: TileTypeStr, // Type de tuile associé
     pub fluid_type: Option<FluidType>, // Type de tuile associé
 }
 impl Default for Threshold {
     fn default() -> Self {
-        Self { min: -1.0, max: 1.0, tile_type: TileType::Empty, fluid_type: None }
+        Self { min: -1.0, max: 1.0, tile_type: TileType::Empty.into(), fluid_type: None }
     }
 }
 

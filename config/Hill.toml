@@ -18,8 +18,7 @@ weight = 0.4
 [[biomes.thresholds]]
 min = -1.0
 max = -0.2
-tile_type = "Fluid"
-fluid_type = "Water"
+tile_type = "Water"
 
 [[biomes.thresholds]]
 min = -0.2

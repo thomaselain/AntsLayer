@@ -1,6 +1,37 @@
 [[biomes]]
 name= "Default"
 base_height = 0.0
+height_variation = 0.5
+
+[[biomes.noise_layers]]
+scale = 0.2
+weight = 1.0
+[[biomes.noise_layers]]
+scale = 5.0
+weight = 0.7
+
+[[biomes.thresholds]]
+min = -1.0
+max = 0.0
+tile_type = "Water"
+
+[[biomes.thresholds]]
+min = 0.0
+max = 0.5
+tile_type = "Dirt"
+
+[[biomes.thresholds]]
+min = 0.5
+max = 1.0
+tile_type = "Grass"
+
+
+
+
+
+[[biomes]]
+name= "Ocean"
+base_height = 0.0
 height_variation = 0.0
 
 [[biomes.noise_layers]]
@@ -16,8 +47,7 @@ weight = 0.1
 [[biomes.thresholds]]
 min = -1.0
 max = 0.5
-tile_type = "Fluid"
-fluid_type = "Water"
+tile_type = "Water"
 
 [[biomes.thresholds]]
 min = 0.5
@@ -38,3 +68,65 @@ tile_type = "Grass"
 min = 0.8
 max = 1.0
 tile_type = "Rock"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[[biomes]]
+name= "Coast"
+base_height = 0.0
+height_variation = 0.0
+
+[[biomes.noise_layers]]
+scale = 0.08
+weight = 1.0
+[[biomes.noise_layers]]
+scale = 8.0
+weight = 0.2
+
+[[biomes.thresholds]]
+min = -1.0
+max = 0.5
+tile_type = "Water"
+
+[[biomes.thresholds]]
+min = 0.5
+max = 0.6
+tile_type = "Sand"
+
+[[biomes.thresholds]]
+min = 0.6
+max = 0.7
+tile_type = "Dirt"
+
+[[biomes.thresholds]]
+min = 0.7
+max = 0.8
+tile_type = "Grass"
+
+[[biomes.thresholds]]
+min = 0.8
+max = 1.0
+tile_type = "Rock"
+
+
+
+
+
+
+

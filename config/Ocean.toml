@@ -10,14 +10,13 @@ weight = 0.7
 scale = 2.0
 weight = 0.5
 [[biomes.noise_layers]]
-scale =1.0
+scale = 1.0
 weight = 0.1
 
 [[biomes.thresholds]]
 min = -1.0
 max = 0.5
-tile_type = "Fluid"
-fluid_type = "Water"
+tile_type = "Water"
 
 [[biomes.thresholds]]
 min = 0.5
@@ -38,4 +37,3 @@ tile_type = "Grass"
 min = 0.8
 max = 1.0
 tile_type = "Rock"
-

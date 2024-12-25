@@ -1,5 +1,5 @@
 mod tests;
-pub mod from;
+pub mod str;
 
 use coords::aliases::TilePos;
 use serde::{ Serialize, Deserialize };
