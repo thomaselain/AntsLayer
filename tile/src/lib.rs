@@ -1,4 +1,5 @@
 mod tests;
+pub mod from;
 
 use coords::aliases::TilePos;
 use serde::{ Serialize, Deserialize };
@@ -27,7 +28,7 @@ pub enum TileType {
     Grass,
     Floor,
     Fluid(FluidType),
-    Custom(u8), //+ (types personnalisés)
+    Custom(u16), //+ (types personnalisés)
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -61,7 +62,7 @@ use bitflags::bitflags;
 
 bitflags! {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
-    pub struct TileFlags: u8 {
+    pub struct TileFlags: u16 {
         const TRAVERSABLE  = 0b00000001;
         const DIGGABLE     = 0b00000010;
         const BUILDABLE    = 0b00000100;
@@ -74,7 +75,7 @@ bitflags! {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(u8)]
+#[repr(u16)]
 pub enum FluidType {
     Magma,
     Water,

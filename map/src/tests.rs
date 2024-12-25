@@ -6,7 +6,7 @@ use chunk_manager::ChunkManager;
 use coords::aliases::TilePos;
 use crate::{ renderer::Renderer, thread::MapStatus, WORLD_STARTING_AREA };
 
-use biomes::{ BiomeConfig, Config };
+use biomes::Config;
 
 #[allow(dead_code)]
 impl Renderer {}
@@ -16,7 +16,7 @@ pub fn save_load() {
     let saved = Map::new("test/saved");
     assert!(saved.is_ok());
     let mut map = saved.unwrap();
-    map.add_chunk(TilePos::new(0,0), Chunk::default());
+    map.add_chunk(TilePos::new(0,0), Chunk::default()).unwrap();
     let saved = map.save();
     assert!(saved.is_ok());
 
@@ -90,7 +90,7 @@ mod threads {
     fn test_map_channel() {
         let key = TilePos::new(1, 1);
         let (sndr, rcvr): (Sender<MapStatus>, Receiver<MapStatus>) = mpsc::channel();
-        let cfg = Config::default_biome(Config::new());
+        let cfg = Config::default_biome(&Config::new());
 
         thread::spawn(move || {
             Chunk::generate_async(key, 42, cfg, sndr.clone());
@@ -114,7 +114,7 @@ mod threads {
     fn big_array_of_chunks() {
         let map = Map::new("big").unwrap();
         let seed = map.seed;
-        let cfg = Config::default_biome(Config::new());
+        let cfg = Config::default_biome(&Config::new());
 
         let mngr = Arc::new(Mutex::new(ChunkManager::new()));
 

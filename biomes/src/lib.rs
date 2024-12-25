@@ -9,6 +9,8 @@ use params::{ AdditionalParams, Threshold };
 use serde::Deserialize;
 use std::fs::File;
 use std::io::{ self, Read };
+use std::slice::SliceIndex;
+use std::str::FromStr;
 use tile::{ FluidType, TileType };
 
 #[derive(Deserialize, Debug, Clone)]
@@ -24,10 +26,39 @@ pub struct BiomeConfig {
 impl Default for BiomeConfig {
     fn default() -> Self {
         Self {
-            name: Default::default(),
-            base_height: Default::default(),
-            height_variation: Default::default(),
-            thresholds: Default::default(),
+            name: String::from_str(DEFAULT_BIOME_NAME).unwrap(),
+            base_height: 0.0,
+            height_variation: 0.0,
+            thresholds: vec![
+                Threshold {
+                    min: -1.0,
+                    max: -0.5,
+                    tile_type: TileType::Fluid(FluidType::Water),
+                    fluid_type: Some(FluidType::Water),
+                },
+                Threshold {
+                    min: -0.5,
+                    max: 0.0,
+                    tile_type: TileType::Sand,
+                    fluid_type: None,
+                },
+                Threshold {
+                    min: 0.0,
+                    max: 0.5,
+                    tile_type: TileType::Dirt,
+                    fluid_type: None,
+                }, Threshold {
+                    min: 0.5,
+                    max: 0.75,
+                    tile_type: TileType::Grass,
+                    fluid_type: None,
+                },Threshold {
+                    min: 0.75,
+                    max: 1.0,
+                    tile_type: TileType::Rock,
+                    fluid_type: None,
+                }
+            ],
             additional_params: Default::default(),
             noise_layers: Default::default(),
         }
@@ -43,31 +74,11 @@ impl BiomeConfig {
         Perlin::new(seed)
     }
 
-    pub fn tile_type_from_noise(noise_value: f64, biome: &BiomeConfig) -> TileType {
+    pub fn tile_type_from_noise(self, noise_value: f64) -> TileType {
         // eprintln!("{.2}", noise_value);
-        for threshold in &biome.thresholds {
+        for threshold in &self.thresholds {
             if noise_value >= threshold.min && noise_value < threshold.max {
-                if threshold.tile_type == "Fluid" {
-                    // Si c'est un fluide, vérifie le type de fluide
-                    if let Some(fluid_type) = &threshold.fluid_type {
-                        return match fluid_type.as_string().as_str() {
-                            "Water" => TileType::Fluid(FluidType::Water),
-                            "Magma" => TileType::Fluid(FluidType::Magma),
-                            _ => TileType::Empty, // En cas d'erreur ou type inconnu
-                        };
-                    }
-                }
-                // Retourne un type de tuile standard
-                return match threshold.tile_type.as_str() {
-                    "Rock" => TileType::Rock,
-                    "Grass" => TileType::Grass,
-                    "Dirt" => TileType::Dirt,
-                    "Wall" => TileType::Wall,
-                    "Sand" => TileType::Wall,
-                    "Floor" => TileType::Floor,
-                    "Empty" => TileType::Empty,
-                    s => todo!("Cutom tile : {:?}", s), // Valeur personnalisée par défaut
-                };
+                return threshold.tile_type;
             }
         }
         TileType::Empty // Par défaut si aucune correspondance
@@ -96,17 +107,25 @@ impl Config {
     pub fn new() -> Self {
         Self::load().expect("Failed to load config")
     }
-    pub fn default_biome(self) -> BiomeConfig {
-        self.get_biome(DEFAULT_BIOME_NAME)
+    pub fn default_biome(&self) -> BiomeConfig {
+        let default = BiomeConfig::default();
+
+        for biome in self.biomes.clone() {
+            if biome.name == DEFAULT_BIOME_NAME {
+                return biome;
+            }
+        }
+
+        default
     }
-    pub fn get_biome(self, name: &str) -> BiomeConfig {
-        for biome in self.biomes {
+    pub fn get_biome(&self, name: &str) -> BiomeConfig {
+        for biome in self.clone().biomes {
             if biome.name == name {
                 return biome;
             }
         }
         eprintln!("Biome \"{}\" not found, set to default", name);
-        todo!("Default biome");
+        BiomeConfig::default()
     }
 
     fn load_biomes() -> Result<Config, io::Error> {

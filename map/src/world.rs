@@ -1,4 +1,4 @@
-use std::{ collections::HashMap, fs::File, io::Error, path::Path };
+use std::{ collections::HashMap, io::Error, path::Path };
 
 use chunk::ChunkPath;
 use rand::Rng;

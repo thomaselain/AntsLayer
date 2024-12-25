@@ -14,7 +14,7 @@ use serde::{ Deserialize, Serialize };
 use thread::{ ChunkError, Status };
 use tile::{ Tile, TileFlags, TileType };
 use unit::Unit;
-use std::io::{ self, Error, Read, Seek, SeekFrom };
+use std::io::{ self, Read, Seek, SeekFrom };
 
 pub const CHUNK_SIZE: usize = 32;
 
@@ -90,10 +90,10 @@ impl Chunk {
                 let ny = ((y as f64) + (chunk_offset.y() as f64)) / (CHUNK_SIZE as f64);
 
                 // Combinaison des couches de bruit
-                let value = biome.combined_noise(&perlin, nx, ny);
+                let value = biome.clone().combined_noise(&perlin, nx, ny);
 
                 // Détermine le type de tuile
-                let tile_type = BiomeConfig::tile_type_from_noise(value, &biome);
+                let tile_type = biome.clone().tile_type_from_noise(value);
 
                 chunk.set_tile(x, y, Tile::new(key, tile_type, 0, TileFlags::empty()));
             }

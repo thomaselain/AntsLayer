@@ -6,7 +6,7 @@ use tile::{ FluidType, TileType };
 
 use crate::{ camera::Camera, Map };
 
-pub const TILE_SIZE: i32 = 1;
+pub const TILE_SIZE: i32 = 5;
 
 pub fn tile_screen_coords(
     chunk_key: TilePos,

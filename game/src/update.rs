@@ -1,4 +1,3 @@
-use biomes::{BiomeConfig, Config};
 use chunk::{ thread::Status, Chunk, ChunkPath };
 use map::Map;
 

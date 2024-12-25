@@ -24,8 +24,8 @@ fn combined_noise() {
     for _ in TEST_RANGE {
         let seed: u32 = rand::thread_rng().gen_range(TEST_RANGE) as u32;
         let perlin = BiomeConfig::noise_from_seed(seed);
-        let value = cfg.combined_noise(&perlin, 0.5, 0.5);
-        let tile_type = BiomeConfig::tile_type_from_noise(value, &cfg);
+        let value = cfg.clone().combined_noise(&perlin, 0.5, 0.5);
+        let tile_type =cfg.clone().tile_type_from_noise(value);
         eprintln!("{:.2}  -->  {:?}", value, tile_type);
         assert!((-1.0..=1.0).contains(&value), "Noise value out of range");
     }
