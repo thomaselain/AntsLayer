@@ -1,4 +1,4 @@
-use std::{ collections::HashMap, io::Error, path::Path };
+use std::{ collections::HashMap, io::{self, Error}, path::Path };
 
 use chunk::ChunkPath;
 use rand::Rng;
@@ -43,7 +43,7 @@ impl Map {
     }
 
     // Charger la map entière
-    pub fn load(name: &str) -> Result<Map, Error> {
+    pub fn load(name: &str) -> Result<Map, io::Error> {
         let path = Path::new(name);
         assert!(path.is_dir());
 

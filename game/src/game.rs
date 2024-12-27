@@ -1,3 +1,4 @@
+use std::io;
 use std::sync::mpsc::Sender;
 
 use chunk::{ thread::Status, Chunk };
@@ -18,11 +19,9 @@ use crate::Game;
 pub const WIN_DEFAULT_WIDTH: u32 = 1000;
 pub const WIN_DEFAULT_HEIGHT: u32 = 800;
 impl Game {
-    // pub fn load_world(&mut self) -> Result<Map, ()> {
-    //     let path = "./data/test_world";
-    //     println!("Loading {}", path);
-    //     // Ok(Map::load(path).expect(&format!("Failed to load map at '{}'", path)))
-    // }
+    pub fn load_world(name:&str) -> Result<Map, io::Error> {
+         Map::load(name)
+    }
 
     pub fn create_world(&mut self, sndr: Sender<(TilePos, Status)>) -> Result<(), String> {
         self.map = Some(Map::init_test());

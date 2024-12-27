@@ -1,10 +1,10 @@
 use game::Game;
-use menu::main_menu;
+use menu::Menu;
 
 pub fn main() {
-    if main_menu().is_err() {
-        todo!("main_menu returned Error!");
-    }
+    let menu = Menu::new();
+
+    let _ = menu.open();
 
     let mut game = Game::new(sdl2::init().unwrap());
     game.create_world(game.sndr.clone()).unwrap();

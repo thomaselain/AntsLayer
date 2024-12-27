@@ -14,7 +14,7 @@ use chunk_manager::Draw;
 use chunk_manager::DrawAll;
 use chunk_manager::ChunkManager;
 
-use biomes::Config;
+use biomes::{ BiomeConfig, Config };
 use inputs::Inputs;
 use sdl2::{ event::Event, Sdl };
 use map::{ camera::Camera, renderer::Renderer, thread::MapStatus, Map };
@@ -72,5 +72,17 @@ impl Game {
             inputs: Inputs::new(),
             map: None,
         }
+    }
+}
+
+struct MapSettings {
+    name: String,
+    biome_cfg: BiomeConfig,
+}
+
+mod map_editor {
+    use crate::Game;
+
+    impl Game {
     }
 }

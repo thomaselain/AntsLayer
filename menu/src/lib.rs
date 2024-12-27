@@ -1,75 +1,109 @@
 mod button;
+mod map_editor;
 
-use button::Button;
+use std::collections::HashMap;
+
+use button::{ Button, MenuError, MenuLabel, Output };
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
+use sdl2::render::Canvas;
+use sdl2::video::Window;
+use sdl2::{ EventPump, Sdl };
 
-pub fn main_menu() -> Result<(), ()> {
-    // Initialisation SDL2
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
-    let window = video_subsystem
-        .window("Menu Principal", 600, 600)
-        .position_centered()
-        .build()
-        .unwrap();
-    let mut canvas = window.into_canvas().build().unwrap();
-    let mut event_pump = sdl_context.event_pump().unwrap();
+type ButtonList = HashMap<u8, Button>;
 
-    // Créer les boutons du menu
-    let buttons: Vec<Button> = vec![
-        Button::new("Gérer la map", 300, 150, 200, 50, Color::GRAY),
-        Button::new("Lancer le jeu", 300, 250, 200, 50, Color::BLUE),
-        Button::new("Paramètres", 300, 350, 200, 50, Color::GREEN),
-        Button::new("Quitter", 300, 450, 200, 50, Color::RED)
-    ];
+pub struct Menu {
+    buttons: ButtonList,
+    sdl: Sdl,
+    canvas: Canvas<Window>,
+}
 
-    // Boucle principale
-    'main_menu: loop {
-        for event in event_pump.poll_iter() {
+impl Menu {
+    pub fn new() -> Self {
+        let sdl = sdl2::init().unwrap();
+        let video_subsystem = sdl.video().unwrap();
+        let window = video_subsystem
+            .window("Menu Principal", 600, 600)
+            .position_centered()
+            .build()
+            .unwrap();
+        let canvas = window.into_canvas().build().unwrap();
+
+        Menu { buttons: Menu::build_buttons(), sdl, canvas }
+    }
+
+    fn build_buttons() -> ButtonList {
+        let mut buttons = ButtonList::new();
+
+        buttons.insert(1, Button::new(MenuLabel::MapEditor));
+        buttons.insert(2, Button::new(MenuLabel::LoadWorld));
+        buttons.insert(3, Button::new(MenuLabel::Settings));
+        buttons.insert(4, Button::new(MenuLabel::Exit));
+        // buttons.insert(5, Button::new(MenuLabel::MainMenu)); // Current menu
+
+        buttons
+    }
+
+    fn catch_menu_events(&self, mut events: EventPump) -> Result<MenuLabel, ()> {
+        for event in events.poll_iter() {
             match event {
-                Event::Quit { .. } => {
-                    break 'main_menu;
+                Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                    return Ok(MenuLabel::Exit); // Quitter sur escape
                 }
                 Event::MouseButtonDown { x, y, .. } => {
-                    for button in &buttons {
+                    for (_id, button) in &self.buttons {
                         if button.is_clicked(x, y) {
-                            match button.label.as_str() {
-                                "Gérer la map" => {
-                                    todo!("Outil de création de maps");
+                            // button.do_button_stuff; ???
+
+                            match button.label {
+                                MenuLabel::MapEditor => {
+                                    return Ok(MenuLabel::MapEditor);
                                 }
-                                "Lancer le jeu" => {
-                                    return Ok(());
-                                } // Lancer le jeu
-                                "Paramètres" => todo!("Ouvrir les paramètres"), // Paramètres
-                                "Quitter" => {
-                                    return Err(());
-                                } // Quitter l'application
-                                _ => {}
+                                MenuLabel::LoadWorld => {
+                                    return Ok(MenuLabel::LoadWorld);
+                                }
+                                MenuLabel::Settings => {
+                                    todo!("Ouvrir les paramètres"); // Paramètres
+                                }
+                                MenuLabel::Exit => {
+                                    return Ok(MenuLabel::Exit);
+                                }
+                                MenuLabel::MainMenu => todo!(),
                             }
-                            return Ok(());
                         }
                     }
-                }
-                Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                    break 'main_menu; // Quitter sur escape
                 }
                 _ => {}
             }
         }
+        Err(())
+    }
+    pub fn main(&self) -> Result<MenuLabel, MenuError> {
+        loop {
+            let events = self.sdl.event_pump().unwrap();
+            if let Ok(next_menu) = self.catch_menu_events(events) {
+                return Ok(next_menu);
+            }else{
 
-        // Rendu du menu
-        canvas.set_draw_color(Color::RGB(0, 0, 0)); // Fond noir
-        canvas.clear();
+            }
+        }
+    }
 
-        for button in &buttons {
-            button.render(&mut canvas);
+    pub fn open(&mut self) -> Result<MenuLabel, MenuError> {
+        self.canvas.set_draw_color(Color::RGB(0, 0, 0)); // Fond noir
+        self.canvas.clear();
+
+        for (_id, button) in &self.buttons {
+            button.render(&mut self.canvas);
         }
 
-        canvas.present();
+        self.canvas.present();
+
+        self.main()
+
+        // Err(MenuError::InvalidOutput)
     }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -77,8 +111,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        main_menu().unwrap();
-        print!("yep");
+    fn open_editor() {
+        let mut menu = Menu::new();
+        let next_menu = menu.open();
+
+        println!("Next menu : {:#?}",next_menu);
+        assert!(next_menu.is_ok());
+        let label = next_menu.unwrap();
+
+        assert_eq!(label, MenuLabel::MapEditor);
+        menu.map_editor();
     }
 }
