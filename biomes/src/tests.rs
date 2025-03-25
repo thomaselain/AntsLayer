@@ -23,7 +23,7 @@ fn combined_noise() {
 
     for _ in TEST_RANGE {
         let seed: u32 = rand::thread_rng().gen_range(TEST_RANGE) as u32;
-        let perlin = BiomeConfig::noise_from_seed(seed);
+        let perlin = Perlin::new(seed);
         let value = cfg.clone().combined_noise(&perlin, 0.5, 0.5);
         let tile_type =cfg.clone().tile_type_from_noise(value);
         eprintln!("{:.2}  -->  {:?}", value, tile_type);

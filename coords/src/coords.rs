@@ -1,5 +1,5 @@
 use std::ops::{ Add, AddAssign, Sub, SubAssign };
-use crate::convert::{ Tof32, Toi32 };
+use crate::convert::{ Tof32,Tof64, Toi32 };
 
 /// `Coords` is a struct that holds two values, `x` and `y`, representing a 2D coordinate in a generic type `T`.
 /// Methods are provided to convert `x` and `y` between `i32` and `f32` types.
@@ -59,6 +59,16 @@ impl<T> Coords<T> where T: Clone + Serialize {
     /// Returns the `y` coordinate as an `f32` by converting the internal value.
     pub fn y_f32(&self) -> f32 where T: Tof32 {
         self.y.to_f32()
+    }
+
+    /// Returns the `x` coordinate as an `f32` by converting the internal value.
+    pub fn x_f64(&self) -> f64 where T: Tof64 {
+        self.x.to_f64()
+    }
+
+    /// Returns the `y` coordinate as an `f64` by converting the internal value.
+    pub fn y_f64(&self) -> f64 where T: Tof64 {
+        self.y.to_f64()
     }
 }
 

@@ -59,7 +59,6 @@ impl Chunk {
 
         thread::spawn(move || {
             let (key, chunk) = Self::generate_from_biome(key, seed, biome_config);
-            // let ((x, y), chunk) = Self::generate_from_biome(x, y, seed, biome_config)?;
 
             // Envoyer l'état Ready en verrouillant le Mutex
             sender.send((key, Status::Ready(chunk))).unwrap();

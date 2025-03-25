@@ -15,7 +15,7 @@ use chunk::{ Chunk, ChunkPath, CHUNK_SIZE };
 use coords::aliases::TilePos;
 use serde::{ Serialize, Deserialize };
 
-pub const WORLD_STARTING_AREA: i32 = 15;
+pub const WORLD_STARTING_AREA: i32 = 5;
 pub const WORLDS_FOLDER: &str = "data/worlds/";
 
 #[derive(Clone, Serialize, Deserialize)]

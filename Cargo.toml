@@ -9,8 +9,6 @@ members = [
 
     "unit",
 
-    "menu",
-
     "coords",
 ]
 

@@ -1,5 +1,6 @@
 use std::sync::mpsc::Sender;
 
+use biomes::Config;
 use chunk::{ thread::Status, Chunk };
 #[allow(unused_imports)]
 use chunk_manager::Draw;
@@ -7,6 +8,7 @@ use chunk_manager::Draw;
 use chunk_manager::DrawAll;
 
 use coords::aliases::TilePos;
+use coords::Coords;
 use sdl2::{ keyboard::Keycode, pixels::Color };
 use map::{ Map, WORLD_STARTING_AREA };
 
@@ -24,18 +26,18 @@ impl Game {
     //     // Ok(Map::load(path).expect(&format!("Failed to load map at '{}'", path)))
     // }
 
-    pub fn create_world(&mut self, sndr: Sender<(TilePos, Status)>) -> Result<(), String> {
+    pub fn create_world(&mut self) -> Result<(), String> {
         self.map = Some(Map::init_test());
 
         let half_size = WORLD_STARTING_AREA / 2;
 
         for x in -half_size..=half_size {
             for y in -half_size..=half_size {
-                Chunk::generate_async(
-                    TilePos::new(x, y),
+                let key = Coords::new(x, y);
+                Chunk::generate_from_biome(
+                    key,
                     self.map.clone().unwrap().seed,
-                    self.config.biomes[self.current_biome].clone(),
-                    sndr.clone()
+                    self.config.clone().biome_from_coord((key.x_f64(), key.y_f64()))
                 );
             }
         }

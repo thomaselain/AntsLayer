@@ -3,8 +3,9 @@ mod tests;
 mod noise;
 mod params;
 
+use ::noise::core::perlin;
 use noise::NoiseLayer;
-use ::noise::Perlin;
+use ::noise::{ NoiseFn, Perlin };
 use params::{ AdditionalParams, Threshold };
 use serde::Deserialize;
 use std::fs::File;
@@ -71,14 +72,13 @@ impl Default for BiomeConfig {
 }
 
 impl BiomeConfig {
-    fn path() -> String {
-        "config/biomes_config.toml".to_string()
-    }
+    // fn path() -> String {
+    //     "config/biomes_config.toml".to_string()
+    // }
 
     pub fn noise_from_seed(seed: u32) -> Perlin {
         Perlin::new(seed)
     }
-
     pub fn tile_type_from_noise(self, noise_value: f64) -> TileType {
         // eprintln!("{.2}", noise_value);
         for threshold in &self.thresholds {
@@ -123,6 +123,7 @@ impl Config {
 
         default
     }
+
     pub fn get_biome(&self, name: &str) -> BiomeConfig {
         for biome in self.clone().biomes {
             if biome.name == name {
@@ -141,7 +142,7 @@ impl Config {
 
         match biomes {
             Ok(cfg) => { Ok(cfg) }
-            Err(e) => panic!("{}",e),
+            Err(e) => panic!("{}", e),
         }
     }
 

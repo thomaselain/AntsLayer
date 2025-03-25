@@ -27,6 +27,18 @@ impl Tof32 for i32 {
     }
 }
 
+/// Trait to convert a type to `f64`.
+pub trait Tof64 {
+    fn to_f64(&self) -> f64;
+}
+
+impl Tof64 for i32 {
+    fn to_f64(&self) -> f64 {
+        *self as f64
+    }
+}
+
+
 impl Display for Coords<i32> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({},{})", self.x(), self.x())

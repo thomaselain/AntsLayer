@@ -50,7 +50,7 @@ impl Game {
                         Chunk::generate_async(
                             key,
                             self.map.clone().unwrap().seed,
-                            self.config.clone().default_biome(),
+                            self.config.clone().biome_from_coord((key.x_f64() as f64, key.y_f64())),
                             self.sndr.clone()
                         );
                     }

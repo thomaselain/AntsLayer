@@ -127,10 +127,10 @@ impl Game {
                 0
             };
             println!("{:?}", self.config.biomes[self.current_biome].name);
-            self.create_world(self.sndr.clone()).unwrap();
+            self.create_world().unwrap();
         }
         if self.inputs.is_key_pressed(Keycode::R) {
-            self.create_world(self.sndr.clone()).unwrap();
+            self.create_world().unwrap();
         }
         if self.inputs.is_key_pressed(Keycode::L) {
             // self.load_world()?;

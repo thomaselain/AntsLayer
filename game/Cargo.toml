@@ -15,6 +15,5 @@ unit = { path="../unit"}
 tile = { path="../tile"}
 map = { path="../map"}
 chunk_manager = { path="../map/chunk_manager"}
-menu = { path="../menu"}
 sdl2 = "0.37"
 byteorder = "1.4"
