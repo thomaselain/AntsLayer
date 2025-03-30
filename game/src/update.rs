@@ -1,3 +1,4 @@
+use biomes::Config;
 use chunk::{ thread::Status, Chunk, ChunkPath };
 use map::Map;
 
@@ -46,11 +47,16 @@ impl Game {
                         mngr.loaded_chunks.insert(key, Status::Ready(chunk));
                     }
                     Err((key, _e)) => {
+                        let seed = self.map.clone().unwrap().seed;
+                        let (_height, biome) = self.config
+                            .clone()
+                            .biome_from_coord((key.x(), key.y()), seed);
+
                         // eprintln!("Cannot load {}, generating new chunk", key);
                         Chunk::generate_async(
                             key,
                             self.map.clone().unwrap().seed,
-                            self.config.clone().biome_from_coord((key.x_f64() as f64, key.y_f64())),
+                            biome,
                             self.sndr.clone()
                         );
                     }

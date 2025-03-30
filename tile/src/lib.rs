@@ -79,6 +79,7 @@ bitflags! {
 pub enum FluidType {
     Magma,
     Water,
+    Deep_water,
 }
 
 impl FluidType {
@@ -86,12 +87,14 @@ impl FluidType {
         match self {
             FluidType::Magma => 1,
             FluidType::Water => 3,
+            FluidType::Deep_water => 2,
         }
     }
     pub fn as_string(self) -> String {
         match self {
             FluidType::Magma => "Magma".to_string(),
             FluidType::Water => "Water".to_string(),
+            FluidType::Deep_water => "Deep_water".to_string(),
         }
     }
 }

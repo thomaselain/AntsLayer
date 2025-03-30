@@ -16,8 +16,6 @@ use tile::{ FluidType, TileType };
 #[derive(Deserialize, Debug, Clone)]
 pub struct BiomeConfig {
     pub name: String, // Nom du biome
-    pub base_height: f64,
-    pub height_variation: f64, // Variation de hauteur
     pub thresholds: Vec<Threshold>, // Liste dynamique des seuils
     pub additional_params: Option<AdditionalParams>, // Paramètres facultatifs
     pub noise_layers: Vec<NoiseLayer>, // Nouvelles couches de bruit
@@ -25,49 +23,7 @@ pub struct BiomeConfig {
 
 impl Default for BiomeConfig {
     fn default() -> Self {
-        Self {
-            name: String::from_str(DEFAULT_BIOME_NAME).unwrap(),
-            base_height: 0.0,
-            height_variation: 0.0,
-            noise_layers: vec![
-                NoiseLayer { scale: 0.5, weight: 1.0 },
-                NoiseLayer { scale: 2.0, weight: 0.7 },
-                NoiseLayer { scale: 1.0, weight: 0.2 }
-            ],
-            thresholds: vec![
-                Threshold {
-                    min: -1.0,
-                    max: -0.5,
-                    tile_type: TileType::Fluid(FluidType::Water).into(),
-                    fluid_type: Some(FluidType::Water),
-                },
-                Threshold {
-                    min: -0.5,
-                    max: 0.0,
-                    tile_type: TileType::Sand.into(),
-                    fluid_type: None,
-                },
-                Threshold {
-                    min: 0.0,
-                    max: 0.5,
-                    tile_type: TileType::Dirt.into(),
-                    fluid_type: None,
-                },
-                Threshold {
-                    min: 0.5,
-                    max: 0.75,
-                    tile_type: TileType::Grass.into(),
-                    fluid_type: None,
-                },
-                Threshold {
-                    min: 0.75,
-                    max: 1.0,
-                    tile_type: TileType::Rock.into(),
-                    fluid_type: None,
-                }
-            ],
-            additional_params: None,
-        }
+        Config::default().get_biome(DEFAULT_BIOME_NAME)
     }
 }
 
@@ -82,7 +38,7 @@ impl BiomeConfig {
     pub fn tile_type_from_noise(self, noise_value: f64) -> TileType {
         // eprintln!("{.2}", noise_value);
         for threshold in &self.thresholds {
-            if noise_value >= threshold.min && noise_value < threshold.max {
+            if noise_value >= threshold.min && noise_value <= threshold.max {
                 return TileType::from(threshold.tile_type.as_str());
             }
         }

@@ -34,11 +34,10 @@ impl Game {
         for x in -half_size..=half_size {
             for y in -half_size..=half_size {
                 let key = Coords::new(x, y);
-                Chunk::generate_from_biome(
-                    key,
-                    self.map.clone().unwrap().seed,
-                    self.config.clone().biome_from_coord((key.x_f64(), key.y_f64()))
-                );
+                let (_height, biome) = self.config
+                    .clone()
+                    .biome_from_coord((key.x(), key.y()), 0);
+                Chunk::generate_from_biome(key, self.map.clone().unwrap().seed, biome);
             }
         }
 

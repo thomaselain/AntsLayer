@@ -9,7 +9,7 @@ members = [
 
     "unit",
 
-    "coords",
+    "coords", "neuron",
 ]
 
 [workspace.dependencies]

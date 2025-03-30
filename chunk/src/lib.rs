@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs::{ self, File };
 use std::path::Path;
-use biomes::BiomeConfig;
+use biomes::{BiomeConfig, Config};
 use coords::aliases::TilePos;
 use serde::{ Deserialize, Serialize };
 use thread::{ ChunkError, Status };
@@ -90,10 +90,13 @@ impl Chunk {
                 let ny = ((y as f64) + (chunk_offset.y() as f64)) / (CHUNK_SIZE as f64);
 
                 // Combinaison des couches de bruit
-                let value = biome.clone().combined_noise(&perlin, nx, ny);
+                let value = biome.clone().combined_noise(seed, &perlin, (nx, ny));
 
+                // if value < -1.0 || value > 1.0 {
+                //     panic!("v = {:.2}", value);
+                // }
                 // Détermine le type de tuile
-                let tile_type = biome.clone().tile_type_from_noise(value);
+                let tile_type = biome.clone().tile_type_from_noise(value * Config::height_at((x as i32,y as i32),seed) );
 
                 chunk.set_tile(x, y, Tile::new(key, tile_type, 0, TileFlags::empty()));
             }

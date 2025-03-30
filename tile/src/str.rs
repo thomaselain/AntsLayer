@@ -4,6 +4,7 @@ impl From<&str> for TileType {
     fn from(value: &str) -> Self {
         match value {
             "Water" => TileType::Fluid(FluidType::Water),
+            "Deep_water" => TileType::Fluid(FluidType::Deep_water),
             "Magma" => TileType::Fluid(FluidType::Magma),
             "Rock" => TileType::Rock,
             "Grass" => TileType::Grass,
@@ -22,6 +23,7 @@ impl Into<String> for TileType {
     fn into(self) -> String {
         String::from(match self {
             TileType::Fluid(FluidType::Water) => "Water",
+            TileType::Fluid(FluidType::Deep_water) => "Deep_water",
             TileType::Fluid(FluidType::Magma) => "Magma",
             TileType::Rock => "Rock",
             TileType::Grass => "Grass",
