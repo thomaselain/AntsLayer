@@ -11,8 +11,8 @@ pub extern crate chunk_manager;
 use std::collections::{ HashMap, HashSet };
 // use biomes::BiomeConfig;
 use camera::Camera;
-use chunk::{ Chunk, ChunkPath, CHUNK_SIZE };
-use coords::aliases::TilePos;
+use chunk::{ Chunk, ChunkPath, CHUNK_WIDTH };
+use coords::aliases::{ChunkPos, TilePos};
 use serde::{ Serialize, Deserialize };
 
 pub const WORLD_STARTING_AREA: i32 = 5;
@@ -22,10 +22,12 @@ pub const WORLDS_FOLDER: &str = "data/worlds/";
 pub struct Map {
     pub path: String,
     pub seed: u32,
-    pub chunks: HashMap<TilePos, Chunk>, // Utilisation de coordonnées pour les chunks
+    pub chunks: HashMap<ChunkPos, Chunk>, // Utilisation de coordonnées pour les chunks
 }
 
 pub enum Directions {
+    Up,
+    Down,
     North,
     East,
     South,
@@ -49,15 +51,15 @@ impl Map {
     }
 
     // Ajouter un chunk
-    pub fn add_chunk(&mut self, key: TilePos, chunk: Chunk) -> std::io::Result<()> {
-        let path = ChunkPath::new(&self.path, key);
-        self.chunks.insert(key, chunk.clone());
+    pub fn add_chunk(&mut self, key: ChunkPos, chunk: Chunk) -> std::io::Result<()> {
+        let path = ChunkPath::new(&self.path, key.into());
+        self.chunks.insert(key.into(), chunk.clone());
 
         chunk.save(path)?;
         Ok(())
     }
 
-    pub fn get_chunk(&self, key: TilePos) -> Result<Chunk, ()> {
+    pub fn get_chunk(&self, key: ChunkPos) -> Result<Chunk, ()> {
         if !self.chunks.contains_key(&key) {
             Err(())
         } else {
@@ -65,9 +67,9 @@ impl Map {
         }
     }
 
-    pub fn visible_chunks(camera: &Camera) -> HashSet<TilePos> {
-        let chunk_x_start = camera.coords.x_i32() / (CHUNK_SIZE as i32);
-        let chunk_y_start = camera.coords.y_i32() / (CHUNK_SIZE as i32);
+    pub fn visible_chunks(camera: &Camera) -> HashSet<ChunkPos> {
+        let chunk_x_start = camera.coords.x_i32() / (CHUNK_WIDTH as i32);
+        let chunk_y_start = camera.coords.y_i32() / (CHUNK_WIDTH as i32);
 
         let mut visible = HashSet::new();
 
@@ -75,7 +77,7 @@ impl Map {
             (camera.render_distance as i32) {
             for y in chunk_y_start - (camera.render_distance as i32)..=chunk_y_start +
                 (camera.render_distance as i32) {
-                visible.insert(TilePos::new(x, y));
+                visible.insert((x, y));
             }
         }
         visible

@@ -50,7 +50,7 @@ impl Game {
                         let seed = self.map.clone().unwrap().seed;
                         let (_height, biome) = self.config
                             .clone()
-                            .biome_from_coord((key.x(), key.y()), seed);
+                            .biome_from_coord((key.0, key.1), seed);
 
                         // eprintln!("Cannot load {}, generating new chunk", key);
                         Chunk::generate_async(

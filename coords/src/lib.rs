@@ -8,7 +8,7 @@ pub use crate::coords::Coords;
 /// This module contains the `Coords` struct which represents a 2D coordinate system
 /// and various operations that can be performed on it, such as addition, subtraction,
 /// and coordinate manipulation.
-/// 
+///
 /// ```
 /// use crate::coords::Coords;
 /// ```
@@ -23,7 +23,7 @@ pub use crate::coords::Coords;
 ///
 /// # Operations
 /// You can perform addition, subtraction, and movement operations on `Coords`:
-/// 
+///
 /// ## Addition
 /// ```
 /// let a = Coords::new(1, 2);
@@ -51,7 +51,7 @@ mod tests {
     use super::*;
 
     /// Tests subtraction of two `Coords` with `f64` values.
-    /// 
+    ///
     /// # Example
     /// ```
     /// let (a, b) = (Coords::new(2.0, 0.0), Coords::new(2.0, 0.0));
@@ -59,8 +59,8 @@ mod tests {
     /// ```
     #[test]
     fn sub_f64() {
-        let (a, b) = (Coords::new(2.0, 0.0), Coords::new(2.0, 0.0));
-        assert_eq!(a - b, Coords::new(0.0, 0.0));
+        let a = Coords::new(2.0, 2.0, 2.0);
+        assert_eq!(a - a, Coords::new(0.0, 0.0, 0.0));
     }
 
     /// Tests addition of two `Coords` with `f64` values.
@@ -72,8 +72,8 @@ mod tests {
     /// ```
     #[test]
     fn add_f64() {
-        let (a, b) = (Coords::new(2.0, 0.0), Coords::new(2.0, 0.0));
-        assert_eq!(a + b, Coords::new(4.0, 0.0));
+        let (a, b) = (Coords::new(2.0, 0.0, 1.0), Coords::new(2.0, 0.0, 1.0));
+        assert_eq!(a + b, Coords::new(4.0, 0.0, 1.0));
     }
 
     /// Tests subtraction of two `Coords` with `i32` values.
@@ -85,8 +85,8 @@ mod tests {
     /// ```
     #[test]
     fn sub_i32() {
-        let (a, b) = (Coords::new(2, 0), Coords::new(2, 0));
-        assert_eq!(a - b, Coords::new(0, 0));
+        let a = Coords::new(2, 0, 1);
+        assert_eq!(a - a, Coords::new(0, 0, 0));
     }
 
     /// Tests addition of two `Coords` with `i32` values.
@@ -98,7 +98,7 @@ mod tests {
     /// ```
     #[test]
     fn add_i32() {
-        let (a, b) = (Coords::new(2, 0), Coords::new(2, 0));
-        assert_eq!(a + b, Coords::new(4, 0));
+        let (a, b) = (Coords::new(2, 0, 1), Coords::new(2, 0, 2));
+        assert_eq!(a + b, Coords::new(4, 0, 3));
     }
 }

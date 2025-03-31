@@ -51,7 +51,7 @@ impl Game {
             game::WIN_DEFAULT_HEIGHT
         ).expect("Failed to create game renderer");
         let config = Config::new();
-        let camera = Camera::new(0.0, 0.0);
+        let camera = Camera::new(0.0, 0.0,0.0);
         let (sndr, rcvr) = mpsc::channel();
 
         Game {

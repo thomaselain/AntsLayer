@@ -55,21 +55,15 @@ name= "Ocean"
 [[biomes.noise_layers]]
 scale = 0.1
 weight = 1.0
-[[biomes.noise_layers]]
-scale = 2.0
-weight = 0.3
-[[biomes.noise_layers]]
-scale = 1.0
-weight = 0.1
 
 
 [[biomes.thresholds]]
-min = -64.0
-max = 0.0
+min = -1.0
+max = -0.5
 tile_type = "Deep_water"
 [[biomes.thresholds]]
-min = 0.0
-max = 64.0
+min = -0.5
+max = 0.0
 tile_type = "Water"
 
 
@@ -89,7 +83,7 @@ tile_type = "Water"
 name= "Coast"
 
 [[biomes.noise_layers]]
-scale = 1.0
+scale = 0.1
 weight = 1.0
 [[biomes.noise_layers]]
 scale = 0.1
@@ -139,7 +133,7 @@ tile_type = "Grass"
 name = "Plain"
 
 [[biomes.noise_layers]]
-scale = 1.0
+scale = 0.1
 weight = 1.0
 
 
@@ -171,7 +165,7 @@ tile_type = "Dirt"
 name = "Hill"
 
 [[biomes.noise_layers]]
-scale = 1.0
+scale = 0.1
 weight = 1.0
 
 [[biomes.thresholds]]
@@ -207,7 +201,7 @@ tile_type = "Grass"
 name= "Mountain"
 
 [[biomes.noise_layers]]
-scale = 1.0
+scale = 0.1
 weight = 1.0
 
 [[biomes.thresholds]]

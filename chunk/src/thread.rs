@@ -1,7 +1,7 @@
 use std::{ sync::mpsc::Sender, thread };
 
 use biomes::BiomeConfig;
-use coords::aliases::TilePos;
+use coords::aliases::{ChunkPos, TilePos};
 use serde::{ Deserialize, Serialize };
 
 use crate::Chunk;
@@ -49,19 +49,19 @@ impl Status {
 
 impl Chunk {
     pub fn generate_async(
-        key: TilePos,
+        key: ChunkPos,
         seed: u32,
         biome_config: BiomeConfig,
-        sender: Sender<(TilePos, Status)>
+        sender: Sender<(ChunkPos, Status)>
     ) {
         // Envoyer l'état Pending avant de commencer la génération
-        sender.clone().send((key, Status::Pending)).unwrap();
+        sender.clone().send((key.into(), Status::Pending)).unwrap();
 
         thread::spawn(move || {
-            let (key, chunk) = Self::generate_from_biome(key, seed, biome_config);
+            let (key, chunk) = Self::generate_from_biome(key.into(), seed, biome_config);
 
             // Envoyer l'état Ready en verrouillant le Mutex
-            sender.send((key, Status::Ready(chunk))).unwrap();
+            sender.send((key.into(), Status::Ready(chunk))).unwrap();
         });
     }
 }

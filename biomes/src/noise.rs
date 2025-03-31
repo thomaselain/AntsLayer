@@ -14,13 +14,17 @@ pub struct NoiseLayer {
 }
 
 impl BiomeConfig {
-    pub fn combined_noise(&self, seed: u32, perlin: &noise::Perlin, key: (f64, f64)) -> f64 {
+    pub fn combined_noise(&self, seed: u32, perlin: &noise::Perlin, key: (f64, f64, f64)) -> f64 {
         let mut total_weight = 0.0;
         let mut value = 0.0;
         // let mut value = Perlin::new(seed).get([nx, ny]);
 
         for layer in &self.noise_layers {
-            let layer_value = perlin.get([key.0 / layer.scale, key.1 / layer.scale]);
+            let layer_value = perlin.get([
+                key.0 / layer.scale,
+                key.1 / layer.scale,
+                key.2 / layer.scale,
+            ]);
             value += layer_value * layer.weight;
             total_weight += layer.weight;
         }
@@ -29,7 +33,7 @@ impl BiomeConfig {
             value /= total_weight; // Normalisation
         }
 
-        value + Config::height_at((key.0 as i32, key.1 as i32), seed)
+        value + Config::noise_at((key.0 as i32, key.1 as i32, key.2 as i32), seed)
     }
 }
 impl Config {
@@ -43,28 +47,24 @@ impl Config {
 
         biome.clone()
     }
-    /// Cherche un biome en fct d'une hauteur
-    pub fn biome_from_height(self, height: f64) -> BiomeConfig {
-        match height {
-            MIN..0.0 => self.biome_from_name("Ocean"),
-            0.0..5.0 => self.biome_from_name("Coast"),
-            5.0..10.0 => self.biome_from_name("Plain"),
-            10.0..32.0 => self.biome_from_name("Hill"),
-            32.0..=MAX => self.biome_from_name("Mountain"),
-            _ => panic!("Unknown height"),
-        }
-    }
 
-    pub fn height_at(key: (i32, i32), seed: u32) -> f64 {
+    pub fn noise_at(coords: (i32, i32, i32), seed: u32) -> f64 {
         let perlin = Perlin::new(seed);
-        perlin.get([0.1 * (key.0 as f64), 0.1 * (key.1 as f64)]) / 0.1
+        perlin.get([0.3 * (coords.0 as f64), 0.3 * (coords.1 as f64), 0.3 * (coords.2 as f64)])
     }
 
     /// Cherche un biome en fct d'une coord
-    /// Renvoie la hauteur trouvée aux coords et le biome qui y correspond
+    /// Renvoie la valeur trouvée aux coords et le biome qui y correspond
     pub fn biome_from_coord(self, key: (i32, i32), seed: u32) -> (f64, BiomeConfig) {
-        let height = Config::height_at(key, seed);
-        let biome = self.biome_from_height(height);
+        let height = Config::noise_at((key.0, key.1,0), seed);
+        let biome = match height {
+            -1.0..-0.5 => self.biome_from_name("Ocean"),
+            -0.5..0.0 => self.biome_from_name("Coast"),
+            0.0..0.2=> self.biome_from_name("Plain"),
+            0.2..0.6 => self.biome_from_name("Hill"),
+            0.6..1.0 => self.biome_from_name("Mountain"),
+            _ => BiomeConfig::default(),
+        };
 
         // eprintln!("Looking for biome at height : {:.3}", height);
         // println!("biome at ({} , {}) : {:?}", key.0, key.1, biome.name);

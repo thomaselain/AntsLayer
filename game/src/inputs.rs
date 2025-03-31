@@ -11,10 +11,12 @@ pub trait ToDirection {
 impl ToDirection for Keycode {
     fn to_direction(self) -> Result<Directions, Keycode> {
         match self {
-            Keycode::Z => Ok(Directions::North), // Haut
-            Keycode::S => Ok(Directions::South), // Bas
-            Keycode::Q => Ok(Directions::West), // Gauche
-            Keycode::D => Ok(Directions::East), // Droite
+            Keycode::C => Ok(Directions::Down),
+            Keycode::W => Ok(Directions::Up),
+            Keycode::Z => Ok(Directions::North),
+            Keycode::S => Ok(Directions::South),
+            Keycode::Q => Ok(Directions::West),
+            Keycode::D => Ok(Directions::East),
 
             key => { Err(key) }
         }
@@ -108,10 +110,10 @@ impl Game {
         self.inputs.update(&self.events);
 
         if self.inputs.is_key_pressed(Keycode::KP_MINUS) && self.camera.speed > 0.1 {
-            self.camera.speed -= 0.01;
+            self.camera.speed -= 0.5;
             println!("Camera speed set to {}", self.camera.speed);
         } else if self.inputs.is_key_pressed(Keycode::KP_PLUS) {
-            self.camera.speed += 0.01;
+            self.camera.speed += 0.5;
             println!("Camera speed set to {}", self.camera.speed);
         } else if self.inputs.is_key_pressed(Keycode::A) && self.camera.render_distance > 1 {
             self.camera.render_distance -= 1;
@@ -136,15 +138,6 @@ impl Game {
             // self.load_world()?;
         }
 
-        if self.inputs.wheel_dir > 0 {
-            self.camera.zoom *= 1.1;
-            eprintln!("WHEEL UP : zoom set to :{}", self.camera.zoom);
-            self.inputs.wheel_dir = 0;
-        } else if self.inputs.wheel_dir < 0 {
-            self.camera.zoom /= 1.1;
-            eprintln!("WHEEL DOWN : zoom set to :{}", self.camera.zoom);
-            self.inputs.wheel_dir = 0;
-        }
         if let Some(map) = &self.map {
             if self.inputs.is_key_pressed(Keycode::Space) {
                 map.clone().save().unwrap();

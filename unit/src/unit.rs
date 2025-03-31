@@ -4,7 +4,7 @@ use crate::Unit;
 
 impl Default for Unit {
     fn default() -> Self {
-        let pos = TilePos::new(0, 0);
+        let pos = TilePos::new(0, 0,0);
         let speed = 1;
 
         Self::new(pos, speed)
@@ -37,6 +37,6 @@ impl Unit {
     }
 
     pub fn tick(&mut self) {
-        self.pos += TilePos::new(0, 1);
+        self.pos += TilePos::new(0, 1,0);
     }
 }

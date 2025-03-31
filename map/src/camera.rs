@@ -1,4 +1,4 @@
-use chunk::CHUNK_SIZE;
+use chunk::{ CHUNK_HEIGHT, CHUNK_WIDTH };
 use coords::Coords;
 
 use crate::{ renderer::TILE_SIZE, Directions };
@@ -15,10 +15,10 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(x: f32, y: f32) -> Self {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
         Camera {
             render_distance: DEFAULT_RENDER_DISTANCE,
-            coords: Coords::new(x, y),
+            coords: Coords::new(x, y, z),
             speed: DEFAULT_SPEED,
             zoom: DEFAULT_ZOOM,
         }
@@ -36,25 +36,31 @@ impl Camera {
     }
 
     /// Centre la caméra autour d'une position donnée
-    pub fn center_on(&mut self, x: i32, y: i32) {
+    pub fn center_on(&mut self, x: i32, y: i32, z: i32) {
         self.coords = Coords::new(
-            (x as f32) * (CHUNK_SIZE as f32),
-            (y as f32) * (CHUNK_SIZE as f32)
+            (x as f32) * (CHUNK_WIDTH as f32),
+            (y as f32) * (CHUNK_WIDTH as f32),
+            (z as f32) * (CHUNK_HEIGHT as f32)
         );
     }
 
     /// Déplace la caméra
     pub fn move_dir(&mut self, dir: Directions) {
         match dir {
-            Directions::North => self.move_by(0.0, (-TILE_SIZE as f32) * self.speed), // Haut
-            Directions::South => self.move_by(0.0, (TILE_SIZE as f32) * self.speed), // Bas
-            Directions::West => self.move_by((-TILE_SIZE as f32) * self.speed, 0.0), // Gauche
-            Directions::East => self.move_by((TILE_SIZE as f32) * self.speed, 0.0), // Droite
+            Directions::Up => self.move_by(0.0, 0.0, 1.0),
+            Directions::Down => self.move_by(0.0, 0.0, -1.0),
+
+            Directions::North => self.move_by(0.0, -self.speed, 0.0),
+            Directions::South => self.move_by(0.0, self.speed, 0.0),
+            Directions::West => self.move_by(-self.speed, 0.0, 0.0),
+            Directions::East => self.move_by(self.speed, 0.0, 0.0),
         }
     }
 
     /// Déplace la caméra
-    pub fn move_by(&mut self, dx: f32, dy: f32) {
-        self.coords = self.coords + Coords::new(dx / (TILE_SIZE as f32), dy / (TILE_SIZE as f32));
+    pub fn move_by(&mut self, dx: f32, dy: f32, dz: f32) {
+        self.coords =
+            self.coords +
+            Coords::new(dx / (TILE_SIZE as f32), dy / (TILE_SIZE as f32), dz / (TILE_SIZE as f32));
     }
 }

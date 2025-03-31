@@ -13,9 +13,10 @@ impl<'de, T> Deserialize<'de>
         struct CoordsInternal<T> {
             x: T,
             y: T,
+            z: T,
         }
 
         let helper = CoordsInternal::deserialize(deserializer)?;
-        Ok(Coords::new(helper.x, helper.y))
+        Ok(Coords::new(helper.x, helper.y, helper.z))
     }
 }

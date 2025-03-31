@@ -1,7 +1,7 @@
 mod tests;
 pub mod str;
 
-use coords::aliases::TilePos;
+use coords::{aliases::TilePos, Coords};
 use serde::{ Serialize, Deserialize };
 
 // Chatgpt le goat
@@ -55,6 +55,12 @@ impl Tile {
 
     pub fn set_extra_data(&mut self, data: u8) {
         self.extra_data = Some(data);
+    }
+}
+
+impl Default for Tile {
+    fn default() -> Self {
+        Tile { hp: 0, coords: Coords::new(0, 0, 0) , tile_type: TileType::Empty, flags: TileFlags::empty(), material: 0, extra_data: None }
     }
 }
 

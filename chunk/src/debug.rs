@@ -1,35 +1,37 @@
 use std::fmt;
 
-use tile::{FluidType, TileType};
+use tile::{ FluidType, TileType };
 
-use crate::{ Chunk, CHUNK_SIZE };
+use crate::{ Chunk, CHUNK_HEIGHT, CHUNK_WIDTH };
 
 impl fmt::Debug for Chunk {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Chunk ({}x{}):", CHUNK_SIZE, CHUNK_SIZE)?;
+        writeln!(f, "Chunk ({}x{}):", CHUNK_WIDTH, CHUNK_WIDTH)?;
 
-        for y in 0..CHUNK_SIZE {
-            for x in 0..CHUNK_SIZE {
-                let tile = &self.tiles[y][x];
-                let symbol = match tile.tile_type {
-                    TileType::Empty => ' ',
-                    TileType::Wall => '#',
-                    TileType::Floor => '_',
-                    TileType::Rock => '&',
-                    TileType::Grass => ',',
-                    TileType::Sand => 'X',
-                    TileType::Dirt => '.',
-                    TileType::Fluid(liquid) =>
-                        match liquid {
-                            FluidType::Magma => 'M',
-                            FluidType::Water => 'w',
-                            FluidType::Deep_water => 'W',
-                        }
+        for z in 0..CHUNK_HEIGHT {
+            for y in 0..CHUNK_WIDTH {
+                for x in 0..CHUNK_WIDTH {
+                    let tile = &self.layers[z].tiles[y][x];
+                    let symbol = match tile.tile_type {
+                        TileType::Empty => ' ',
+                        TileType::Wall => '#',
+                        TileType::Floor => '_',
+                        TileType::Rock => '&',
+                        TileType::Grass => ',',
+                        TileType::Sand => 'X',
+                        TileType::Dirt => '.',
+                        TileType::Fluid(liquid) =>
+                            match liquid {
+                                FluidType::Magma => 'M',
+                                FluidType::Water => 'w',
+                                FluidType::Deep_water => 'W',
+                            }
                         TileType::Custom(_) => '?',
-                };
-                write!(f, "{} ", symbol)?;
+                    };
+                    write!(f, "{} ", symbol)?;
+                }
+                writeln!(f)?; // Nouvelle ligne après chaque rangée
             }
-            writeln!(f)?; // Nouvelle ligne après chaque rangée
         }
         Ok(())
     }
@@ -50,6 +52,6 @@ mod tests {
         println!("{:?}", chunk); // Cela devrait afficher les informations de Chunk
 
         // On peut aussi vérifier des éléments de base comme un tile spécifique
-        assert_eq!(chunk.tiles[0][0].tile_type, TileType::Empty); // Vérifie que la première case est bien vide
+        assert_eq!(chunk.layers[0].tiles[0][0].tile_type, TileType::Empty); // Vérifie que la première case est bien vide
     }
 }

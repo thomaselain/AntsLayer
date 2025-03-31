@@ -51,13 +51,15 @@ mod tests {
 
     #[test]
     fn coords_conversion() {
-        let coords_f32 = Coords::new(3.0, 4.0);
-        let coords_i32 = Coords::new(3, 4);
+        let coords_f32 = Coords::new(3.0, 4.0, 2.1);
+        let coords_i32 = Coords::new(3, 4, 3);
 
         assert_eq!(coords_f32.x_i32(), 3); // Convert x from f32 to i32
         assert_eq!(coords_f32.y_i32(), 4); // Convert y from f32 to i32
+        assert_eq!(coords_f32.z_i32(), 3); // Convert y from f32 to i32
 
         assert_eq!(coords_i32.x_f32(), 3.0); // Convert x from i32 to f32
         assert_eq!(coords_i32.y_f32(), 4.0); // Convert y from i32 to f32
+        assert_eq!(coords_i32.z_f32(), 2.1); // Convert y from i32 to f32
     }
 }

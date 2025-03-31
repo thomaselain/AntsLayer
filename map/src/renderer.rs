@@ -1,4 +1,4 @@
-use chunk::{ Chunk, CHUNK_SIZE };
+use chunk::{ Chunk, CHUNK_HEIGHT, CHUNK_WIDTH };
 use chunk_manager::{ ChunkManager, Draw, DrawAll };
 use coords::aliases::TilePos;
 use sdl2::{ pixels::Color, rect::Rect, Sdl };
@@ -6,18 +6,17 @@ use tile::{ FluidType, TileType };
 
 use crate::{ camera::Camera, Map };
 
-pub const TILE_SIZE: i32 = 2;
+pub const TILE_SIZE: i32 = 5;
 
 pub fn tile_screen_coords(
     chunk_key: TilePos,
-    x: usize,
-    y: usize,
+    tile_pos: TilePos,
     offset_x: i32,
     offset_y: i32
-) -> TilePos {
-    TilePos::new(
-        (chunk_key.x() * (CHUNK_SIZE as i32) + (x as i32)) * TILE_SIZE - offset_x,
-        (chunk_key.y() * (CHUNK_SIZE as i32) + (y as i32)) * TILE_SIZE - offset_y
+) -> (i32, i32) {
+    (
+        (chunk_key.x() * (CHUNK_WIDTH as i32) + tile_pos.x()) * TILE_SIZE - offset_x,
+        (chunk_key.y() * (CHUNK_WIDTH as i32) + tile_pos.y()) * TILE_SIZE - offset_y,
     )
 }
 
@@ -51,7 +50,7 @@ impl DrawAll<Map, Renderer, Camera> for ChunkManager {
     fn draw_all(&mut self, map: &mut Map, renderer: &mut Renderer, camera: &Camera) {
         // map.generate_visible_chunks(camera, self);
         for key in map.chunks.keys() {
-            let status = self.loaded_chunks.get(&key);
+            let status = self.loaded_chunks.get(key);
 
             if let Some(status) = status {
                 match status.clone().get_chunk() {
@@ -91,9 +90,20 @@ impl Draw<Renderer, Camera> for Chunk {
         let (window_width, window_height) = renderer.get_window_size();
         let (offset_x, offset_y) = camera.get_offset(window_width, window_height);
 
-        for (x, row) in self.tiles.clone().iter().enumerate() {
-            for (y, tile) in row.iter().enumerate() {
-                let screen_coords = tile_screen_coords(self.key, x, y, offset_x, offset_y);
+        for y in 0..CHUNK_WIDTH {
+            for x in 0..CHUNK_WIDTH {
+                let tile = if let Ok(tile) = self.get_tile(x, y, camera.coords.z() as usize) {
+                    tile
+                } else {
+                    break;
+                };
+
+                let screen_coords = tile_screen_coords(
+                    self.key.into(),
+                    tile.coords,
+                    offset_x,
+                    offset_y
+                );
 
                 let color = match tile.tile_type {
                     TileType::Fluid(liquid) =>
@@ -116,8 +126,8 @@ impl Draw<Renderer, Camera> for Chunk {
                 renderer.canvas
                     .fill_rect(
                         Rect::new(
-                            screen_coords.x(),
-                            screen_coords.y(),
+                            screen_coords.0,
+                            screen_coords.1,
                             TILE_SIZE as u32,
                             TILE_SIZE as u32
                         )

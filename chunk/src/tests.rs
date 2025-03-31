@@ -13,7 +13,7 @@ fn load_default_biome() -> BiomeConfig {
 #[test]
 fn chunk_serialization() {
     const PATH: &str = "test/serialize";
-    let key = TilePos::new(0, 0);
+    let key = (0, 0);
     let path = ChunkPath::new(PATH, key);
 
     let (_, chunk) = Chunk::generate_from_biome(key, 0, load_default_biome());
@@ -38,7 +38,7 @@ fn chunk_serialization() {
 #[test]
 fn read_write_chunk() {
     const PATH: &str = "test/read_write";
-    let key = TilePos::new(0, 0);
+    let key =(0,0);
     let path = ChunkPath::new(PATH, key);
 
     let (_key, status) = Chunk::generate_default(key);
@@ -61,16 +61,16 @@ fn read_write_chunk() {
 pub fn tile_modification() {
     const PATH: &str = "test/tile_modification";
 
-    let key = TilePos::new(0, 0);
+    let key = (0, 0);
     let path = ChunkPath::new(PATH, key);
 
     let (_, mut chunk) = Chunk::generate_from_biome(key, 0, load_default_biome());
 
-    for x in 0..CHUNK_SIZE {
-        for y in 0..CHUNK_SIZE {
+    for x in 0..CHUNK_WIDTH {
+        for y in 0..CHUNK_WIDTH {
             if x == y {
-                let new_tile = Tile::new(key, TileType::Grass, 0, TileFlags::empty());
-                chunk.set_tile(x, y, new_tile);
+                let new_tile = Tile::new(key.into(), TileType::Grass, 0, TileFlags::empty());
+                chunk.set_tile(x, y, 0,new_tile);
             }
         }
     }
@@ -89,7 +89,7 @@ fn chunk_file_operations() {
     const PATH: &str = "test/file_operations";
     let cfg = Config::new();
 
-    let key = TilePos::new(0, 0);
+    let key = (0, 0);
     // new chunks paths
     let path = ChunkPath::new(PATH, key);
 
@@ -112,12 +112,12 @@ fn chunk_file_operations() {
 
 #[test]
 fn skip_in_file() {
-    let key = TilePos::new(0, 0);
+    let key = (0, 0);
     ChunkPath::new("test", key);
     use std::io::Cursor;
 
     // Créer un fichier virtuel avec deux chunks
-    let chunk_data = vec![0u8; CHUNK_SIZE * CHUNK_SIZE * std::mem::size_of::<Tile>()];
+    let chunk_data = vec![0u8; CHUNK_WIDTH * CHUNK_WIDTH * std::mem::size_of::<Tile>()];
     let mut file_data = chunk_data.clone();
     file_data.extend(&chunk_data);
 

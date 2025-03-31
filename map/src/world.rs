@@ -45,9 +45,13 @@ impl Map {
     // Charger la map entière
     pub fn load(name: &str) -> Result<Map, Error> {
         let path = Path::new(name);
-        assert!(path.is_dir());
-
+        Map::init_world_folder(name);
         let map = Map::new(name).unwrap();
+
+        // if !path.is_dir(){
+        //     panic!("Could not open {} at {:?}", name, path);
+        // }
+
         Ok(map)
     }
 }

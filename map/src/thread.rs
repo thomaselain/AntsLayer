@@ -1,1 +1,3 @@
-pub type MapStatus = (coords::Coords<i32>, chunk::thread::Status);
+use coords::aliases::ChunkPos;
+
+pub type MapStatus = (ChunkPos, chunk::thread::Status);

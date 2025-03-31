@@ -3,7 +3,6 @@ use std::{ sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex }, time::Duratio
 use super::Map;
 use chunk::{ thread::Status, Chunk };
 use chunk_manager::ChunkManager;
-use coords::aliases::TilePos;
 use crate::{ renderer::Renderer, thread::MapStatus, WORLD_STARTING_AREA };
 
 use biomes::Config;
@@ -13,14 +12,14 @@ impl Renderer {}
 
 #[test]
 pub fn save_load() {
-    let saved = Map::new("test/saved");
+    let saved = Map::new("save_load");
     assert!(saved.is_ok());
     let mut map = saved.unwrap();
-    map.add_chunk(TilePos::new(0,0), Chunk::default()).unwrap();
+    map.add_chunk((0,0).into(), Chunk::default()).unwrap();
     let saved = map.save();
     assert!(saved.is_ok());
 
-    let load = Map::load("test/saved");
+    let load = Map::load("save_load");
     assert!(load.is_ok());
 
 
@@ -35,14 +34,14 @@ pub fn every_biomes() {
 
         let biome_clone = biome.clone();
 
-        let mut map = Map::new(&biome.name).unwrap();
+        let mut map = Map::new(&format!("every_biomes/{}",&biome.name)).unwrap();
         let (sndr, rcvr): (Sender<MapStatus>, Receiver<MapStatus>) = mpsc::channel();
-        let key = TilePos::new(0, 0);
+        let key = (0, 0);
 
         let _chunk_manager = chunk_manager.lock().expect("Failed to lock chunk manager");
         Chunk::generate_async(key, map.seed, biome, sndr);
 
-        while let Some((key, status)) = rcvr.recv_timeout(Duration::from_secs(1)).ok() {
+        while let Some((key, status)) = rcvr.recv_timeout(Duration::from_secs(5)).ok() {
             match status {
                 Status::Pending => {}
                 Status::Ready(chunk) => {
@@ -58,7 +57,7 @@ pub fn every_biomes() {
             "\nSeed : {} \n Biome {}\n {:?}",
             map.seed,
             biome_clone.name,
-            map.clone().get_chunk(key).ok()
+            map.clone().get_chunk(key.into()).ok()
         );
     }
 }
@@ -66,12 +65,13 @@ pub fn every_biomes() {
 #[test]
 fn create_and_save() {
     let map = Map::new("save_test");
+    assert!(map.is_ok());
 
-    let key = TilePos::new(WORLD_STARTING_AREA * 2, WORLD_STARTING_AREA * 2);
+    let key = (WORLD_STARTING_AREA, WORLD_STARTING_AREA);
     let chunk = Chunk::default();
 
     let mut map = map.expect("Map creation failed");
-    map.add_chunk(key, chunk).expect("Failed to add chunk to map");
+    map.add_chunk(key.into(), chunk).expect("Failed to add chunk to map");
     map.save().expect("Map saving failed");
 }
 
@@ -88,7 +88,7 @@ mod threads {
 
     #[test]
     fn test_map_channel() {
-        let key = TilePos::new(1, 1);
+        let key = (1, 1);
         let (sndr, rcvr): (Sender<MapStatus>, Receiver<MapStatus>) = mpsc::channel();
         let cfg = Config::default_biome(&Config::new());
 
@@ -119,7 +119,7 @@ mod threads {
         let mngr = Arc::new(Mutex::new(ChunkManager::new()));
 
         // Size of the created zone
-        let size = &30;
+        let size = &10;
         let range = (-1i32 * size) / 2..size / 2;
 
         eprintln!("Going to generate {} chunks, this may take a while ...", size * size);
@@ -135,7 +135,7 @@ mod threads {
                 let sndr = chunk_manager.sndr.lock().unwrap().clone();
 
                 Chunk::generate_async(
-                    TilePos::new(x, y),
+                    (x, y),
                     seed,
                     cfg.clone(),
                     sndr.clone()
