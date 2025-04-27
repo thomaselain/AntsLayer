@@ -41,6 +41,9 @@ fn read_write_chunk() {
     let key =(0,0);
     let path = ChunkPath::new(PATH, key);
 
+
+    eprintln!("Default biome loaded : {:#?}", BiomeConfig::default());
+
     let (_key, status) = Chunk::generate_default(key);
 
     // Save new chunk
@@ -64,12 +67,12 @@ pub fn tile_modification() {
     let key = (0, 0);
     let path = ChunkPath::new(PATH, key);
 
-    let (_, mut chunk) = Chunk::generate_from_biome(key, 0, load_default_biome());
+    let mut chunk = Chunk::new(key);
 
     for x in 0..CHUNK_WIDTH {
         for y in 0..CHUNK_WIDTH {
             if x == y {
-                let new_tile = Tile::new(key.into(), TileType::Grass, 0, TileFlags::empty());
+                let new_tile = Tile::new(key.into(), TileType::Grass, TileFlags::empty());
                 chunk.set_tile(x, y, 0,new_tile);
             }
         }
@@ -94,7 +97,7 @@ fn chunk_file_operations() {
     let path = ChunkPath::new(PATH, key);
 
     let (sndr, rcvr) = mpsc::channel();
-    Chunk::generate_async(key, 0, cfg.default_biome(), sndr.clone());
+    Chunk::generate_async(key, 0, &cfg.default_biome(), sndr.clone());
 
     let mut status = Status::Pending;
     while let Ok((_c, s)) = rcvr.recv_timeout(Duration::from_secs(2)) {
@@ -108,6 +111,7 @@ fn chunk_file_operations() {
 
     // Test écriture
     chunk.save(path.clone()).unwrap();
+    println!("{:?}", chunk);
 }
 
 #[test]

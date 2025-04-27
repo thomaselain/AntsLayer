@@ -1,7 +1,7 @@
 mod tests;
 pub mod str;
 
-use coords::{aliases::TilePos, Coords};
+use coords::{ aliases::TilePos, Coords };
 use serde::{ Serialize, Deserialize };
 
 // Chatgpt le goat
@@ -33,34 +33,33 @@ pub enum TileType {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Tile {
-    pub hp: u8,
     pub coords: TilePos,
     pub tile_type: TileType, // Le type de la tuile
     pub flags: TileFlags, // États dynamiques (traversable, liquide, etc.)
-    pub material: u16, // Index ou ID du matériau (roche, métal, etc.)
     pub extra_data: Option<u8>, // Données supplémentaires (exemple : objet)
 }
 
+
 impl Tile {
-    pub fn new(coords: TilePos, tile_type: TileType, material: u16, flags: TileFlags) -> Self {
+    pub fn new(coords: TilePos, tile_type: TileType, flags: TileFlags) -> Self {
         Self {
-            hp: u8::MAX,
             coords,
             tile_type,
-            material,
             flags,
+            extra_data: None,
+        }
+    }
+    pub fn new_empty(coords: TilePos) -> Self {
+        Self {
+            coords,
+            tile_type:TileType::Empty,
+            flags:TileFlags::TRAVERSABLE,
             extra_data: None,
         }
     }
 
     pub fn set_extra_data(&mut self, data: u8) {
         self.extra_data = Some(data);
-    }
-}
-
-impl Default for Tile {
-    fn default() -> Self {
-        Tile { hp: 0, coords: Coords::new(0, 0, 0) , tile_type: TileType::Empty, flags: TileFlags::empty(), material: 0, extra_data: None }
     }
 }
 
@@ -85,7 +84,7 @@ bitflags! {
 pub enum FluidType {
     Magma,
     Water,
-    Deep_water,
+    DeepWater,
 }
 
 impl FluidType {
@@ -93,14 +92,14 @@ impl FluidType {
         match self {
             FluidType::Magma => 1,
             FluidType::Water => 3,
-            FluidType::Deep_water => 2,
+            FluidType::DeepWater => 2,
         }
     }
     pub fn as_string(self) -> String {
         match self {
             FluidType::Magma => "Magma".to_string(),
             FluidType::Water => "Water".to_string(),
-            FluidType::Deep_water => "Deep_water".to_string(),
+            FluidType::DeepWater => "Deep_water".to_string(),
         }
     }
 }

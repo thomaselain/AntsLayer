@@ -110,7 +110,7 @@ impl Draw<Renderer, Camera> for Chunk {
                         match liquid {
                             FluidType::Magma => Color::RED,
                             FluidType::Water => Color::BLUE,
-                            FluidType::Deep_water => Color::RGB(15, 25, 155),
+                            FluidType::DeepWater => Color::RGB(15, 25, 155),
                         }
                     TileType::Empty => Color::RGB(10, 10, 10),
                     TileType::Sand => Color::RGB(255, 255, 100),

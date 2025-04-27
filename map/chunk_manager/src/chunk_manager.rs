@@ -56,7 +56,7 @@ impl ChunkManager {
         } else if let Ok((key, status)) = Chunk::load(path) {
             match status {
                 Status::Visible(chunk) | Status::Ready(chunk) => Ok((key, chunk)),
-                Status::Pending => { Err((key, ChunkError::StillLoading)) }
+                Status::Pending => { Err((key, ChunkError::Loading)) }
                 Status::Error(_) => todo!(),
             }
         } else {

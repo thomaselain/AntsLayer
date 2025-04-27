@@ -24,7 +24,7 @@ impl fmt::Debug for Chunk {
                             match liquid {
                                 FluidType::Magma => 'M',
                                 FluidType::Water => 'w',
-                                FluidType::Deep_water => 'W',
+                                FluidType::DeepWater => 'W',
                             }
                         TileType::Custom(_) => '?',
                     };

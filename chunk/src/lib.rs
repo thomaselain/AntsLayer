@@ -18,8 +18,8 @@ use tile::{ Tile, TileFlags, TileType };
 use unit::Unit;
 use std::io::{ self, Read, Seek, SeekFrom };
 
-pub const CHUNK_WIDTH: usize = 5;
-pub const CHUNK_HEIGHT: usize = 10;
+pub const CHUNK_WIDTH: usize = 10;
+pub const CHUNK_HEIGHT: usize = 5;
 
 #[derive(Clone)]
 pub struct ChunkPath(String, ChunkPos);
@@ -53,18 +53,44 @@ pub struct ChunkLayer {
     tiles: [[Tile; CHUNK_WIDTH]; CHUNK_WIDTH],
 }
 
-impl Default for ChunkLayer {
-    fn default() -> Self {
-        ChunkLayer { tiles: [[Tile::default(); CHUNK_WIDTH]; CHUNK_WIDTH] }
+impl ChunkLayer {
+    pub fn empty(key: ChunkPos) -> [[Tile; CHUNK_WIDTH]; CHUNK_WIDTH] {
+        [[Tile::new_empty(key.into_world_()); CHUNK_WIDTH]; CHUNK_WIDTH]
+    }
+    pub fn new(pos: Coords<i32>, z: i32) -> Self {
+        // Fill new chunk with empty traversable tiles
+        // But with 0,0,0 as coords, it will be set in the loop later (Syntax could probably be improved a lot)
+        let empty_tile = Tile::new(Coords::new(0, 0, 0), TileType::Empty, TileFlags::TRAVERSABLE);
+        let mut new = [[empty_tile; CHUNK_WIDTH]; CHUNK_WIDTH];
+        //
+
+        // Coords setting in loop
+        for x in 0..CHUNK_WIDTH as i32 {
+            for y in 0..CHUNK_WIDTH as i32 {
+                new[x as usize][y as usize].coords = Coords::new(
+                    x + pos.x() * (CHUNK_WIDTH as i32),
+                    y + pos.y() * (CHUNK_WIDTH as i32),
+                    z
+                );
+                // eprintln!("{:?}", new[x as usize][y as usize].coords);
+            }
+        }
+        //
+
+        ChunkLayer { tiles: new }
+    }
+
+    pub fn set_tile(mut self, x: i32, y: i32, tile: Tile) {
+        self.tiles[x as usize][y as usize] = tile;
     }
 }
 
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct Chunk {
+    // pub units: HashMap<TilePos, Unit>,
     pub key: ChunkPos,
-    pub units: HashMap<TilePos, Unit>,
     pub is_dirty: bool,
-    pub layers: [ChunkLayer; CHUNK_HEIGHT], // Stockage linéaire pour optimiser la mémoire cache
+    pub layers: [ChunkLayer; CHUNK_HEIGHT],
 }
 
 impl Default for Chunk {
@@ -73,15 +99,43 @@ impl Default for Chunk {
     }
 }
 
+#[test]
+fn new_chunk() {
+    let chunk = Chunk::generate_default((0, 0));
+}
+
 impl Chunk {
     pub fn new(key: ChunkPos) -> Self {
-        let default_tile = Tile::new(key.into(), TileType::Empty, 0, TileFlags::empty());
-        Self {
-            key,
-            units: HashMap::new(),
-            is_dirty: true,
-            layers: [ChunkLayer::default(); CHUNK_HEIGHT],
+        let layers = [ChunkLayer::empty(key); CHUNK_HEIGHT];
+
+        for z in 0..CHUNK_HEIGHT {
+            layers[z]
         }
+
+        Self { key, is_dirty: true, layers }
+    }
+
+    /// Generate a specific layer from a chunk
+    pub fn generate_layer(key: ChunkPos, seed: u32, biome: &BiomeConfig, z: i32) -> ChunkLayer {
+        let perlin = BiomeConfig::noise_from_seed(seed);
+        let layer = ChunkLayer::new(key.into(), z);
+
+        for x in 0..CHUNK_WIDTH as i32 {
+            for y in 0..CHUNK_WIDTH as i32 {
+                let tile_pos = layer.tiles[x as usize][y as usize].coords;
+
+                let value = biome.clone().combined_noise(&perlin, tile_pos);
+                // eprintln!("value at {:?} : {:?}", tile_pos, value);
+
+                // Détermine le type de tuile
+                let tile_type = biome.clone().tile_type_from_noise(value);
+                let new_tile = Tile::new(tile_pos, tile_type, TileFlags::empty());
+                layer.set_tile(x, y, new_tile);
+                eprintln!("{:?}", new_tile);
+            }
+        }
+
+        layer
     }
 
     /// Generate a chunk without multi threading
@@ -91,37 +145,12 @@ impl Chunk {
     }
 
     pub fn generate_from_biome(key: ChunkPos, seed: u32, biome: BiomeConfig) -> (ChunkPos, Chunk) {
-        let mut chunk = Chunk::new(key.into());
-        let perlin = BiomeConfig::noise_from_seed(seed);
-        let chunk_offset = (key.0 * (CHUNK_WIDTH as i32), key.1 * (CHUNK_WIDTH as i32));
+        let mut chunk = Chunk::new(key);
 
-        for x in 0..CHUNK_WIDTH {
-            for y in 0..CHUNK_WIDTH {
-                for z in 0..CHUNK_HEIGHT {
-                    let nx = ((x as f64) + (chunk_offset.0 as f64)) / (CHUNK_WIDTH as f64);
-                    let ny = ((y as f64) + (chunk_offset.1 as f64)) / (CHUNK_WIDTH as f64);
+        for z in 0..CHUNK_HEIGHT as i32 {
+            let layer = Chunk::generate_layer(key, seed, &biome, z);
 
-                    // Combinaison des couches de bruit
-                    let value = biome.clone().combined_noise(seed, &perlin, (nx, ny, z as f64));
-
-                    // if value < -1.0 || value > 1.0 {
-                    //     panic!("v = {:.2}", value);
-                    // }
-                    // Détermine le type de tuile
-                    let tile_type = biome
-                        .clone()
-                        .tile_type_from_noise(
-                            value * Config::noise_at((x as i32, y as i32, z as i32), seed)
-                        );
-                    let new_tile = Tile::new(
-                        Coords::new(x as i32, y as i32, z as i32),
-                        tile_type,
-                        0,
-                        TileFlags::empty()
-                    );
-                    chunk.set_tile(x, y, z, new_tile);
-                }
-            }
+            chunk.layers[z as usize] = layer;
         }
 
         (key, chunk)

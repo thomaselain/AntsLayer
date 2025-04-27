@@ -1,14 +1,9 @@
-use std::sync::mpsc::Sender;
-
-use biomes::Config;
-use chunk::{ thread::Status, Chunk };
 #[allow(unused_imports)]
 use chunk_manager::Draw;
 #[allow(unused_imports)]
 use chunk_manager::DrawAll;
 
-use coords::aliases::TilePos;
-use coords::Coords;
+use crate::thread::BuildThread;
 use sdl2::{ keyboard::Keycode, pixels::Color };
 use map::{ Map, WORLD_STARTING_AREA };
 
@@ -17,8 +12,8 @@ use unit::{ Unit, MOVING };
 
 use crate::Game;
 
-pub const WIN_DEFAULT_WIDTH: u32 = 1000;
-pub const WIN_DEFAULT_HEIGHT: u32 = 800;
+pub const WIN_DEFAULT_WIDTH: u32 = 800;
+pub const WIN_DEFAULT_HEIGHT: u32 = 600;
 impl Game {
     // pub fn load_world(&mut self) -> Result<Map, ()> {
     //     let path = "./data/test_world";
@@ -34,8 +29,9 @@ impl Game {
         for x in -half_size..=half_size {
             for y in -half_size..=half_size {
                 let key = (x, y);
-                let (_height, biome) = self.config.clone().biome_from_coord((key.0, key.1), 0);
-                Chunk::generate_from_biome(key, self.map.clone().unwrap().seed, biome);
+                let (_height, biome) = self.config.clone().biome_from_coord((key.0, key.1));
+                // self.build_thread(key);
+                chunk::Chunk::generate_from_biome(key, self.map.clone().unwrap().seed, biome);
             }
         }
         Ok(())

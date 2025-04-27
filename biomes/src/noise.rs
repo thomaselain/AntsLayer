@@ -1,10 +1,13 @@
 use std::f64::{ MAX, MIN };
 
+use coords::Coords;
 use noise::{ NoiseFn, Perlin, Seedable };
 use rand::random;
 use serde::Deserialize;
 
 use crate::{ BiomeConfig, Config };
+
+const WORLD_SCALE:f64 = 0.1;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct NoiseLayer {
@@ -14,16 +17,15 @@ pub struct NoiseLayer {
 }
 
 impl BiomeConfig {
-    pub fn combined_noise(&self, seed: u32, perlin: &noise::Perlin, key: (f64, f64, f64)) -> f64 {
+    pub fn combined_noise(&self, perlin:& Perlin, pos: Coords<i32>) -> f64 {
         let mut total_weight = 0.0;
         let mut value = 0.0;
-        // let mut value = Perlin::new(seed).get([nx, ny]);
-
+        
         for layer in &self.noise_layers {
             let layer_value = perlin.get([
-                key.0 / layer.scale,
-                key.1 / layer.scale,
-                key.2 / layer.scale,
+                pos.x_f64() / layer.scale,
+                pos.y_f64() / layer.scale,
+                pos.z_f64() / layer.scale,
             ]);
             value += layer_value * layer.weight;
             total_weight += layer.weight;
@@ -33,7 +35,7 @@ impl BiomeConfig {
             value /= total_weight; // Normalisation
         }
 
-        value + Config::noise_at((key.0 as i32, key.1 as i32, key.2 as i32), seed)
+        value + Config::noise_at(perlin, pos)
     }
 }
 impl Config {
@@ -48,26 +50,29 @@ impl Config {
         biome.clone()
     }
 
-    pub fn noise_at(coords: (i32, i32, i32), seed: u32) -> f64 {
-        let perlin = Perlin::new(seed);
-        perlin.get([0.3 * (coords.0 as f64), 0.3 * (coords.1 as f64), 0.3 * (coords.2 as f64)])
+    pub fn noise_at(perlin: &Perlin, coords: Coords<i32>) -> f64 {
+        perlin.get([
+            WORLD_SCALE * coords.x_f64(),
+            WORLD_SCALE * coords.y_f64(),
+            WORLD_SCALE * coords.z_f64()])
     }
 
     /// Cherche un biome en fct d'une coord
     /// Renvoie la valeur trouvée aux coords et le biome qui y correspond
-    pub fn biome_from_coord(self, key: (i32, i32), seed: u32) -> (f64, BiomeConfig) {
-        let height = Config::noise_at((key.0, key.1,0), seed);
+    pub fn biome_from_coord(self, key: (i32, i32)) -> (f64, BiomeConfig) {
+        let height = 0.5;
+        // let height = Config::noise_at(Coords::new(key.0, key.1, 0), seed);
         let biome = match height {
             -1.0..-0.5 => self.biome_from_name("Ocean"),
             -0.5..0.0 => self.biome_from_name("Coast"),
-            0.0..0.2=> self.biome_from_name("Plain"),
+            0.0..0.2 => self.biome_from_name("Plain"),
             0.2..0.6 => self.biome_from_name("Hill"),
             0.6..1.0 => self.biome_from_name("Mountain"),
             _ => BiomeConfig::default(),
         };
 
-        // eprintln!("Looking for biome at height : {:.3}", height);
-        // println!("biome at ({} , {}) : {:?}", key.0, key.1, biome.name);
+        eprintln!("Looking for biome at height : {:.3}", height);
+        println!("biome at ({} , {}) : {:?}", key.0, key.1, biome.name);
         (height, biome)
     }
 }

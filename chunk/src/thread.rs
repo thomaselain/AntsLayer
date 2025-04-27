@@ -1,10 +1,10 @@
-use std::{ sync::mpsc::Sender, thread };
+use std::{ sync::{ mpsc::Sender, Arc, Mutex }, thread };
 
 use biomes::BiomeConfig;
-use coords::aliases::{ChunkPos, TilePos};
+use coords::aliases::{ ChunkPos, TilePos };
 use serde::{ Deserialize, Serialize };
 
-use crate::Chunk;
+use crate::{ Chunk, CHUNK_HEIGHT };
 
 // type ChunkKey = TilePos;
 
@@ -14,8 +14,9 @@ pub enum ChunkError {
     FailedToGenerate,
     NoFile,
     NotVisible,
-    StillLoading,
+    Loading,
 }
+
 impl ChunkError {
     pub fn to_string(self) -> String {
         let e = "";
@@ -51,17 +52,28 @@ impl Chunk {
     pub fn generate_async(
         key: ChunkPos,
         seed: u32,
-        biome_config: BiomeConfig,
+        biome: &BiomeConfig,
         sender: Sender<(ChunkPos, Status)>
     ) {
+        let chunk = Arc::new(Mutex::new(Chunk::new(key)));
+
         // Envoyer l'état Pending avant de commencer la génération
         sender.clone().send((key.into(), Status::Pending)).unwrap();
 
+        let biome = biome.clone();
         thread::spawn(move || {
-            let (key, chunk) = Self::generate_from_biome(key.into(), seed, biome_config);
+            let (chunk, sender) = (Arc::clone(&chunk), sender.clone());
+            for z in 0..CHUNK_HEIGHT as i32 {
+                let layer = Chunk::generate_layer(key, seed, &biome, z);
 
-            // Envoyer l'état Ready en verrouillant le Mutex
-            sender.send((key.into(), Status::Ready(chunk))).unwrap();
+                chunk.lock().unwrap().layers[z as usize] = layer;
+
+                // PENDING
+                // sender.send((key, Status::Pending)).unwrap();
+            }
+
+            // READY
+            sender.send((key, Status::Ready(chunk.lock().unwrap().clone()))).unwrap();
         });
     }
 }

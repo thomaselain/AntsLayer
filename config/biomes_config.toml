@@ -1,9 +1,8 @@
-
 [[biomes]]
 name = "Default"
 
 [[biomes.noise_layers]]
-scale = 10.0
+scale = 1.0
 weight = 1.0
 
 
@@ -11,7 +10,7 @@ weight = 1.0
 [[biomes.thresholds]]
 min = -1.0
 max = -0.9
-tile_type = "Dirt"
+tile_type = "Rock"
 [[biomes.thresholds]]
 min = -0.9
 max = 0.0

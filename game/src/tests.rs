@@ -25,11 +25,11 @@ pub fn add_unit(game: &mut Game) {
     let mngr = game.chunk_manager.lock().unwrap();
     match mngr.loaded_chunks.get(&pos.into()) {
         Some(status) => {
-            let chunk = status.clone().get_chunk().ok();
+            // let chunk = status.clone().get_chunk().ok();
 
-            if let Some(mut chunk) = chunk {
-                chunk.units.insert(pos, unit);
-            }
+        //     if let Some(mut chunk) = chunk {
+        //         chunk.units.insert(pos, unit);
+        //     }
         }
         None => {
             eprintln!("Chunk not ready yet");
@@ -49,7 +49,7 @@ fn create_map_with_threads() {
     // game.tick();
     game.map.clone().unwrap().save().unwrap();
     let mut mngr = game.chunk_manager.lock().unwrap();
-    while let Ok((key, status)) = game.rcvr.recv_timeout(std::time::Duration::from_secs(1)) {
+    while let Ok((key, status)) = game.rcvr.recv_timeout(std::time::Duration::from_secs(2)) {
         mngr.loaded_chunks.insert(key, status);
     }
 

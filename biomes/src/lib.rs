@@ -36,7 +36,7 @@ impl BiomeConfig {
         Perlin::new(seed)
     }
     pub fn tile_type_from_noise(self, noise_value: f64) -> TileType {
-        // eprintln!("{.2}", noise_value);
+        // eprintln!("noise value : {:?}", noise_value);
         for threshold in &self.thresholds {
             if noise_value >= threshold.min && noise_value <= threshold.max {
                 return TileType::from(threshold.tile_type.as_str());

@@ -16,22 +16,23 @@ impl Game {
                     chunk.save(ChunkPath::new(&self.map.clone().unwrap().path, key)).unwrap();
                     mngr.loaded_chunks.insert(key, status.clone());
                     self.map.clone().unwrap().add_chunk(key, chunk.clone()).unwrap();
+                    // eprintln!("chunk ({:?}) is ready !", key);
                 }
                 Status::Pending => {
-                    // eprintln!("chunk ({},{}) is still waiting", key.x(), key.y());
+                    // eprintln!("chunk ({:?}) is still waiting", key);
                 }
                 _ => {
-                    eprintln!("Statut inconnu pour le chunk {:?}: {:?}", key, status);
+                    // eprintln!("Statut inconnu pour le chunk {:?}: {:?}", key, status);
                 }
             }
         }
     }
+    
     // Mettre à jour les unités, la carte, les ressources, etc.
     pub fn update_game_logic(&mut self) {
         if self.map.is_some() {
             self.receive_chunks();
         }
-        // Vérifiez régulièrement si des chunks en `Pending` doivent être relancés
     }
 
     // Mettre à jour les animations, états visuels, etc.
@@ -47,16 +48,16 @@ impl Game {
                         mngr.loaded_chunks.insert(key, Status::Ready(chunk));
                     }
                     Err((key, _e)) => {
-                        let seed = self.map.clone().unwrap().seed;
+                        // let seed = self.map.clone().unwrap().seed;
                         let (_height, biome) = self.config
                             .clone()
-                            .biome_from_coord((key.0, key.1), seed);
+                            .biome_from_coord((key.0, key.1));
 
                         // eprintln!("Cannot load {}, generating new chunk", key);
                         Chunk::generate_async(
                             key,
                             self.map.clone().unwrap().seed,
-                            biome,
+                            &biome,
                             self.sndr.clone()
                         );
                     }

@@ -2,6 +2,7 @@ mod inputs;
 
 pub mod game;
 pub mod update;
+pub mod thread;
 
 #[cfg(test)]
 pub mod tests;

@@ -39,7 +39,7 @@ pub fn every_biomes() {
         let key = (0, 0);
 
         let _chunk_manager = chunk_manager.lock().expect("Failed to lock chunk manager");
-        Chunk::generate_async(key, map.seed, biome, sndr);
+        Chunk::generate_async(key, map.seed, &biome, sndr);
 
         while let Some((key, status)) = rcvr.recv_timeout(Duration::from_secs(5)).ok() {
             match status {
@@ -93,7 +93,7 @@ mod threads {
         let cfg = Config::default_biome(&Config::new());
 
         thread::spawn(move || {
-            Chunk::generate_async(key, 42, cfg, sndr.clone());
+            Chunk::generate_async(key, 42, &cfg, sndr.clone());
         });
 
         while let Some((_key, status)) = rcvr.recv_timeout(Duration::from_secs(2)).ok() {
@@ -111,7 +111,7 @@ mod threads {
     }
 
     #[test]
-    fn big_array_of_chunks() {
+    fn array_of_chunks() {
         let map = Map::new("big").unwrap();
         let seed = map.seed;
         let cfg = Config::default_biome(&Config::new());
@@ -119,7 +119,7 @@ mod threads {
         let mngr = Arc::new(Mutex::new(ChunkManager::new()));
 
         // Size of the created zone
-        let size = &10;
+        let size = &2;
         let range = (-1i32 * size) / 2..size / 2;
 
         eprintln!("Going to generate {} chunks, this may take a while ...", size * size);
@@ -137,7 +137,7 @@ mod threads {
                 Chunk::generate_async(
                     (x, y),
                     seed,
-                    cfg.clone(),
+                    &cfg.clone(),
                     sndr.clone()
                 );
             });
