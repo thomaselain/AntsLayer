@@ -7,7 +7,8 @@ use crate::Game;
 impl Game {
     pub fn display_debug(&mut self) -> Result<(), String> {
         // Load font
-        let font = self.ttf_context
+        let font = self
+            .ttf_context
             .load_font("assets/Minecraft.ttf", 16)
             .expect("Failed to load Font");
 

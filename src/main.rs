@@ -1,15 +1,15 @@
-use std::{ process::{ ExitCode, Termination }, sync::{ Arc, Mutex }, time::{ Duration, Instant } };
+use std::{ process::{ ExitCode, Termination }, time::{ Duration, Instant } };
 
 use chunk::manager::Manager;
 use inputs::Inputs;
 use renderer::Renderer;
-use sdl2::{ event::Event, keyboard::Keycode, pixels::Color, ttf::{ Font, Sdl2TtfContext }, Sdl };
+use sdl2::{ event::Event, pixels::Color, ttf::Sdl2TtfContext, Sdl };
 
 mod debug;
 
 mod chunk;
-mod renderer;
 mod inputs;
+mod renderer;
 
 pub struct Game {
     // Game engine
@@ -68,12 +68,6 @@ impl Game {
 }
 
 impl Game {
-    // pub fn load_world(&mut self) -> Result<Map, ()> {
-    //     let path = "./data/test_world";
-    //     println!("Loading {}", path);
-    //     // Ok(Map::load(path).expect(&format!("Failed to load map at '{}'", path)))
-    // }
-
     pub fn create_world(&mut self) -> Result<(), ()> {
         self.chunk_manager = Manager::new();
 

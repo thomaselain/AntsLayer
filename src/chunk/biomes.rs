@@ -1,6 +1,8 @@
 use noise::{ NoiseFn, Perlin };
 use serde::Deserialize;
 
+use crate::renderer::TILE_SIZE;
+
 use super::{ tile::Tile, CHUNK_WIDTH };
 
 pub struct Biomes {
@@ -9,7 +11,9 @@ pub struct Biomes {
 
 impl Biomes {
     pub fn load() -> Biomes {
-        Biomes { params: Params::all() }
+        Biomes {
+            params: Params::all(),
+        }
     }
 }
 
@@ -38,14 +42,18 @@ pub struct NoiseParams {
     /// A multiplier that determines how quickly the amplitudes diminish for each successive octave in the noise function.
     /// The amplitude of each successive octave is equal to the product of the previous octave’s amplitude and the persistence value. Increasing the persistence produces “rougher” noise.
     pub persistence: f64,
+
+    /// A multiplier on perlin.get() method
+    pub scale: f64,
 }
 impl Default for NoiseParams {
     fn default() -> Self {
         Self {
-            octaves: 2,
+            octaves: 3,
             frequency: 1.0,
-            lacunarity: 2.0,
-            persistence: 1.0,
+            lacunarity: 1.5,
+            persistence: 1.1,
+            scale: 1.0/TILE_SIZE as f64,
         }
     }
 }
@@ -79,27 +87,37 @@ impl Params {
     pub fn plain() -> Self {
         Self {
             name: "Plain".into(),
-            terrain: TerrainParams { humidity: 6, temperature: 25, elevation: 2, roughness: 2 },
+            terrain: TerrainParams {
+                humidity: 6,
+                temperature: 25,
+                elevation: 2,
+                roughness: 2,
+            },
             noise: NoiseParams::default(),
         }
     }
     pub fn coast() -> Self {
         Self {
             name: "Coast".into(),
-            terrain: TerrainParams { humidity: 8, temperature: 19, elevation: 1, roughness: 1 },
+            terrain: TerrainParams {
+                humidity: 8,
+                temperature: 19,
+                elevation: 1,
+                roughness: 1,
+            },
             noise: NoiseParams::default(),
         }
     }
     pub fn ocean() -> Self {
         Self {
             name: "Ocean".into(),
-            terrain: TerrainParams { humidity: 10, temperature: 15, elevation: 0, roughness: 0 },
-            noise: NoiseParams {
-                octaves: 4,
-                frequency: 1.0,
-                lacunarity: 2.0,
-                persistence: 1.0,
+            terrain: TerrainParams {
+                humidity: 10,
+                temperature: 15,
+                elevation: 0,
+                roughness: 0,
             },
+            noise: NoiseParams::default(),
         }
     }
 }

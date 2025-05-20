@@ -1,6 +1,6 @@
-use std::ops::{ Index, IndexMut };
+use std::ops::{Index, IndexMut};
 
-use super::{ tile::Tile, ChunkContent, CHUNK_WIDTH };
+use super::{tile::Tile, ChunkContent, CHUNK_WIDTH};
 
 fn flatten_index_i32((x, y, z): (i32, i32, i32)) -> usize {
     let (x, y, z) = (x as usize, y as usize, z as usize);
@@ -35,7 +35,6 @@ impl IndexMut<usize> for ChunkContent {
         &mut self.0[index]
     }
 }
-
 
 /// ChunkContent[(usize, usize, usize)]
 impl Index<(usize, usize, usize)> for ChunkContent {

@@ -32,7 +32,7 @@ impl ToDirection for Keycode {
             Keycode::Q => Ok(Direction::West),
             Keycode::D => Ok(Direction::East),
 
-            key => { Err(key) }
+            key => Err(key),
         }
     }
 }
@@ -82,7 +82,8 @@ impl Game {
                 if let Ok(dir) = key.to_direction() {
                     match dir {
                         // C W
-                        Direction::Up | Direction::Down if !repeat => {
+                        // Direction::Up | Direction::Down if !repeat => {
+                        Direction::Up | Direction::Down => {
                             self.renderer.move_camera(dir);
                         }
 
@@ -111,8 +112,8 @@ impl Renderer {
     pub fn move_camera(&mut self, dir: Direction) {
         let c = self.camera;
         let mv = match dir {
-            Direction::Up => (0, 0, 1),
-            Direction::Down => (0, 0, -1),
+            Direction::Up => (0, 0, -1),
+            Direction::Down => (0, 0, 1),
             Direction::North => (0, 1, 0),
             Direction::East => (-1, 0, 0),
             Direction::South => (0, -1, 0),

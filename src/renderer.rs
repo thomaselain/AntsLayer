@@ -1,8 +1,8 @@
-use std::sync::{ Arc, Mutex };
+use std::sync::{Arc, Mutex};
 
 use sdl2::Sdl;
 
-use crate::chunk::{ tile::Tile, Chunk, ChunkContent, CHUNK_WIDTH };
+use crate::chunk::{tile::Tile, Chunk, ChunkContent, CHUNK_WIDTH};
 
 // Width of a renderer tile (in pixels)
 pub const TILE_SIZE: usize = 4;
@@ -22,16 +22,18 @@ impl Renderer {
             .build()
             .map_err(|e| e.to_string())?;
 
-        let canvas = window
-            .into_canvas()
-            .build()
-            .map_err(|e| e.to_string())?;
+        let canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
 
-        Ok(Renderer { canvas, camera: (0, 0, crate::chunk::SEA_LEVEL as i32) })
+        Ok(Renderer {
+            canvas,
+            camera: (0, 0, crate::chunk::SEA_LEVEL as i32),
+        })
     }
 
     pub fn get_window_size(&self) -> (u32, u32) {
-        self.canvas.output_size().expect("Failed to get window size")
+        self.canvas
+            .output_size()
+            .expect("Failed to get window size")
     }
 
     // Offsets
@@ -55,7 +57,7 @@ impl Renderer {
     pub fn tile_screen_coords(
         offset: (i32, i32),
         chunk_pos: (&i32, &i32),
-        tile_pos: (i32, i32)
+        tile_pos: (i32, i32),
     ) -> (i32, i32) {
         let world_x_tiles = chunk_pos.0 * (CHUNK_WIDTH as i32) + tile_pos.0;
         let world_y_tiles = chunk_pos.1 * (CHUNK_WIDTH as i32) + tile_pos.1;
@@ -72,7 +74,7 @@ impl Chunk {
         &self,
         renderer: &mut Renderer,
         // Chunk coordinates
-        (pos_x, pos_y): (&i32, &i32)
+        (pos_x, pos_y): (&i32, &i32),
     ) {
         let (offset_x, offset_y) = renderer.get_offset();
         let camera_z = renderer.get_camera_z();
@@ -109,11 +111,8 @@ impl Chunk {
             //     (x,y),
             // );
 
-            let draw_pos = Renderer::tile_screen_coords(
-                (offset_x, offset_y),
-                (pos_x, pos_y),
-                (x, y)
-            );
+            let draw_pos =
+                Renderer::tile_screen_coords((offset_x, offset_y), (pos_x, pos_y), (x, y));
 
             self.content[index].draw(renderer, draw_pos);
         }

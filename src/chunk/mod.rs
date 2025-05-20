@@ -1,20 +1,20 @@
-use std::{ fmt::{ self } };
+use std::fmt::{ self };
 
 use biomes::Params;
 use noise::{ Fbm, NoiseFn, Perlin };
-use tile::{ Tile };
+use tile::Tile;
 
-pub mod tile;
-mod generation;
 mod biomes;
+mod generation;
 pub mod manager;
+pub mod tile;
 
 /// Chunk's data
 #[derive(Clone, Copy)]
 pub struct ChunkContent([Tile; FLAT_CHUNK_SIZE]);
 const FLAT_CHUNK_SIZE: usize = CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT;
-pub const CHUNK_WIDTH: usize = 8;
-pub const CHUNK_HEIGHT: usize = 16;
+pub const CHUNK_WIDTH: usize = 16;
+pub const CHUNK_HEIGHT: usize = 64;
 pub const SEA_LEVEL: usize = generation::SEA_LEVEL;
 mod index;
 
@@ -35,7 +35,7 @@ impl ChunkContent {
     pub fn new() -> Self {
         Self([Tile::air(); FLAT_CHUNK_SIZE])
     }
-    pub fn len() -> usize{
+    pub fn len() -> usize {
         FLAT_CHUNK_SIZE
     }
 }
@@ -47,7 +47,9 @@ pub struct Chunk {
 
 impl Chunk {
     pub fn new() -> Self {
-        Self { content: ChunkContent::new() }
+        Self {
+            content: ChunkContent::new(),
+        }
     }
     pub fn content(self) -> [Tile; FLAT_CHUNK_SIZE] {
         return self.content.0;
@@ -60,10 +62,14 @@ impl Chunk {
             for x in 0..CHUNK_WIDTH as i32 {
                 for y in 0..CHUNK_WIDTH as i32 {
                     let (nx, ny) = (
-                        ((x as f64) + (pos.0 as f64)) / (CHUNK_WIDTH as f64),
-                        ((y as f64) + (pos.1 as f64)) / (CHUNK_WIDTH as f64),
+                        x as f64 + (pos.0 as f64 * CHUNK_WIDTH as f64),
+                        y as f64 + (pos.1 as f64 * CHUNK_WIDTH as f64),
                     );
-                    let v = p.get([nx, ny, z as f64]);
+                    let v = p.get([
+                        b.noise.scale * nx, 
+                        b.noise.scale * ny,
+                        b.noise.scale * z as f64
+                        ]);
 
                     // eprintln!("{:.2?}", v);
 
@@ -83,10 +89,10 @@ impl Chunk {
 //
 #[cfg(test)]
 mod tests {
-    use crate::chunk::*;
     use crate::chunk::biomes::Biomes;
+    use crate::chunk::*;
     use crate::Manager;
-    
+
     #[test]
     fn all_biomes() {
         let biomes = Params::all();

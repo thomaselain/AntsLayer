@@ -1,4 +1,4 @@
-use std::{ collections::HashMap };
+use std::collections::HashMap;
 
 use noise::Perlin;
 
@@ -18,20 +18,24 @@ impl Manager {
             ((0, 1), Chunk::new()),
             ((1, 0), Chunk::new()),
             ((1, 1), Chunk::new()),
-        ].into()
+        ]
+        .into()
     }
     pub fn _2by2_plains() -> HashMap<(i32, i32), Chunk> {
         [
-            ((0, 0), Chunk::from_biome((0, 0), &Params::ocean())),
-            ((0, 1), Chunk::from_biome((0, 1), &Params::ocean())),
-            ((1, 0), Chunk::from_biome((1, 0), &Params::ocean())),
-            ((1, 1), Chunk::from_biome((1, 1), &Params::ocean())),
-        ].into()
+            ((0, 0), Chunk::from_biome((0, 0), &Params::plain())),
+            ((0, 1), Chunk::from_biome((0, 1), &Params::plain())),
+            ((1, 0), Chunk::from_biome((1, 0), &Params::plain())),
+            ((1, 1), Chunk::from_biome((1, 1), &Params::plain())),
+        ]
+        .into()
     }
 }
 
 impl Manager {
     pub fn new() -> Self {
-        Self { loaded_chunks: Manager::_2by2_empty() }
+        Self {
+            loaded_chunks: Manager::_2by2_empty(),
+        }
     }
 }
