@@ -13,6 +13,7 @@ mod inputs;
 
 pub struct Game {
     // Game engine
+    pub running: bool,
     pub last_tick: Instant,
     pub tick_rate: Duration,
 
@@ -52,6 +53,7 @@ impl Game {
             .expect("Failed to init SDL2::ttf");
 
         Game {
+            running: true,
             last_tick: Instant::now(),
             tick_rate: Duration::from_secs_f64(1.0 / 60.0),
             chunk_manager: Manager::new(),
@@ -99,17 +101,13 @@ impl Game {
 
     pub fn run(&mut self) {
         // Boucle de jeu
-        'running: loop {
+        while self.running {
             let mut event_pump = self.sdl.event_pump().unwrap();
 
             // Clear screen at the start of each frame
             // (could be improved a lot)
             self.renderer.canvas.set_draw_color(Color::RGB(0, 0, 0));
             self.renderer.canvas.clear();
-
-            if self.inputs.is_key_pressed(Keycode::Escape) {
-                break 'running;
-            }
 
             for event in event_pump.poll_iter() {
                 self.events.push(event);

@@ -76,32 +76,30 @@ impl Inputs {
 
 impl Game {
     pub fn process_input(&mut self) -> Result<(), ()> {
-        // On parcourt tous les events reçus ce frame
         for event in self.events.drain(..) {
             if let Event::KeyDown { keycode: Some(key), repeat, .. } = event {
-                // Essaie de convertir en Direction
+                // Directional inputs
                 if let Ok(dir) = key.to_direction() {
                     match dir {
-                        // Pour Up/Down, seulement si ce n'est pas un repeat
+                        // C W
                         Direction::Up | Direction::Down if !repeat => {
                             self.renderer.move_camera(dir);
                         }
-                        // Pour les 4 autres, on accepte le repeat
+
+                        // Z Q S D
                         Direction::North | Direction::East | Direction::South | Direction::West => {
                             self.renderer.move_camera(dir);
                         }
-                        // Pour W/C en repeat, on ne fait rien
                         _ => {}
                     }
-                } else {
-                    match key {
-                        Keycode::ESCAPE => {}
-                        _ => {
-                            unsafe {
-                                exit(0);
-                            }
-                        }
+                }
+
+                // EXIT GAME (at next loop)
+                match key {
+                    Keycode::ESCAPE => {
+                        self.running = false;
                     }
+                    _ => {}
                 }
             }
         }
