@@ -84,11 +84,12 @@ impl Chunk {
             let (
                 // x = i % W
                 x,
+
                 // y = (i / W) % W
                 y,
-                // z = (i / W²) % W
 
                 // Does not need calculation because it is set by camera
+                // z = (i / W²) % W
                 z,
             ) = Tile::index_to_xyz(index);
 
@@ -98,18 +99,6 @@ impl Chunk {
             }
 
             // println!("Drawing tile at {:?} (index = {:?})", (x, y, z), index);
-
-            // NEEDS FIX
-            // panic!(
-            //     "Fix coordinates
-            // \nChunk coords :{:?}
-            // \nIndex        :{:?}
-            // \nTile pos     :{:?}
-            // ",
-            //     (pos_x, pos_y),
-            //     index,
-            //     (x,y),
-            // );
 
             let draw_pos =
                 Renderer::tile_screen_coords((offset_x, offset_y), (pos_x, pos_y), (x, y));

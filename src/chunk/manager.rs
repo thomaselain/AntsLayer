@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{ collections::HashMap, ops::Range };
 
 use noise::Perlin;
 
@@ -8,34 +8,40 @@ use super::Chunk;
 
 pub struct Manager {
     pub loaded_chunks: HashMap<(i32, i32), Chunk>,
+    pub test_biome: Params,
 }
 
 // Default empty chunks
 impl Manager {
-    pub fn _2by2_empty() -> HashMap<(i32, i32), Chunk> {
-        [
-            ((0, 0), Chunk::new()),
-            ((0, 1), Chunk::new()),
-            ((1, 0), Chunk::new()),
-            ((1, 1), Chunk::new()),
-        ]
-        .into()
-    }
-    pub fn _2by2_plains() -> HashMap<(i32, i32), Chunk> {
-        [
-            ((0, 0), Chunk::from_biome((0, 0), &Params::plain())),
-            ((0, 1), Chunk::from_biome((0, 1), &Params::plain())),
-            ((1, 0), Chunk::from_biome((1, 0), &Params::plain())),
-            ((1, 1), Chunk::from_biome((1, 1), &Params::plain())),
-        ]
-        .into()
+    pub fn generate_range(
+        x_range: Range<i32>,
+        y_range: Range<i32>,
+        p: Option<Params>
+    ) -> HashMap<(i32, i32), Chunk> {
+        let mut m = HashMap::new();
+        for j in y_range {
+            for i in x_range.clone() {
+                // Biome as arg : use it
+                if let Some(ref p) = p {
+                    m.insert((i, j), Chunk::from_biome((i, j), &p));
+                } else {
+                    // No biome given : generate empty
+                    m.insert((i, j), Chunk::new());
+                }
+            }
+        }
+
+        m
     }
 }
 
 impl Manager {
     pub fn new() -> Self {
+        let default_biome = Params::ocean();
+
         Self {
-            loaded_chunks: Manager::_2by2_empty(),
+            loaded_chunks: Manager::generate_range(-10..10, -10..10, Some(default_biome.clone())),
+            test_biome: default_biome.clone(),
         }
     }
 }

@@ -13,7 +13,11 @@ impl Game {
             .expect("Failed to load Font");
 
         // Text to display
-        let text = format!("Camera: {:?}", self.renderer.camera);
+        let text = format!(
+            "Camera: {:?}",
+            // \ntest_biome: {:?}\n",
+            self.renderer.camera,
+        );
 
         // Turn text into a surface and then a texture
         let surface = font

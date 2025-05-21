@@ -4,7 +4,7 @@ use biomes::Params;
 use noise::{ Fbm, NoiseFn, Perlin };
 use tile::Tile;
 
-mod biomes;
+pub mod biomes;
 mod generation;
 pub mod manager;
 pub mod tile;
@@ -14,7 +14,7 @@ pub mod tile;
 pub struct ChunkContent([Tile; FLAT_CHUNK_SIZE]);
 const FLAT_CHUNK_SIZE: usize = CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT;
 pub const CHUNK_WIDTH: usize = 16;
-pub const CHUNK_HEIGHT: usize = 64;
+pub const CHUNK_HEIGHT: usize = 128;
 pub const SEA_LEVEL: usize = generation::SEA_LEVEL;
 mod index;
 
@@ -62,14 +62,14 @@ impl Chunk {
             for x in 0..CHUNK_WIDTH as i32 {
                 for y in 0..CHUNK_WIDTH as i32 {
                     let (nx, ny) = (
-                        x as f64 + (pos.0 as f64 * CHUNK_WIDTH as f64),
-                        y as f64 + (pos.1 as f64 * CHUNK_WIDTH as f64),
+                        (x as f64) + (pos.0 as f64) * (CHUNK_WIDTH as f64),
+                        (y as f64) + (pos.1 as f64) * (CHUNK_WIDTH as f64),
                     );
                     let v = p.get([
-                        b.noise.scale * nx, 
+                        b.noise.scale * nx,
                         b.noise.scale * ny,
-                        b.noise.scale * z as f64
-                        ]);
+                        b.noise.scale * (z as f64),
+                    ]);
 
                     // eprintln!("{:.2?}", v);
 

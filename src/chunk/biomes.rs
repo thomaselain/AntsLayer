@@ -53,7 +53,7 @@ impl Default for NoiseParams {
             frequency: 1.0,
             lacunarity: 1.5,
             persistence: 1.1,
-            scale: 1.0/TILE_SIZE as f64,
+            scale: 0.015,
         }
     }
 }

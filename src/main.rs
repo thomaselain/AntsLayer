@@ -1,6 +1,6 @@
 use std::{ process::{ ExitCode, Termination }, time::{ Duration, Instant } };
 
-use chunk::manager::Manager;
+use chunk::{ biomes::Params, manager::Manager };
 use inputs::Inputs;
 use renderer::Renderer;
 use sdl2::{ event::Event, pixels::Color, ttf::Sdl2TtfContext, Sdl };
@@ -56,6 +56,7 @@ impl Game {
             running: true,
             last_tick: Instant::now(),
             tick_rate: Duration::from_secs_f64(1.0 / 60.0),
+
             chunk_manager: Manager::new(),
             renderer,
 
@@ -132,8 +133,7 @@ fn main() -> Result<Game, ()> {
     let sdl = sdl2::init().expect("Failed to init SDL2");
     let mut game = Game::new(sdl);
 
-    game.chunk_manager.loaded_chunks = Manager::_2by2_plains();
-
     game.run();
+    
     Ok(game)
 }
