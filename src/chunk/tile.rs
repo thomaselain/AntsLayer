@@ -1,10 +1,10 @@
-use std::{ fmt, sync::{ Arc, Mutex } };
+use std::fmt;
 
 use bitflags::bitflags;
 use sdl2::{ pixels::Color, rect::Rect };
 use serde::{ Deserialize, Serialize };
 
-use crate::renderer::{ self, Renderer, TILE_SIZE };
+use crate::renderer::{ Renderer, TILE_SIZE };
 
 use super::{ CHUNK_HEIGHT, CHUNK_WIDTH };
 
@@ -51,6 +51,14 @@ pub enum TileType {
     Gas(Gas),
     Fluid(Fluid),
     Custom(u16),
+}
+impl TileType {
+    pub fn is_transparent(self) -> bool {
+        match self {
+            TileType::Gas(_) => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
@@ -182,7 +190,7 @@ impl Into<String> for TileType {
 }
 
 impl Tile {
-    fn color(self) -> Color {
+    pub fn color(self) -> Color {
         match self.tile_type {
             TileType::Stone(stone) => {
                 match stone {
@@ -198,16 +206,16 @@ impl Tile {
                     Soil::Clay => Color::RGB(182, 106, 80),
                 }
             }
-            TileType::Gas(_gas) => Color::RGBA(25, 25, 25, 150),
+            TileType::Gas(_gas) => Color::RGBA(255, 255, 255, 25),
             TileType::Fluid(_fluid) => Color::BLUE,
             TileType::Custom(_) => Color::RGB(255, 155, 200),
         }
     }
 
-    pub fn draw(self, renderer: &mut Renderer, (x, y): (i32, i32)) {
+    pub fn draw(self, renderer: &mut Renderer, (x, y): (i32, i32), color: Color) {
         // eprintln!("Rendering Tile at : {:?} with color {:?}", (x,y), self.color());
+        renderer.canvas.set_draw_color(color);
 
-        renderer.canvas.set_draw_color(self.color());
         renderer.canvas
             .fill_rect(Rect::new(x, y, TILE_SIZE as u32, TILE_SIZE as u32))
             .expect("Failed to draw tile");

@@ -1,6 +1,5 @@
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::ttf::Font;
 
 use crate::Game;
 
@@ -14,9 +13,10 @@ impl Game {
 
         // Text to display
         let text = format!(
-            "Camera: {:?}",
+            "Camera: {:?} Time elapsed: {:.1?}s",
             // \ntest_biome: {:?}\n",
             self.renderer.camera,
+            self.elapsed_secs()
         );
 
         // Turn text into a surface and then a texture

@@ -1,6 +1,6 @@
 use std::{ process::{ ExitCode, Termination }, time::{ Duration, Instant } };
 
-use chunk::{ biomes::Params, manager::Manager };
+use chunk::manager::Manager;
 use inputs::Inputs;
 use renderer::Renderer;
 use sdl2::{ event::Event, pixels::Color, ttf::Sdl2TtfContext, Sdl };
@@ -15,6 +15,7 @@ pub struct Game {
     // Game engine
     pub running: bool,
     pub last_tick: Instant,
+    pub first_tick: Instant,
     pub tick_rate: Duration,
 
     // Chunk
@@ -43,6 +44,11 @@ mod tests {
 }
 
 impl Game {
+    // Seconds that happends since the game started
+    fn elapsed_secs(&self) -> f64 {
+        self.first_tick.clone().elapsed().as_secs_f64()
+    }
+
     pub fn new(sdl: Sdl) -> Game {
         let renderer = Renderer::new(&sdl, "Ants Layer", 800, 600).expect(
             "Failed to create game renderer"
@@ -55,6 +61,7 @@ impl Game {
         Game {
             running: true,
             last_tick: Instant::now(),
+            first_tick: Instant::now(),
             tick_rate: Duration::from_secs_f64(1.0 / 60.0),
 
             chunk_manager: Manager::new(),
@@ -84,8 +91,10 @@ impl Game {
     }
 
     fn render(&mut self) {
+        let timestamp = self.elapsed_secs();
+
         for ((x, y), c) in &self.chunk_manager.loaded_chunks {
-            c.draw(&mut self.renderer, (x, y));
+            c.draw(&mut self.renderer, (x, y), timestamp);
         }
 
         // Top-left info display
@@ -134,6 +143,6 @@ fn main() -> Result<Game, ()> {
     let mut game = Game::new(sdl);
 
     game.run();
-    
+
     Ok(game)
 }

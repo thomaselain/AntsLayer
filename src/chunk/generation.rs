@@ -1,21 +1,12 @@
-use noise::{ Fbm, Perlin };
+use super::{ biomes::Params, tile::Tile, Chunk, CHUNK_HEIGHT };
 
-use super::{ biomes::Params, tile::Tile, Chunk, CHUNK_HEIGHT, CHUNK_WIDTH };
-
-const TEST_SEED: u32 = 42;
-pub const SEA_LEVEL: usize = CHUNK_HEIGHT / 2;
+pub const SEA_LEVEL: usize = CHUNK_HEIGHT / 3;
 
 impl Chunk {
     pub fn from_biome((x, y): (i32, i32), b: &Params) -> Chunk {
-        let mut chunk = Chunk::new();
-        let mut p = Fbm::<Perlin>::new(TEST_SEED);
-        
-        p.octaves = b.noise.octaves;
-        p.frequency = b.noise.frequency;
-        p.lacunarity = b.noise.lacunarity;
-        p.persistence = b.noise.persistence;
+        let mut chunk = Chunk::new();        
 
-        chunk.generate((x, y), b.clone(), p.clone());
+        chunk.generate((x, y), b.clone(), b.noise.fbm.clone());
         chunk
     }
 }
@@ -51,7 +42,7 @@ impl Params {
             (true, "Ocean", _) => Tile::air(),
 
             (false, "Ocean", 0.0..0.01) => Tile::marble(),
-            (false, "Ocean", 0.01..0.02) => Tile::dirt(),
+            (false, "Ocean", 0.01..0.9) => Tile::dirt(),
             (false, "Ocean", _) => Tile::water(),
             // ------------------
 

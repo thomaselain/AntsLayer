@@ -8,15 +8,15 @@ pub mod biomes;
 mod generation;
 pub mod manager;
 pub mod tile;
+pub mod index;
 
 /// Chunk's data
 #[derive(Clone, Copy)]
 pub struct ChunkContent([Tile; FLAT_CHUNK_SIZE]);
 const FLAT_CHUNK_SIZE: usize = CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT;
-pub const CHUNK_WIDTH: usize = 16;
-pub const CHUNK_HEIGHT: usize = 128;
+pub const CHUNK_WIDTH: usize = 8;
+pub const CHUNK_HEIGHT: usize = 64;
 pub const SEA_LEVEL: usize = generation::SEA_LEVEL;
-mod index;
 
 /// Allows ASCII display
 impl fmt::Debug for Chunk {
@@ -89,7 +89,6 @@ impl Chunk {
 //
 #[cfg(test)]
 mod tests {
-    use crate::chunk::biomes::Biomes;
     use crate::chunk::*;
     use crate::Manager;
 
@@ -105,8 +104,8 @@ mod tests {
 
     #[test]
     fn manager() {
-        let biomes = Biomes::load();
-        assert!(!biomes.params.is_empty());
+        let biomes = Params::all();
+        assert!(!biomes.is_empty());
 
         let mngr = Manager::new();
         assert!(!mngr.loaded_chunks.is_empty());

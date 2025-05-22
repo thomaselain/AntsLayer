@@ -1,31 +1,17 @@
-use noise::{ NoiseFn, Perlin };
-use serde::Deserialize;
+use noise::{ Fbm, Perlin };
 
-use crate::renderer::TILE_SIZE;
-
-use super::{ tile::Tile, CHUNK_WIDTH };
-
-pub struct Biomes {
-    pub params: Vec<Params>,
-}
-
-impl Biomes {
-    pub fn load() -> Biomes {
-        Biomes {
-            params: Params::all(),
-        }
-    }
-}
-
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Params {
     pub name: String,
     pub noise: NoiseParams,
     pub terrain: TerrainParams,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct NoiseParams {
+    // raw noise
+    pub fbm: Fbm<Perlin>,
+
     /// https://docs.rs/noise/latest/noise/struct.Fbm.html
     /// Total number of frequency octaves to generate the noise with.
     /// The number of octaves control the amount of detail in the noise function. Adding more octaves increases the detail, with the drawback of increasing the calculation time.
@@ -49,16 +35,17 @@ pub struct NoiseParams {
 impl Default for NoiseParams {
     fn default() -> Self {
         Self {
+            fbm:Fbm::new(42),
             octaves: 3,
             frequency: 1.0,
-            lacunarity: 1.5,
+            lacunarity:2.0,
             persistence: 1.1,
             scale: 0.015,
         }
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct TerrainParams {
     /// Humidity
     pub humidity: u8,

@@ -1,7 +1,5 @@
 use std::{ collections::HashMap, ops::Range };
 
-use noise::Perlin;
-
 use crate::chunk::biomes::Params;
 
 use super::Chunk;

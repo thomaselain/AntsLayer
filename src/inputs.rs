@@ -1,4 +1,4 @@
-use sdl2::{ event::Event, keyboard::Keycode, libc::exit, sys::KeyCode };
+use sdl2::{ event::Event, keyboard::Keycode };
 
 use crate::{ renderer::Renderer, Game };
 
@@ -77,7 +77,7 @@ impl Inputs {
 impl Game {
     pub fn process_input(&mut self) -> Result<(), ()> {
         for event in self.events.drain(..) {
-            if let Event::KeyDown { keycode: Some(key), repeat, .. } = event {
+            if let Event::KeyDown { keycode: Some(key), repeat: _, .. } = event {
                 // Directional inputs
                 if let Ok(dir) = key.to_direction() {
                     match dir {
@@ -91,7 +91,6 @@ impl Game {
                         Direction::North | Direction::East | Direction::South | Direction::West => {
                             self.renderer.move_camera(dir);
                         }
-                        _ => {}
                     }
                 }
 
