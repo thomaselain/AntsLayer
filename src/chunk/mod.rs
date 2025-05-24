@@ -1,17 +1,18 @@
 use std::fmt::{ self };
 
 use biomes::Params;
+use manager::LoadedChunk;
 use noise::{ Fbm, NoiseFn, Perlin };
 use tile::Tile;
 
 pub mod biomes;
-mod generation;
+pub mod generation;
 pub mod manager;
 pub mod tile;
 pub mod index;
 
 /// Chunk's data
-#[derive(Clone, Copy)]
+#[derive(Hash, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct ChunkContent([Tile; FLAT_CHUNK_SIZE]);
 const FLAT_CHUNK_SIZE: usize = CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT;
 pub const CHUNK_WIDTH: usize = 8;
@@ -40,16 +41,14 @@ impl ChunkContent {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Hash, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Chunk {
     pub content: ChunkContent,
 }
 
 impl Chunk {
-    pub fn new() -> Self {
-        Self {
-            content: ChunkContent::new(),
-        }
+    pub fn new(pos: (i32, i32)) -> LoadedChunk {
+        LoadedChunk { pos, c: Chunk { content: ChunkContent::new() } }
     }
     pub fn content(self) -> [Tile; FLAT_CHUNK_SIZE] {
         return self.content.0;
@@ -98,7 +97,7 @@ mod tests {
 
         for b in biomes {
             let chunk = Chunk::from_biome((0, 0), &b);
-            println!("{:?}: \n{:?}\n", b.name, chunk);
+            println!("{:?}: \n{:?}\n", b.name, chunk.c);
         }
     }
 

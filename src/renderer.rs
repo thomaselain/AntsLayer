@@ -11,11 +11,15 @@ use crate::chunk::{
     SEA_LEVEL,
 };
 
-// Width of a renderer tile (in pixels)
-pub const TILE_SIZE: usize = 10;
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
 /// This is maximum of air tiles to display
-pub const MAX_AIR_DEPTH: u8 = 10;
+pub const MAX_AIR_DEPTH: u8 = 5;
+// Width of a renderer tile (in pixels)
+pub const DEFAULT_TILE_SIZE: usize = 4;
+//
+pub const CLOUDS_RENDERING: bool = false;
+pub const VIEW_DISTANCE: i32 = (CHUNK_WIDTH as i32) * 4;
+pub const MAX_VISIBLE_CHUNKS: usize = VIEW_DISTANCE.pow(2) as usize;
 
 // Struct for rendering with noise
 pub struct RendererNoise {
@@ -33,6 +37,10 @@ impl RendererNoise {
 pub struct Renderer {
     pub canvas: sdl2::render::Canvas<sdl2::video::Window>,
     pub camera: (i32, i32, i32),
+    pub view_distance: i32,
+
+    // Width of a renderer tile (in pixels)
+    pub tile_size: usize,
 
     noise: RendererNoise,
 }
@@ -40,7 +48,7 @@ pub struct Renderer {
 impl NoiseParams {
     pub fn clouds() -> Self {
         Self {
-            fbm:Fbm::new(69),
+            fbm: Fbm::new(69_420),
             octaves: 1,
             frequency: 1.05,
             lacunarity: 2.0,
@@ -70,6 +78,8 @@ impl Renderer {
             canvas,
             camera: (0, 0, crate::chunk::SEA_LEVEL as i32),
             noise: RendererNoise { clouds: NoiseParams::clouds() },
+            tile_size: DEFAULT_TILE_SIZE,
+            view_distance: VIEW_DISTANCE,
         })
     }
 
@@ -83,8 +93,8 @@ impl Renderer {
         let half_w = (w as i32) / 2;
         let half_h = (h as i32) / 2;
 
-        let offset_x = self.camera.0 * (TILE_SIZE as i32) + half_w;
-        let offset_y = self.camera.1 * (TILE_SIZE as i32) + half_h;
+        let offset_x = self.camera.0 * (self.tile_size as i32) + half_w;
+        let offset_y = self.camera.1 * (self.tile_size as i32) + half_h;
 
         (offset_x, offset_y)
     }
@@ -98,12 +108,13 @@ impl Renderer {
     pub fn tile_screen_coords(
         offset: (i32, i32),
         chunk_pos: (&i32, &i32),
-        tile_pos: (i32, i32)
+        tile_pos: (i32, i32),
+        tile_size: i32
     ) -> (i32, i32) {
         let (x, y) = Self::tile_world_coords(chunk_pos, tile_pos);
 
-        let pixel_x = offset.0 + x * (TILE_SIZE as i32);
-        let pixel_y = offset.1 + y * (TILE_SIZE as i32);
+        let pixel_x = offset.0 + x * tile_size;
+        let pixel_y = offset.1 + y * tile_size;
 
         (pixel_x, pixel_y)
     }
@@ -120,7 +131,7 @@ impl Chunk {
         &self,
         renderer: &mut Renderer,
         // Chunk coordinates
-        (pos_x, pos_y): (&i32, &i32),
+        (pos_x, pos_y): (i32, i32),
         timestamp: f64
     ) {
         let (offset_x, offset_y) = renderer.get_offset();
@@ -133,13 +144,16 @@ impl Chunk {
             if z == camera_z {
                 let draw_pos = Renderer::tile_screen_coords(
                     (offset_x, offset_y),
-                    (pos_x, pos_y),
-                    (x, y)
+                    (&pos_x, &pos_y),
+                    (x, y),
+                    renderer.tile_size as i32
                 );
                 let mut depth = 0;
                 let mut current_z = z;
                 let mut tiles_to_draw = Vec::new();
 
+                ////////////////////////////////////////////////////////////////
+                //////////////////     FOG     RENDERING  //////////////////////
                 ////////////////////////////////////////////////////////////////
                 'find_deepest: loop {
                     let idx = flatten_index_i32((x, y, current_z));
@@ -151,9 +165,9 @@ impl Chunk {
                         // current tile is not transparent
                         !tile.tile_type.is_transparent() ||
                         // Reached bottom
-                        current_z == 0 ||
+                        current_z == 0 
                         // Dont draw too much
-                        depth >= MAX_AIR_DEPTH
+                        || depth >= MAX_AIR_DEPTH
                     {
                         break 'find_deepest;
                     }
@@ -163,7 +177,7 @@ impl Chunk {
                 }
                 ////////////////////////////////////////////////////////////////
 
-                // Draw deepest tile found
+                // Draw deepest tile found first
                 if let Some(bottom_tile) = tiles_to_draw.pop() {
                     let c = bottom_tile.color();
                     bottom_tile.draw(renderer, draw_pos, c);
@@ -172,22 +186,26 @@ impl Chunk {
                 // Draw tiles from bottom to top
                 for tile in tiles_to_draw.iter().rev() {
                     let mut c = tile.color();
-
-                    tile.draw(renderer, draw_pos, c);
+                    if tile.tile_type.is_transparent() {
+                        tile.draw(renderer, draw_pos, c);
+                    }
 
                     // Clouds
-                    if z > (SEA_LEVEL as i32) + (MAX_AIR_DEPTH as i32) / 2 {
-                        let (x, y) = Renderer::tile_world_coords((pos_x, pos_y), (x, y));
-                        let (x, y, z) = (x as f64, y as f64, z as f64);
-                        // Find cloud value
-                        c.a = ((c.a as f64) +
-                            renderer.noise.get_cloud_value(
-                                x + timestamp * 5.0,
-                                y + timestamp * 2.5,
-                                z,
-                                timestamp / 10.0
-                            ) * 255.0) as u8;
-                        tile.draw(renderer, draw_pos, c);
+                    if CLOUDS_RENDERING {
+                        if z > (SEA_LEVEL as i32) + (MAX_AIR_DEPTH as i32) / 2 {
+                            let (x, y) = Renderer::tile_world_coords((&pos_x, &pos_y), (x, y));
+                            let (x, y, z) = (x as f64, y as f64, z as f64);
+                            // Find cloud value
+                            c.a = ((c.a as f64) +
+                                renderer.noise.get_cloud_value(
+                                    x + timestamp * 5.0,
+                                    y + timestamp * 2.5,
+                                    z,
+                                    timestamp / 10.0
+                                ) *
+                                    255.0) as u8;
+                            tile.draw(renderer, draw_pos, c);
+                        }
                     }
                 }
             }

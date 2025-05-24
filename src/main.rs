@@ -1,13 +1,19 @@
 use std::{ process::{ ExitCode, Termination }, time::{ Duration, Instant } };
 
-use chunk::manager::Manager;
+use chunk::{ manager::{ Manager }, CHUNK_WIDTH };
 use inputs::Inputs;
-use renderer::Renderer;
+use renderer::{ Renderer, VIEW_DISTANCE };
 use sdl2::{ event::Event, pixels::Color, ttf::Sdl2TtfContext, Sdl };
 
+// Units
+mod ant;
+
+//
 mod debug;
 
 mod chunk;
+
+// Game engine
 mod inputs;
 mod renderer;
 
@@ -19,6 +25,7 @@ pub struct Game {
     pub tick_rate: Duration,
 
     // Chunk
+    // pub ants_manager: Manager,
     pub chunk_manager: Manager,
     pub renderer: Renderer,
 
@@ -31,15 +38,15 @@ pub struct Game {
 
 #[cfg(test)]
 mod tests {
-    use crate::main;
-    use crate::Game;
+    #[allow(unused_imports)]
+    use crate::{ main, ant::{ Ant, Type }, Game };
 
     #[test]
-    fn test_main() -> Result<Game, ()> {
+    #[ignore = "test doesn't wait for the game to exit so it shows as FAILED"]
+    fn test_main() -> Result<(), ()> {
         // Run the game and get its Result
-        let game = main();
-
-        Ok(game?)
+        main()?;
+        Ok(())
     }
 }
 
@@ -92,14 +99,19 @@ impl Game {
 
     fn render(&mut self) {
         let timestamp = self.elapsed_secs();
+        let (x_min, x_max, y_min, y_max) = (
+            (self.renderer.camera.0 - VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
+            (self.renderer.camera.0 + VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
+            (self.renderer.camera.1 - VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
+            (self.renderer.camera.1 + VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
+        );
 
-        for ((x, y), c) in &self.chunk_manager.loaded_chunks {
-            c.draw(&mut self.renderer, (x, y), timestamp);
+        for chunk in &self.chunk_manager.loaded_chunks {
+            chunk.c.draw(&mut self.renderer, chunk.pos, timestamp);
         }
 
         // Top-left info display
-        //
-        // camera coords
+        #[cfg(test)]
         self.display_debug().unwrap();
     }
 
@@ -139,8 +151,7 @@ impl Termination for Game {
 }
 
 fn main() -> Result<Game, ()> {
-    let sdl = sdl2::init().expect("Failed to init SDL2");
-    let mut game = Game::new(sdl);
+    let mut game = Game::new(sdl2::init().unwrap());
 
     game.run();
 

@@ -1,4 +1,4 @@
-use sdl2::{ event::Event, keyboard::Keycode };
+use sdl2::{ event::Event, keyboard::Keycode, mouse::MouseWheelDirection };
 
 use crate::{ renderer::Renderer, Game };
 
@@ -101,6 +101,21 @@ impl Game {
                     }
                     _ => {}
                 }
+            }
+            if let Event::MouseWheel { y, direction, .. } = event {
+                let scroll = match direction {
+                    sdl2::mouse::MouseWheelDirection::Normal => y,
+                    sdl2::mouse::MouseWheelDirection::Flipped => -y,
+                    _ => 0,
+                };
+
+                if scroll > 0 {
+                    self.renderer.tile_size += 1;
+                } else if scroll < 0 {
+                    self.renderer.tile_size = self.renderer.tile_size.saturating_sub(1);
+                }
+                self.renderer.tile_size = self.renderer.tile_size.clamp(4, 64);
+                
             }
         }
         Ok(())

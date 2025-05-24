@@ -6,17 +6,17 @@ use crate::Game;
 impl Game {
     pub fn display_debug(&mut self) -> Result<(), String> {
         // Load font
-        let font = self
-            .ttf_context
+        let font = self.ttf_context
             .load_font("assets/Minecraft.ttf", 16)
             .expect("Failed to load Font");
 
         // Text to display
         let text = format!(
-            "Camera: {:?} Time elapsed: {:.1?}s",
+            "Camera: {:?} Time elapsed: {:.1?}s Tile size: {:?}",
             // \ntest_biome: {:?}\n",
             self.renderer.camera,
-            self.elapsed_secs()
+            self.elapsed_secs(),
+            self.renderer.tile_size
         );
 
         // Turn text into a surface and then a texture

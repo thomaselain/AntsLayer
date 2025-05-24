@@ -1,12 +1,12 @@
-use super::{ biomes::Params, tile::Tile, Chunk, CHUNK_HEIGHT };
+use super::{ biomes::Params, manager::LoadedChunk, tile::Tile, Chunk, CHUNK_HEIGHT };
 
-pub const SEA_LEVEL: usize = CHUNK_HEIGHT / 3;
+pub const SEA_LEVEL: usize = (CHUNK_HEIGHT as f64 * 0.7) as usize;
 
 impl Chunk {
-    pub fn from_biome((x, y): (i32, i32), b: &Params) -> Chunk {
-        let mut chunk = Chunk::new();        
+    pub fn from_biome(pos: (i32, i32), b: &Params) -> LoadedChunk {
+        let mut chunk = Chunk::new(pos);        
 
-        chunk.generate((x, y), b.clone(), b.noise.fbm.clone());
+        chunk.c.generate(pos, b.clone(), b.noise.fbm.clone());
         chunk
     }
 }
@@ -15,8 +15,8 @@ impl Params {
     pub fn tile_at(&self, (x, y, z): (i32, i32, i32), v: f64) -> Tile {
         let above_sea_level = z > (SEA_LEVEL as i32);
 
-        let v = if z < SEA_LEVEL as i32 {
-            v / z as f64
+        let v = if z > SEA_LEVEL as i32 {
+            v *0.3* z as f64
         } else {
             // v - 0.2
             v

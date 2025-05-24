@@ -1,10 +1,10 @@
-use std::fmt;
+use std::{collections::HashSet, fmt};
 
 use bitflags::bitflags;
 use sdl2::{ pixels::Color, rect::Rect };
 use serde::{ Deserialize, Serialize };
 
-use crate::renderer::{ Renderer, TILE_SIZE };
+use crate::{ant::Ant, renderer::Renderer};
 
 use super::{ CHUNK_HEIGHT, CHUNK_WIDTH };
 
@@ -35,15 +35,13 @@ impl Tile {
     }
 }
 /// TILE STRUCT
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Hash, Serialize, Deserialize, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Tile {
     pub hp: u8,
     pub tile_type: TileType,
-    // extra_data (for items, units etc...)
-    pub extra_data: Option<u8>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Hash, Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u16)]
 pub enum TileType {
     Stone(Stone),
@@ -52,6 +50,7 @@ pub enum TileType {
     Fluid(Fluid),
     Custom(u16),
 }
+
 impl TileType {
     pub fn is_transparent(self) -> bool {
         match self {
@@ -61,14 +60,14 @@ impl TileType {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Hash, Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u16)]
 pub enum Fluid {
     Magma,
     Water,
     SaltWater,
 }
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Hash, Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u16)]
 pub enum Gas {
     Air,
@@ -80,68 +79,60 @@ impl Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Gas(Gas::Air),
-            extra_data: None,
         }
     }
     pub fn sand() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Soil(Soil::Sand),
-            extra_data: None,
         }
     }
     pub fn clay() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Soil(Soil::Clay),
-            extra_data: None,
         }
     }
     pub fn dirt() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Soil(Soil::Dirt),
-            extra_data: None,
         }
     }
     pub fn marble() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Stone(Stone::Marble),
-            extra_data: None,
         }
     }
     pub fn limestone() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Stone(Stone::Limestone),
-            extra_data: None,
         }
     }
     pub fn granite() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Stone(Stone::Granite),
-            extra_data: None,
         }
     }
     pub fn water() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Fluid(Fluid::Water),
-            extra_data: None,
         }
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Hash, Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u16)]
 pub enum Soil {
     Dirt,
     Sand,
     Clay,
 }
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Hash, Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u16)]
 pub enum Stone {
     Granite,
@@ -196,17 +187,17 @@ impl Tile {
                 match stone {
                     Stone::Granite => Color::RGB(100, 100, 100),
                     Stone::Marble => Color::RGB(150, 150, 150),
-                    Stone::Limestone => Color::RGB(230, 230, 230),
+                    Stone::Limestone => Color::RGB(175, 175, 175),
                 }
             }
             TileType::Soil(soil) => {
                 match soil {
                     Soil::Dirt => Color::RGB(111, 78, 55),
-                    Soil::Sand => Color::RGB(255, 255, 143),
+                    Soil::Sand => Color::RGB(220, 220, 10),
                     Soil::Clay => Color::RGB(182, 106, 80),
                 }
             }
-            TileType::Gas(_gas) => Color::RGBA(255, 255, 255, 25),
+            TileType::Gas(_gas) => Color::RGBA(255, 255, 255, 42),
             TileType::Fluid(_fluid) => Color::BLUE,
             TileType::Custom(_) => Color::RGB(255, 155, 200),
         }
@@ -217,7 +208,7 @@ impl Tile {
         renderer.canvas.set_draw_color(color);
 
         renderer.canvas
-            .fill_rect(Rect::new(x, y, TILE_SIZE as u32, TILE_SIZE as u32))
+            .fill_rect(Rect::new(x, y, renderer.tile_size as u32, renderer.tile_size as u32))
             .expect("Failed to draw tile");
         renderer.canvas.set_draw_color(Color::BLACK);
     }
