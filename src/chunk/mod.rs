@@ -8,6 +8,12 @@ use tile::Tile;
 pub mod biomes;
 pub mod generation;
 pub mod manager;
+
+/// Name export so it's not confused with Ant::Manager
+#[allow(unused)]
+pub use manager::Manager as ChunkManager;
+
+
 pub mod tile;
 pub mod index;
 
@@ -89,7 +95,7 @@ impl Chunk {
 #[cfg(test)]
 mod tests {
     use crate::chunk::*;
-    use crate::Manager;
+    use crate::ChunkManager;
 
     #[test]
     fn all_biomes() {
@@ -106,7 +112,7 @@ mod tests {
         let biomes = Params::all();
         assert!(!biomes.is_empty());
 
-        let mngr = Manager::new();
+        let mngr = ChunkManager::new();
         assert!(!mngr.loaded_chunks.is_empty());
     }
 }

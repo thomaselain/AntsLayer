@@ -1,17 +1,19 @@
 use std::{ process::{ ExitCode, Termination }, time::{ Duration, Instant } };
 
-use chunk::{ manager::{ Manager }, CHUNK_WIDTH };
+use ant::{ AntManager };
+use chunk::{ ChunkManager, CHUNK_WIDTH };
 use inputs::Inputs;
 use renderer::{ Renderer, VIEW_DISTANCE };
 use sdl2::{ event::Event, pixels::Color, ttf::Sdl2TtfContext, Sdl };
 
+//  ------
+mod debug;
+//  ------
+
+// Chunks
+mod chunk;
 // Units
 mod ant;
-
-//
-mod debug;
-
-mod chunk;
 
 // Game engine
 mod inputs;
@@ -25,8 +27,8 @@ pub struct Game {
     pub tick_rate: Duration,
 
     // Chunk
-    // pub ants_manager: Manager,
-    pub chunk_manager: Manager,
+    pub ant_manager: AntManager,
+    pub chunk_manager: ChunkManager,
     pub renderer: Renderer,
 
     // SDL2 fields
@@ -71,7 +73,8 @@ impl Game {
             first_tick: Instant::now(),
             tick_rate: Duration::from_secs_f64(1.0 / 60.0),
 
-            chunk_manager: Manager::new(),
+            ant_manager: AntManager::new(),
+            chunk_manager: ChunkManager::new(),
             renderer,
 
             sdl,
@@ -84,7 +87,7 @@ impl Game {
 
 impl Game {
     pub fn create_world(&mut self) -> Result<(), ()> {
-        self.chunk_manager = Manager::new();
+        self.chunk_manager = ChunkManager::new();
 
         Ok(())
     }
@@ -112,7 +115,11 @@ impl Game {
 
         // Top-left info display
         #[cfg(test)]
-        self.display_debug().unwrap();
+        {
+            self.display_debug(format!("Camera pos : {:?}", self.renderer.camera), 1).unwrap();
+            self.display_debug(format!("Time       : {:.2?}", self.elapsed_secs()), 2).unwrap();
+            self.display_debug(format!("Tile size  : {:?}", self.renderer.tile_size), 3).unwrap();
+        }
     }
 
     pub fn run(&mut self) {
