@@ -1,4 +1,4 @@
-use std::{ process::{ ExitCode, Termination }, time::{ Duration, Instant } };
+use std::{ time::{ Duration, Instant } };
 
 use ant::{ AntManager };
 use chunk::{ ChunkManager, CHUNK_WIDTH };
@@ -93,11 +93,12 @@ impl Game {
     }
 
     pub fn tick(&mut self) {
+        // Let the ants think !
+        self.ant_manager.tick(&self.chunk_manager.loaded_chunks, self.last_tick);
+
         if self.process_input().is_err() {
             todo!("Invalid input handling");
         }
-
-        self.render();
     }
 
     fn render(&mut self) {
@@ -109,16 +110,14 @@ impl Game {
             (self.renderer.camera.1 + VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
         );
 
-        for chunk in &self.chunk_manager.loaded_chunks {
-            chunk.c.draw(&mut self.renderer, chunk.pos, timestamp);
-        }
+        self.chunk_manager.render(&mut self.renderer, timestamp);
+
+        self.ant_manager.render(&mut self.renderer);
 
         // Top-left info display
         #[cfg(test)]
         {
-            self.display_debug(format!("Camera pos : {:?}", self.renderer.camera), 1).unwrap();
-            self.display_debug(format!("Time       : {:.2?}", self.elapsed_secs()), 2).unwrap();
-            self.display_debug(format!("Tile size  : {:?}", self.renderer.tile_size), 3).unwrap();
+            self.display_debug().unwrap();
         }
     }
 
@@ -138,29 +137,21 @@ impl Game {
 
             self.tick();
 
+            // Maybe multithread will be needed for chunks rendering
+            self.render();
+
             self.renderer.canvas.present();
         }
     }
 }
 
-impl Termination for Game {
-    fn report(self) -> std::process::ExitCode {
-        // Testing stuff when Game exits
-        // self.chunk_manager.loaded_chunks.clear();
-
-        if self.chunk_manager.loaded_chunks.is_empty() {
-            ExitCode::SUCCESS
-        } else {
-            eprintln!("Game stoped with chunks still active");
-            ExitCode::FAILURE
-        }
-    }
-}
-
-fn main() -> Result<Game, ()> {
+fn main() -> Result<(), ()> {
     let mut game = Game::new(sdl2::init().unwrap());
 
     game.run();
 
-    Ok(game)
+    eprintln!("Active ants   : {:?}", game.ant_manager.ants.len());
+    eprintln!("Active chunks : {:?}", game.chunk_manager.loaded_chunks.len());
+
+    Ok(())
 }

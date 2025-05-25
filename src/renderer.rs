@@ -1,14 +1,17 @@
 use noise::{ Fbm, NoiseFn };
-use sdl2::Sdl;
+use sdl2::{ pixels::Color, rect::Rect, Sdl };
 
-use crate::chunk::{
-    biomes::NoiseParams,
-    index::flatten_index_i32,
-    tile::{ Tile },
-    Chunk,
-    ChunkContent,
-    CHUNK_WIDTH,
-    SEA_LEVEL,
+use crate::{
+    ant::Ant,
+    chunk::{
+        biomes::NoiseParams,
+        index::flatten_index_i32,
+        tile::Tile,
+        Chunk,
+        ChunkContent,
+        CHUNK_WIDTH,
+        SEA_LEVEL,
+    },
 };
 
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
@@ -105,29 +108,62 @@ impl Renderer {
     }
 
     // Converts Tile coords into displayable coords (x,y)
-    pub fn tile_screen_coords(
+    pub fn tile_to_screen_coords(
         offset: (i32, i32),
-        chunk_pos: (&i32, &i32),
+        chunk_pos: (i32, i32),
         tile_pos: (i32, i32),
         tile_size: i32
     ) -> (i32, i32) {
-        let (x, y) = Self::tile_world_coords(chunk_pos, tile_pos);
+        let (x, y) = Self::tile_to_world_coords(chunk_pos, tile_pos);
 
         let pixel_x = offset.0 + x * tile_size;
         let pixel_y = offset.1 + y * tile_size;
 
         (pixel_x, pixel_y)
     }
-    pub fn tile_world_coords(chunk_pos: (&i32, &i32), tile_pos: (i32, i32)) -> (i32, i32) {
+    pub fn tile_to_world_coords(chunk_pos: (i32, i32), tile_pos: (i32, i32)) -> (i32, i32) {
         let x = chunk_pos.0 * (CHUNK_WIDTH as i32) + tile_pos.0;
         let y = chunk_pos.1 * (CHUNK_WIDTH as i32) + tile_pos.1;
 
         (x, y)
     }
+    pub fn world_to_chunk_coords(tile_pos: (i32, i32)) -> (i32, i32) {
+        let x = tile_pos.0 / (CHUNK_WIDTH as i32);
+        let y = tile_pos.1 / (CHUNK_WIDTH as i32);
+
+        (x, y)
+    }
 }
 
+/// Ant rendering
+///
+impl Ant {
+    pub fn render(self, renderer: &mut Renderer) {
+        let offset = renderer.get_offset();
+        let ant_pos = (self.pos.0, self.pos.1);
+        let chunk_pos = Renderer::world_to_chunk_coords(ant_pos);
+
+        renderer.canvas.set_draw_color(Color::RED);
+        let (x,y) = Renderer::tile_to_screen_coords(offset, chunk_pos, ant_pos, renderer.tile_size as i32);
+        renderer.canvas
+            .fill_rect(
+                Rect::new(
+                    x,
+                    y,
+                    renderer.tile_size as u32,
+                    renderer.tile_size as u32
+                )
+            )
+            .expect("Failed to draw tile");
+
+        renderer.canvas.set_draw_color(Color::BLACK);
+    }
+}
+
+/// Chunk rendering
+///
 impl Chunk {
-    pub fn draw(
+    pub fn render(
         &self,
         renderer: &mut Renderer,
         // Chunk coordinates
@@ -142,9 +178,9 @@ impl Chunk {
             let (x, y, z) = Tile::index_to_xyz(index);
 
             if z == camera_z {
-                let draw_pos = Renderer::tile_screen_coords(
+                let draw_pos = Renderer::tile_to_screen_coords(
                     (offset_x, offset_y),
-                    (&pos_x, &pos_y),
+                    (pos_x, pos_y),
                     (x, y),
                     renderer.tile_size as i32
                 );
@@ -165,9 +201,9 @@ impl Chunk {
                         // current tile is not transparent
                         !tile.tile_type.is_transparent() ||
                         // Reached bottom
-                        current_z == 0 
+                        current_z == 0 ||
                         // Dont draw too much
-                        || depth >= MAX_AIR_DEPTH
+                        depth >= MAX_AIR_DEPTH
                     {
                         break 'find_deepest;
                     }
@@ -193,7 +229,7 @@ impl Chunk {
                     // Clouds
                     if CLOUDS_RENDERING {
                         if z > (SEA_LEVEL as i32) + (MAX_AIR_DEPTH as i32) / 2 {
-                            let (x, y) = Renderer::tile_world_coords((&pos_x, &pos_y), (x, y));
+                            let (x, y) = Renderer::tile_to_world_coords((pos_x, pos_y), (x, y));
                             let (x, y, z) = (x as f64, y as f64, z as f64);
                             // Find cloud value
                             c.a = ((c.a as f64) +

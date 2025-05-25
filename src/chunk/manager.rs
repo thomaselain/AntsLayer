@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::chunk::biomes::Params;
+use crate::{ chunk::biomes::Params, renderer::{ self, Renderer } };
 
 use super::Chunk;
 
@@ -15,7 +15,6 @@ pub struct LoadedChunk {
     pub c: Chunk,
 }
 
-// Default empty chunks
 impl Manager {
     pub fn generate_range(
         x_range: Range<i32>,
@@ -45,8 +44,13 @@ impl Manager {
         let default_biome = Params::ocean();
 
         Self {
-            loaded_chunks: Manager::generate_range(-3..3, -3..3, Some(default_biome.clone())),
+            loaded_chunks: Manager::generate_range(-20..20, -5..5, Some(default_biome.clone())),
             test_biome: default_biome.clone(),
+        }
+    }
+    pub fn render(&mut self, renderer: &mut Renderer, timestamp: f64) {
+        for chunk in &self.loaded_chunks {
+            chunk.c.render(renderer, chunk.pos, timestamp);
         }
     }
 }
