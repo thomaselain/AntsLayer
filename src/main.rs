@@ -1,10 +1,9 @@
-use std::{ ops::Range, time::{ Duration, Instant } };
+use std::{ time::{ Duration, Instant } };
 
 use ant::{ AntManager };
-use chunk::{ ChunkManager, CHUNK_WIDTH };
+use chunk::{ ChunkManager };
 use inputs::Inputs;
-use rand::distributions::uniform::SampleUniform;
-use renderer::{ Renderer, VIEW_DISTANCE };
+use renderer::{ Renderer, WIN_DEFAULT_H, WIN_DEFAULT_W };
 use sdl2::{ event::Event, pixels::Color, ttf::Sdl2TtfContext, Sdl };
 
 //  ------
@@ -21,8 +20,15 @@ mod inputs;
 mod renderer;
 
 pub struct Game {
-    // Game engine
+    // Engine
     pub running: bool,
+
+    // Frames and Ticks tracking
+    pub tps: u32,
+    pub fps: u32,
+    pub ticks: u32,
+    pub frames: u32,
+    pub last_frame: Instant,
     pub last_tick: Instant,
     pub first_tick: Instant,
     pub tick_rate: Duration,
@@ -42,13 +48,25 @@ pub struct Game {
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
-    use crate::{ main, ant::{ Ant, Type }, Game };
+    use crate::{ main, ant::{ Ant, Type }, chunk::generation::SEA_LEVEL, Game };
 
     #[test]
-    #[ignore = "test doesn't wait for the game to exit so it shows as FAILED"]
+    #[ignore = "Cannot init SDL on more than one thread"]
     fn test_main() -> Result<(), ()> {
-        // Run the game and get its Result
-        main()?;
+        let mut game = Game::new(sdl2::init().unwrap());
+        game.run();
+
+        // Joette
+        let mut ants = vec![Ant::new((0, 0, SEA_LEVEL as i32), Type::Explorer)];
+
+        for i in 10..20 {
+            ants.push(Ant::new((i, i, SEA_LEVEL as i32), Type::Fetcher));
+        }
+
+        // Check if ants are copied correctly
+        assert!(game.ant_manager.ants.is_empty());
+        game.ant_manager.ants = ants;
+
         Ok(())
     }
 }
@@ -60,7 +78,7 @@ impl Game {
     }
 
     pub fn new(sdl: Sdl) -> Game {
-        let renderer = Renderer::new(&sdl, "Ants Layer", 800, 600).expect(
+        let renderer = Renderer::new(&sdl, "Ants Layer").expect(
             "Failed to create game renderer"
         );
         let ttf_context = sdl2::ttf
@@ -70,6 +88,13 @@ impl Game {
 
         Game {
             running: true,
+
+            tps: Default::default(),
+            fps: Default::default(),
+            ticks: Default::default(),
+            frames: Default::default(),
+
+            last_frame: Instant::now(),
             last_tick: Instant::now(),
             first_tick: Instant::now(),
             tick_rate: Duration::from_secs_f64(1.0 / 60.0),
@@ -94,6 +119,9 @@ impl Game {
     }
 
     pub fn tick(&mut self) {
+        #[cfg(test)]
+        self.update_tps();
+
         // Let the ants think !
         self.ant_manager.tick(&self.chunk_manager, self.last_tick);
 
@@ -101,16 +129,41 @@ impl Game {
             todo!("Invalid input handling");
         }
     }
-
+    #[allow(unused)]
+    fn update_fps(&mut self) {
+        if Instant::now().duration_since(self.last_frame) < Duration::from_secs(1) {
+            // Increment frames Per Second if less than a sec happened
+            self.frames += 1;
+        } else {
+            // Otherwise, update counter
+            self.fps = self.frames;
+            self.last_frame = Instant::now();
+        }
+    }
+    #[allow(unused)]
+    fn update_tps(&mut self) {
+        if Instant::now().duration_since(self.last_tick) < Duration::from_secs(1) {
+            // Increment frames Per Second if less than a sec happened
+            self.ticks += 1;
+        } else {
+            // Otherwise, update counter
+            self.tps = self.ticks;
+            self.last_tick = Instant::now();
+        }
+    }
     fn render(&mut self) {
         let timestamp = self.elapsed_secs();
-        
-        let (x_min, x_max, y_min, y_max) = (
-            (self.renderer.camera.0 - VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
-            (self.renderer.camera.0 + VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
-            (self.renderer.camera.1 - VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
-            (self.renderer.camera.1 + VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
-        );
+
+        #[cfg(test)]
+        self.update_fps();
+
+        // Render distance calucation
+        // let (x_min, x_max, y_min, y_max) = (
+        // (self.renderer.camera.0 - VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
+        // (self.renderer.camera.0 + VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
+        // (self.renderer.camera.1 - VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
+        // (self.renderer.camera.1 + VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
+        // );
 
         self.chunk_manager.render(&mut self.renderer, timestamp);
 
@@ -140,6 +193,7 @@ impl Game {
             self.tick();
 
             // Maybe multithread will be needed for chunks rendering
+            self.renderer.update_window_size();
             self.render();
 
             self.renderer.canvas.present();
@@ -149,7 +203,6 @@ impl Game {
 
 fn main() -> Result<(), ()> {
     let mut game = Game::new(sdl2::init().unwrap());
-
     game.run();
 
     eprintln!("Active ants   : {:?}", game.ant_manager.ants.len());

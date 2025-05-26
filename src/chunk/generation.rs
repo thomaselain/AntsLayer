@@ -17,8 +17,10 @@ pub enum MapShape {
     // ???
     ROUND,
 }
-pub const STARTING_AREA: i32 = 3;
-pub const STARTING_MAP_SHAPE: MapShape = MapShape::SQUARE;
+#[allow(unused)]
+pub const TEST_MAP_SIZE: i32 = 5;
+pub const STARTING_AREA: i32 = 10;
+pub const STARTING_MAP_SHAPE: MapShape = MapShape::RECT;
 
 impl Manager {
     pub fn generate_range(

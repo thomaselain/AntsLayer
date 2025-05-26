@@ -103,9 +103,12 @@ impl Game {
                 if scroll > 0 {
                     self.renderer.tile_size += 1;
                 } else if scroll < 0 {
-                    self.renderer.tile_size = self.renderer.tile_size.saturating_sub(1);
+                    self.renderer.tile_size = self.renderer.tile_size - 1;
                 }
-                self.renderer.tile_size = self.renderer.tile_size.clamp(4, 64);
+                self.renderer.tile_size = self.renderer.tile_size.clamp(
+                    crate::renderer::MIN_TILE_SIZE,
+                    crate::renderer::MAX_TILE_SIZE
+                );
             }
         }
         Ok(())
@@ -115,7 +118,7 @@ impl Game {
 impl Renderer {
     pub fn move_camera(&mut self, dir: Direction) {
         let (x, y, z) = self.camera;
-        let (mv) = match dir {
+        let mv = match dir {
             Direction::Up if z < (CHUNK_HEIGHT as i32) => (0, 0, 1),
             Direction::Down if z > 0 => (0, 0, -1),
 

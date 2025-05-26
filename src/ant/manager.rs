@@ -1,10 +1,6 @@
 use std::time::{ Duration, Instant };
 
-use crate::{
-    ant::Direction,
-    chunk::{ manager::LoadedChunk, tile::TileType, ChunkManager, SEA_LEVEL },
-    renderer::Renderer,
-};
+use crate::{ ant::Direction, chunk::{ ChunkManager, SEA_LEVEL }, renderer::Renderer };
 
 use super::Ant;
 
@@ -14,14 +10,8 @@ pub struct Manager {
 
 impl Manager {
     pub fn new() -> Self {
-        let mut ants = vec![Ant::new((0, 0, SEA_LEVEL as i32), super::Type::Explorer)];
-
-        for i in 10..20 {
-            ants.push(Ant::new((i, i, SEA_LEVEL as i32), super::Type::Fetcher));
-        }
-
         Self {
-            ants,
+            ants:vec![],
         }
     }
     pub fn add(&mut self, ant: Ant) {

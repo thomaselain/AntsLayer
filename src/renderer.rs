@@ -5,13 +5,10 @@ use crate::{
     ant::Ant,
     chunk::{
         biomes::NoiseParams,
-        generation::STARTING_AREA,
         index::flatten_index_i32,
         manager::LoadedChunk,
-        tile::Tile,
         Chunk,
         ChunkContent,
-        CHUNK_HEIGHT,
         CHUNK_WIDTH,
         SEA_LEVEL,
     },
@@ -19,14 +16,23 @@ use crate::{
 
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
 /// This is maximum of air tiles to display
-pub const MAX_AIR_DEPTH: u8 = 16;
+pub const MAX_AIR_DEPTH: u8 = 20;
 // Width of a renderer tile (in pixels)
-pub const DEFAULT_TILE_SIZE: usize = 4;
+pub const DEFAULT_TILE_SIZE: usize = 16;
+pub const MIN_TILE_SIZE: usize = 1;
+pub const MAX_TILE_SIZE: usize = 100;
+const IS_GRID_ENABLED: bool = true;
+const GRID_COLOR: Color = Color::BLACK;
+
 //
-pub const CLOUDS_HEIGHT: i32 = (CHUNK_HEIGHT as i32) - (MAX_AIR_DEPTH as i32);
+const CLOUD_COLOR: Color = Color::RGBA(255, 255, 255, 255 / (MAX_AIR_DEPTH as u8));
+pub const CLOUDS_HEIGHT: i32 = (SEA_LEVEL as i32) + (MAX_AIR_DEPTH as i32) / 2;
 pub const CLOUDS_RENDERING: bool = true;
 pub const VIEW_DISTANCE: i32 = (CHUNK_WIDTH as i32) * 4;
 // pub const MAX_VISIBLE_CHUNKS: usize = VIEW_DISTANCE.pow(2) as usize;
+
+pub const WIN_DEFAULT_W: u32 = 800;
+pub const WIN_DEFAULT_H: u32 = 600;
 
 // Struct for rendering with noise
 pub struct RendererNoise {
@@ -34,8 +40,11 @@ pub struct RendererNoise {
 }
 
 impl RendererNoise {
+    pub fn new() -> Self {
+        Self { clouds: NoiseParams::clouds() }
+    }
     pub fn get_cloud_value(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
-        let scale = self.clouds.scale / (CHUNK_WIDTH as f64);
+        let scale = self.clouds.scale;
 
         self.clouds.fbm.get([x * scale, y * scale, z * scale, t])
     }
@@ -45,6 +54,8 @@ pub struct Renderer {
     pub canvas: sdl2::render::Canvas<sdl2::video::Window>,
     pub camera: (i32, i32, i32),
     pub view_distance: i32,
+    pub dims: (u32, u32),
+    pub is_grid_enabled: bool,
 
     // Width of a renderer tile (in pixels)
     pub tile_size: usize,
@@ -56,20 +67,20 @@ impl NoiseParams {
     pub fn clouds() -> Self {
         Self {
             fbm: Fbm::new(69_420),
-            octaves: 1,
-            frequency: 1.05,
-            lacunarity: 2.0,
-            persistence: 1.9,
+            octaves: 2,
+            frequency: 5.0,
+            lacunarity: 5.0,
+            persistence: 3.0,
             scale: 0.05,
         }
     }
 }
 
 impl Renderer {
-    pub fn new(sdl: &Sdl, title: &str, width: u32, height: u32) -> Result<Self, String> {
+    pub fn new(sdl: &Sdl, title: &str) -> Result<Self, String> {
         let video_subsystem = sdl.video()?;
         let window = video_subsystem
-            .window(title, width, height)
+            .window(title, WIN_DEFAULT_W, WIN_DEFAULT_H)
             .position_centered()
             .resizable()
             .build()
@@ -82,28 +93,38 @@ impl Renderer {
         canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
 
         Ok(Renderer {
+            is_grid_enabled: IS_GRID_ENABLED,
             canvas,
+            // camera: (
+            //     // x
+            //     -((CHUNK_WIDTH as i32) * STARTING_AREA) / 2,
+            //     // y
+            //     -((CHUNK_WIDTH as i32) * STARTING_AREA) / 2,
+            //     // z
+            //     crate::chunk::SEA_LEVEL as i32,
+            // ),
             camera: (
                 // x
-                -(CHUNK_WIDTH as i32 * STARTING_AREA) / 2,
+                0,
                 // y
-                -(CHUNK_WIDTH as i32 * STARTING_AREA) / 2,
+                0,
                 // z
                 crate::chunk::SEA_LEVEL as i32,
             ),
-            noise: RendererNoise { clouds: NoiseParams::clouds() },
+            dims: (WIN_DEFAULT_W, WIN_DEFAULT_H),
+            noise: RendererNoise::new(),
             tile_size: DEFAULT_TILE_SIZE,
             view_distance: VIEW_DISTANCE,
         })
     }
 
-    pub fn get_window_size(&self) -> (u32, u32) {
-        self.canvas.output_size().expect("Failed to get window size")
+    pub fn update_window_size(&mut self) {
+        self.dims = self.canvas.output_size().expect("Failed to get window size");
     }
 
     // Offsets
     pub fn get_offset(&self) -> (i32, i32) {
-        let (w, h) = self.get_window_size();
+        let (w, h) = self.dims;
         let half_w = (w as i32) / 2;
         let half_h = (h as i32) / 2;
 
@@ -122,13 +143,26 @@ impl Renderer {
         (pixel_x, pixel_y)
     }
 
-    pub fn draw_tile(&mut self, pos: (i32, i32), c: Color) {
-        let (x, y) = self.tile_to_screen_coords(pos);
+    pub fn draw_tile(&mut self, (x, y): (i32, i32), c: Color) {
+        self.fill_rect((x, y), c);
 
+        if self.is_grid_enabled {
+            self.rect((x, y), c);
+        }
+    }
+    pub fn rect(&mut self, (x, y): (i32, i32), c: Color) {
+        self.canvas.set_draw_color(c);
+        self.canvas
+            .draw_rect(Rect::new(x, y, self.tile_size as u32, self.tile_size as u32))
+            .expect(&format!("Failed to draw tile at {:?}", (x, y)));
+        self.canvas.set_draw_color(Color::BLACK);
+    }
+
+    pub fn fill_rect(&mut self, (x, y): (i32, i32), c: Color) {
         self.canvas.set_draw_color(c);
         self.canvas
             .fill_rect(Rect::new(x, y, self.tile_size as u32, self.tile_size as u32))
-            .expect(&format!("Failed to draw tile at {:?}", pos));
+            .expect(&format!("Failed to draw tile at {:?}", (x, y)));
         self.canvas.set_draw_color(Color::BLACK);
     }
 
@@ -138,27 +172,39 @@ impl Renderer {
 
         (x, y)
     }
-    pub fn visible_chunks(&self, chunks: Vec<LoadedChunk>) -> Vec<LoadedChunk> {
-        let mut v = vec![];
 
+    pub fn is_chunk_on_screen(&self, chunk_pos: (i32, i32)) -> bool {
+        let world_x = chunk_pos.0 * (CHUNK_WIDTH as i32);
+        let world_y = chunk_pos.1 * (CHUNK_WIDTH as i32);
+        let (screen_x, screen_y) = self.tile_to_screen_coords((world_x, world_y));
+
+        let chunk_px = (CHUNK_WIDTH as i32) * (self.tile_size as i32);
+
+        // 3) Bornes du chunk à l’écran
+        let left = screen_x;
+        let right = screen_x + chunk_px;
+        let top = screen_y;
+        let bottom = screen_y + chunk_px;
+
+        // 4) Bornes de la fenêtre
+        let win_w = self.dims.0 as i32;
+        let win_h = self.dims.1 as i32;
+
+        // 5) Vérifie le chevauchement
+        let x_overlap = right > 0 && left < win_w;
+        let y_overlap = bottom > 0 && top < win_h;
+        x_overlap && y_overlap
+    }
+
+    /// Filtre la liste des LoadedChunk pour ne garder que ceux visibles
+    pub fn visible_chunks(&self, chunks: Vec<LoadedChunk>) -> Vec<LoadedChunk> {
+        let mut v = Vec::with_capacity(chunks.len());
         for c in chunks {
-            if self.is_on_screen(c.pos) {
+            if self.is_chunk_on_screen(c.pos) {
                 v.push(c);
             }
         }
         v
-    }
-
-    pub fn is_on_screen(&self, draw_pos: (i32, i32)) -> bool {
-        let win = self.get_window_size();
-
-        let range_x = 0..win.0 as i32;
-        let range_y = 0..win.1 as i32;
-        if range_x.contains(&draw_pos.0) && range_y.contains(&draw_pos.1) {
-            true
-        } else {
-            false
-        }
     }
 }
 
@@ -166,7 +212,9 @@ impl Renderer {
 ///
 impl Ant {
     pub fn render(self, renderer: &mut Renderer) {
-        renderer.draw_tile((self.pos.0, self.pos.1), Color::RED);
+        let (x, y) = (self.pos.0, self.pos.1);
+        let (x, y) = renderer.tile_to_screen_coords((x, y));
+        renderer.draw_tile((x, y), Color::RED);
     }
 }
 
@@ -180,6 +228,8 @@ impl Chunk {
         (pos_x, pos_y): (i32, i32),
         timestamp: f64
     ) {
+        let mut tiles_to_draw = Vec::with_capacity((MAX_AIR_DEPTH as usize) + 1);
+
         for index in 0..ChunkContent::len() {
             let (x, y, z) = ChunkContent::index_to_xyz(index);
 
@@ -189,7 +239,6 @@ impl Chunk {
 
                 let mut depth = 0;
                 let mut current_z = z;
-                let mut tiles_to_draw = Vec::new();
 
                 ////////////////////////////////////////////////////////////////
                 //////////////////     FOG     RENDERING  //////////////////////
@@ -219,41 +268,35 @@ impl Chunk {
                 // Draw deepest tile found first
                 if let Some(bottom_tile) = tiles_to_draw.pop() {
                     let c = bottom_tile.color();
-                    bottom_tile.draw(renderer, draw_pos, c);
+                    renderer.fill_rect(draw_pos, c);
                 }
 
-                // Draw the next transparent tiles
+                // Draw the fog layer
                 if let Some(next_tile) = tiles_to_draw.pop() {
-                    if !next_tile.tile_type.is_transparent() {
-                        break;
-                    }
-                    // fog rendering
-                    let mut c = next_tile.color();
-                    c.a = c.a * (1 + (tiles_to_draw.len() as u8));
-                    next_tile.draw(renderer, draw_pos, c);
+                    let mut fog = CLOUD_COLOR;
+                    fog.a *= tiles_to_draw.len() as u8;
+                    renderer.fill_rect(draw_pos, fog);
 
                     ////////////////////////////////////////////////////////////////
                     ////////////////////////Clouds//////////////////////////////////
                     ////////////////////////////////////////////////////////////////
                     if CLOUDS_RENDERING && z >= CLOUDS_HEIGHT {
-                        'clouds_rendering: loop {
-                            // Convert into world coords f64
-                            // Allows use of perlin.get[coords]
-                            let (x, y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
-                            let (x, y, z) = (x as f64, y as f64, CLOUDS_HEIGHT as f64);
+                        let mut cloud = CLOUD_COLOR;
+                        // Convert into world coords f64
+                        // Allows use of perlin.get[coords]
+                        let (x, y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
+                        let (x, y, z) = (x as f64, y as f64, CLOUDS_HEIGHT as f64);
 
-                            // Find cloud value
-                            c.a = ((c.a as f64) +
-                                renderer.noise.get_cloud_value(
-                                    x + timestamp * 7.5,
-                                    y + timestamp * 3.5,
-                                    z,
-                                    timestamp / 25.0
-                                ) *
-                                    255.0) as u8;
-                            next_tile.draw(renderer, draw_pos, c);
-                            break 'clouds_rendering;
-                        }
+                        // Find cloud value
+                        let cloud_value = renderer.noise.get_cloud_value(
+                            x + timestamp * 1.5,
+                            y + timestamp * 1.1,
+                            z,
+                            timestamp / 100.0
+                        ) as u8;
+                        cloud.a = cloud_value * 255;
+                        renderer.fill_rect(draw_pos, cloud);
+                        tiles_to_draw.clear();
                     }
                 }
             }

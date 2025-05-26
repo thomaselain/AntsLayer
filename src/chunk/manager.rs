@@ -1,6 +1,4 @@
-use std::ops::Range;
-
-use crate::{ chunk::biomes::Params, renderer::{ self, Renderer } };
+use crate::{ chunk::{ biomes::Params }, renderer::{ Renderer } };
 
 use super::{
     generation::{ MapShape, STARTING_AREA, STARTING_MAP_SHAPE },
@@ -24,21 +22,24 @@ impl Manager {
     pub fn new() -> Self {
         let default_biome = Params::ocean();
 
+        #[allow(unused)]
+        let mut size = STARTING_AREA;
+        #[cfg(test)]
+        {
+            size = crate::chunk::generation::TEST_MAP_SIZE;
+        }
+
         Self {
             loaded_chunks: match STARTING_MAP_SHAPE {
                 MapShape::RECT => {
                     Manager::generate_range(
-                        -STARTING_AREA..STARTING_AREA,
-                        -(STARTING_AREA / 2)..STARTING_AREA / 2,
+                        -size..size,
+                        -(size / 2)..size / 2,
                         Some(default_biome.clone())
                     )
                 }
                 MapShape::SQUARE => {
-                    Manager::generate_range(
-                        -STARTING_AREA..STARTING_AREA,
-                        -STARTING_AREA..STARTING_AREA,
-                        Some(default_biome.clone())
-                    )
+                    Manager::generate_range(-size..size, -size..size, Some(default_biome.clone()))
                 }
                 MapShape::ROUND => { todo!("Round starting map") }
             },
@@ -52,7 +53,7 @@ impl Manager {
     }
     pub fn tile_at(&self, p: (i32, i32, i32)) -> Option<Tile> {
         let chunk_pos = (p.0 / (CHUNK_WIDTH as i32), p.1 / (CHUNK_WIDTH as i32));
-        for loaded_chunk in self.loaded_chunks.clone() {
+        for loaded_chunk in &self.loaded_chunks {
             if loaded_chunk.pos == chunk_pos {
                 return Some(loaded_chunk.c.content[p]);
             }

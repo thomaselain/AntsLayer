@@ -1,10 +1,10 @@
-use std::{collections::HashSet, fmt};
+use std::{ collections::HashSet, fmt };
 
 use bitflags::bitflags;
 use sdl2::{ pixels::Color, rect::Rect };
 use serde::{ Deserialize, Serialize };
 
-use crate::{ant::Ant, renderer::Renderer};
+use crate::{ ant::Ant, renderer::Renderer };
 
 use super::{ CHUNK_HEIGHT, CHUNK_WIDTH };
 
@@ -191,14 +191,8 @@ impl Tile {
         }
     }
 
-    pub fn draw(self, renderer: &mut Renderer, (x, y): (i32, i32), color: Color) {
-        // eprintln!("Rendering Tile at : {:?} with color {:?}", (x,y), self.color());
-        renderer.canvas.set_draw_color(color);
-
-        renderer.canvas
-            .fill_rect(Rect::new(x, y, renderer.tile_size as u32, renderer.tile_size as u32))
-            .expect("Failed to draw tile");
-        renderer.canvas.set_draw_color(Color::BLACK);
+    pub fn draw(self, renderer: &mut Renderer, (x, y): (i32, i32), c: Color) {
+        renderer.draw_tile((x, y), c);
     }
 }
 
