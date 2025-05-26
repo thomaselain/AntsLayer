@@ -1,4 +1,4 @@
-use std::fmt::{ self };
+use std::{ collections::btree_map::Range, fmt::{ self } };
 
 use biomes::Params;
 use manager::LoadedChunk;
@@ -12,7 +12,6 @@ pub mod manager;
 /// Name export so it's not confused with Ant::Manager
 #[allow(unused)]
 pub use manager::Manager as ChunkManager;
-
 
 pub mod tile;
 pub mod index;
@@ -44,6 +43,21 @@ impl ChunkContent {
     }
     pub fn len() -> usize {
         FLAT_CHUNK_SIZE
+    }
+    pub fn index_to_xyz(index: usize) -> (i32, i32, i32) {
+        (
+            // X
+            (index % CHUNK_WIDTH) as i32,
+            // Y
+            ((index / CHUNK_WIDTH) % CHUNK_WIDTH) as i32,
+            // Z
+            ((index / CHUNK_WIDTH.pow(2)) % CHUNK_HEIGHT) as i32,
+        )
+    }
+    pub fn column(index: i32) -> Vec<(i32, i32, i32)> {
+        assert!(index >= 0 && index < ((CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT) as i32));
+        let (x, y, _) = Self::index_to_xyz(index as usize);
+        (0..CHUNK_HEIGHT as i32).map(|z| (x, y, z)).collect()
     }
 }
 

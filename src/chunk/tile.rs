@@ -22,18 +22,6 @@ impl fmt::Debug for Tile {
     }
 }
 
-impl Tile {
-    pub fn index_to_xyz(index: usize) -> (i32, i32, i32) {
-        (
-            // X
-            (index % CHUNK_WIDTH) as i32,
-            // Y
-            ((index / CHUNK_WIDTH) % CHUNK_WIDTH) as i32,
-            // Z
-            ((index / CHUNK_WIDTH.pow(2)) % CHUNK_HEIGHT) as i32,
-        )
-    }
-}
 /// TILE STRUCT
 #[derive(Hash, Serialize, Deserialize, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Tile {

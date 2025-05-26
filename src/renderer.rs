@@ -4,17 +4,26 @@ use sdl2::{ pixels::Color, rect::Rect, Sdl };
 use crate::{
     ant::Ant,
     chunk::{
-        biomes::NoiseParams, index::flatten_index_i32, tile::Tile, Chunk, ChunkContent, CHUNK_HEIGHT, CHUNK_WIDTH, SEA_LEVEL
+        biomes::NoiseParams,
+        generation::STARTING_AREA,
+        index::flatten_index_i32,
+        manager::LoadedChunk,
+        tile::Tile,
+        Chunk,
+        ChunkContent,
+        CHUNK_HEIGHT,
+        CHUNK_WIDTH,
+        SEA_LEVEL,
     },
 };
 
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
 /// This is maximum of air tiles to display
-pub const MAX_AIR_DEPTH: u8 = 8;
+pub const MAX_AIR_DEPTH: u8 = 16;
 // Width of a renderer tile (in pixels)
 pub const DEFAULT_TILE_SIZE: usize = 4;
 //
-pub const CLOUDS_HEIGHT: i32 = CHUNK_HEIGHT as i32 - MAX_AIR_DEPTH as i32;
+pub const CLOUDS_HEIGHT: i32 = (CHUNK_HEIGHT as i32) - (MAX_AIR_DEPTH as i32);
 pub const CLOUDS_RENDERING: bool = true;
 pub const VIEW_DISTANCE: i32 = (CHUNK_WIDTH as i32) * 4;
 // pub const MAX_VISIBLE_CHUNKS: usize = VIEW_DISTANCE.pow(2) as usize;
@@ -51,7 +60,7 @@ impl NoiseParams {
             frequency: 1.05,
             lacunarity: 2.0,
             persistence: 1.9,
-            scale: 0.1,
+            scale: 0.05,
         }
     }
 }
@@ -74,7 +83,14 @@ impl Renderer {
 
         Ok(Renderer {
             canvas,
-            camera: (0, 0, crate::chunk::SEA_LEVEL as i32),
+            camera: (
+                // x
+                -(CHUNK_WIDTH as i32 * STARTING_AREA) / 2,
+                // y
+                -(CHUNK_WIDTH as i32 * STARTING_AREA) / 2,
+                // z
+                crate::chunk::SEA_LEVEL as i32,
+            ),
             noise: RendererNoise { clouds: NoiseParams::clouds() },
             tile_size: DEFAULT_TILE_SIZE,
             view_distance: VIEW_DISTANCE,
@@ -122,6 +138,17 @@ impl Renderer {
 
         (x, y)
     }
+    pub fn visible_chunks(&self, chunks: Vec<LoadedChunk>) -> Vec<LoadedChunk> {
+        let mut v = vec![];
+
+        for c in chunks {
+            if self.is_on_screen(c.pos) {
+                v.push(c);
+            }
+        }
+        v
+    }
+
     pub fn is_on_screen(&self, draw_pos: (i32, i32)) -> bool {
         let win = self.get_window_size();
 
@@ -154,15 +181,11 @@ impl Chunk {
         timestamp: f64
     ) {
         for index in 0..ChunkContent::len() {
-            let (x, y, z) = Tile::index_to_xyz(index);
+            let (x, y, z) = ChunkContent::index_to_xyz(index);
 
             if z == renderer.camera.2 {
                 let (world_x, world_y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
                 let draw_pos = renderer.tile_to_screen_coords((world_x, world_y));
-
-                if !renderer.is_on_screen(draw_pos) {
-                    continue;
-                }
 
                 let mut depth = 0;
                 let mut current_z = z;
@@ -206,7 +229,7 @@ impl Chunk {
                     }
                     // fog rendering
                     let mut c = next_tile.color();
-                    c.a = c.a * (1 + (tiles_to_draw.len() as u8)) / 2;
+                    c.a = c.a * (1 + (tiles_to_draw.len() as u8));
                     next_tile.draw(renderer, draw_pos, c);
 
                     ////////////////////////////////////////////////////////////////

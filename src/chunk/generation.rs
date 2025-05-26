@@ -1,10 +1,24 @@
+use std::{ ops::Range };
 
-use std::ops::Range;
+use super::{
+    biomes::Params,
+    manager::LoadedChunk,
+    tile::Tile,
+    Chunk,
+    ChunkManager as Manager,
+    CHUNK_HEIGHT,
+};
 
-use super::{ biomes::Params, manager::LoadedChunk, tile::Tile, Chunk, ChunkManager as Manager, CHUNK_HEIGHT };
-
-pub const SEA_LEVEL: usize = (CHUNK_HEIGHT as f64 * 0.6) as usize;
-pub const STARTING_AREA: i32 = 10;
+pub const SEA_LEVEL: usize = ((CHUNK_HEIGHT as f64) * 0.6) as usize;
+#[allow(unused)]
+pub enum MapShape {
+    SQUARE,
+    RECT,
+    // ???
+    ROUND,
+}
+pub const STARTING_AREA: i32 = 3;
+pub const STARTING_MAP_SHAPE: MapShape = MapShape::SQUARE;
 
 impl Manager {
     pub fn generate_range(
@@ -31,7 +45,7 @@ impl Manager {
 }
 impl Chunk {
     pub fn from_biome(pos: (i32, i32), b: &Params) -> LoadedChunk {
-        let mut chunk = Chunk::new(pos);        
+        let mut chunk = Chunk::new(pos);
 
         chunk.c.generate(pos, b.clone(), b.noise.fbm.clone());
         chunk
@@ -42,8 +56,8 @@ impl Params {
     pub fn tile_at(&self, (x, y, z): (i32, i32, i32), v: f64) -> Tile {
         let above_sea_level = z > (SEA_LEVEL as i32);
 
-        let v = if z > SEA_LEVEL as i32 {
-            v *0.3* z as f64
+        let v = if z > (SEA_LEVEL as i32) {
+            v * 0.3 * (z as f64)
         } else {
             // v - 0.2
             v

@@ -119,7 +119,7 @@ impl Game {
         // Top-left info display
         #[cfg(test)]
         {
-            self.display_debug().unwrap();
+            self.display_info().unwrap();
         }
     }
 
