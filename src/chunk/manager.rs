@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use crate::{ chunk::biomes::Params, renderer::{ self, Renderer } };
 
-use super::Chunk;
+use super::{ generation::STARTING_AREA, tile::Tile, Chunk, CHUNK_WIDTH };
 
 pub struct Manager {
     pub loaded_chunks: Vec<LoadedChunk>,
@@ -16,35 +16,15 @@ pub struct LoadedChunk {
 }
 
 impl Manager {
-    pub fn generate_range(
-        x_range: Range<i32>,
-        y_range: Range<i32>,
-        p: Option<Params>
-    ) -> Vec<LoadedChunk> {
-        let mut m = Vec::new();
-
-        for j in y_range {
-            for i in x_range.clone() {
-                // Biome as arg : use it
-                if let Some(ref p) = p {
-                    m.push(Chunk::from_biome((i, j), &p));
-                } else {
-                    // No biome given : generate empty
-                    m.push(Chunk::new((i, j)));
-                }
-            }
-        }
-
-        m
-    }
-}
-
-impl Manager {
     pub fn new() -> Self {
         let default_biome = Params::ocean();
 
         Self {
-            loaded_chunks: Manager::generate_range(-20..20, -5..5, Some(default_biome.clone())),
+            loaded_chunks: Manager::generate_range(
+                -STARTING_AREA..STARTING_AREA,
+                -(STARTING_AREA / 2)..STARTING_AREA / 2,
+                Some(default_biome.clone())
+            ),
             test_biome: default_biome.clone(),
         }
     }
@@ -52,5 +32,15 @@ impl Manager {
         for chunk in &self.loaded_chunks {
             chunk.c.render(renderer, chunk.pos, timestamp);
         }
+    }
+    pub fn tile_at(&self, p: (i32, i32, i32)) -> Option<Tile> {
+        let chunk_pos = (p.0 / (CHUNK_WIDTH as i32), p.1 / (CHUNK_WIDTH as i32));
+        for loaded_chunk in self.loaded_chunks.clone() {
+            if loaded_chunk.pos == chunk_pos{
+                return Some(loaded_chunk.c.content[p])
+            }
+        }
+        // Could not find this tile in loaded chunks
+        None
     }
 }

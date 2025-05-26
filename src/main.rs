@@ -1,8 +1,9 @@
-use std::{ time::{ Duration, Instant } };
+use std::{ ops::Range, time::{ Duration, Instant } };
 
 use ant::{ AntManager };
 use chunk::{ ChunkManager, CHUNK_WIDTH };
 use inputs::Inputs;
+use rand::distributions::uniform::SampleUniform;
 use renderer::{ Renderer, VIEW_DISTANCE };
 use sdl2::{ event::Event, pixels::Color, ttf::Sdl2TtfContext, Sdl };
 
@@ -94,7 +95,7 @@ impl Game {
 
     pub fn tick(&mut self) {
         // Let the ants think !
-        self.ant_manager.tick(&self.chunk_manager.loaded_chunks, self.last_tick);
+        self.ant_manager.tick(&self.chunk_manager, self.last_tick);
 
         if self.process_input().is_err() {
             todo!("Invalid input handling");
@@ -103,6 +104,7 @@ impl Game {
 
     fn render(&mut self) {
         let timestamp = self.elapsed_secs();
+        
         let (x_min, x_max, y_min, y_max) = (
             (self.renderer.camera.0 - VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
             (self.renderer.camera.0 + VIEW_DISTANCE) / (CHUNK_WIDTH as i32),

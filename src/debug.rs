@@ -1,17 +1,21 @@
-use std::process::{ ExitCode, Termination };
+use std::ops::{AddAssign, Range};
 
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 
-use crate::Game;
+use crate::{ ant::Direction, renderer::CLOUDS_HEIGHT, Game };
 
 impl Game {
     pub fn display_debug(&mut self) -> Result<(), String> {
         self.display_debug_at(format!("Camera  : {:?}", self.renderer.camera), 1)?;
         self.display_debug_at(format!("Time       : {:.1?}s", self.elapsed_secs()), 2)?;
         self.display_debug_at(format!("Tile size  : {:?}", self.renderer.tile_size), 3)?;
+        self.display_debug_at(format!("Clouds height : {:?}", CLOUDS_HEIGHT), 4)?;
 
-        self.display_debug_at(format!("Joette's pos {:?}", self.ant_manager.ants.first().expect("No ants?").pos), 6)?;
+        self.display_debug_at(
+            format!("Joette's pos {:?}", self.ant_manager.ants.first().expect("No ants?").pos),
+            6
+        )?;
         Ok(())
     }
     pub fn display_debug_at(&mut self, info: String, index: i32) -> Result<(), String> {

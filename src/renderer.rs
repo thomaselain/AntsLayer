@@ -4,25 +4,20 @@ use sdl2::{ pixels::Color, rect::Rect, Sdl };
 use crate::{
     ant::Ant,
     chunk::{
-        biomes::NoiseParams,
-        index::flatten_index_i32,
-        tile::Tile,
-        Chunk,
-        ChunkContent,
-        CHUNK_WIDTH,
-        SEA_LEVEL,
+        biomes::NoiseParams, index::flatten_index_i32, tile::Tile, Chunk, ChunkContent, CHUNK_HEIGHT, CHUNK_WIDTH, SEA_LEVEL
     },
 };
 
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
 /// This is maximum of air tiles to display
-pub const MAX_AIR_DEPTH: u8 = 5;
+pub const MAX_AIR_DEPTH: u8 = 8;
 // Width of a renderer tile (in pixels)
 pub const DEFAULT_TILE_SIZE: usize = 4;
 //
-pub const CLOUDS_RENDERING: bool = false;
+pub const CLOUDS_HEIGHT: i32 = CHUNK_HEIGHT as i32 - MAX_AIR_DEPTH as i32;
+pub const CLOUDS_RENDERING: bool = true;
 pub const VIEW_DISTANCE: i32 = (CHUNK_WIDTH as i32) * 4;
-pub const MAX_VISIBLE_CHUNKS: usize = VIEW_DISTANCE.pow(2) as usize;
+// pub const MAX_VISIBLE_CHUNKS: usize = VIEW_DISTANCE.pow(2) as usize;
 
 // Struct for rendering with noise
 pub struct RendererNoise {
@@ -56,7 +51,7 @@ impl NoiseParams {
             frequency: 1.05,
             lacunarity: 2.0,
             persistence: 1.9,
-            scale: 0.3,
+            scale: 0.1,
         }
     }
 }
@@ -101,37 +96,42 @@ impl Renderer {
 
         (offset_x, offset_y)
     }
-
-    // returns self.camera.z
-    pub fn get_camera_z(&self) -> i32 {
-        self.camera.2
-    }
-
     // Converts Tile coords into displayable coords (x,y)
-    pub fn tile_to_screen_coords(
-        offset: (i32, i32),
-        chunk_pos: (i32, i32),
-        tile_pos: (i32, i32),
-        tile_size: i32
-    ) -> (i32, i32) {
-        let (x, y) = Self::tile_to_world_coords(chunk_pos, tile_pos);
+    pub fn tile_to_screen_coords(&self, (x, y): (i32, i32)) -> (i32, i32) {
+        let offset = self.get_offset();
 
-        let pixel_x = offset.0 + x * tile_size;
-        let pixel_y = offset.1 + y * tile_size;
+        let pixel_x = offset.0 + x * (self.tile_size as i32);
+        let pixel_y = offset.1 + y * (self.tile_size as i32);
 
         (pixel_x, pixel_y)
     }
-    pub fn tile_to_world_coords(chunk_pos: (i32, i32), tile_pos: (i32, i32)) -> (i32, i32) {
+
+    pub fn draw_tile(&mut self, pos: (i32, i32), c: Color) {
+        let (x, y) = self.tile_to_screen_coords(pos);
+
+        self.canvas.set_draw_color(c);
+        self.canvas
+            .fill_rect(Rect::new(x, y, self.tile_size as u32, self.tile_size as u32))
+            .expect(&format!("Failed to draw tile at {:?}", pos));
+        self.canvas.set_draw_color(Color::BLACK);
+    }
+
+    pub fn to_world_coords(chunk_pos: (i32, i32), tile_pos: (i32, i32)) -> (i32, i32) {
         let x = chunk_pos.0 * (CHUNK_WIDTH as i32) + tile_pos.0;
         let y = chunk_pos.1 * (CHUNK_WIDTH as i32) + tile_pos.1;
 
         (x, y)
     }
-    pub fn world_to_chunk_coords(tile_pos: (i32, i32)) -> (i32, i32) {
-        let x = tile_pos.0 / (CHUNK_WIDTH as i32);
-        let y = tile_pos.1 / (CHUNK_WIDTH as i32);
+    pub fn is_on_screen(&self, draw_pos: (i32, i32)) -> bool {
+        let win = self.get_window_size();
 
-        (x, y)
+        let range_x = 0..win.0 as i32;
+        let range_y = 0..win.1 as i32;
+        if range_x.contains(&draw_pos.0) && range_y.contains(&draw_pos.1) {
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -139,24 +139,7 @@ impl Renderer {
 ///
 impl Ant {
     pub fn render(self, renderer: &mut Renderer) {
-        let offset = renderer.get_offset();
-        let ant_pos = (self.pos.0, self.pos.1);
-        let chunk_pos = Renderer::world_to_chunk_coords(ant_pos);
-
-        renderer.canvas.set_draw_color(Color::RED);
-        let (x,y) = Renderer::tile_to_screen_coords(offset, chunk_pos, ant_pos, renderer.tile_size as i32);
-        renderer.canvas
-            .fill_rect(
-                Rect::new(
-                    x,
-                    y,
-                    renderer.tile_size as u32,
-                    renderer.tile_size as u32
-                )
-            )
-            .expect("Failed to draw tile");
-
-        renderer.canvas.set_draw_color(Color::BLACK);
+        renderer.draw_tile((self.pos.0, self.pos.1), Color::RED);
     }
 }
 
@@ -170,20 +153,17 @@ impl Chunk {
         (pos_x, pos_y): (i32, i32),
         timestamp: f64
     ) {
-        let (offset_x, offset_y) = renderer.get_offset();
-        let camera_z = renderer.get_camera_z();
-        // eprintln!("offset : {:?}", (offset_x, offset_y));
-
         for index in 0..ChunkContent::len() {
             let (x, y, z) = Tile::index_to_xyz(index);
 
-            if z == camera_z {
-                let draw_pos = Renderer::tile_to_screen_coords(
-                    (offset_x, offset_y),
-                    (pos_x, pos_y),
-                    (x, y),
-                    renderer.tile_size as i32
-                );
+            if z == renderer.camera.2 {
+                let (world_x, world_y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
+                let draw_pos = renderer.tile_to_screen_coords((world_x, world_y));
+
+                if !renderer.is_on_screen(draw_pos) {
+                    continue;
+                }
+
                 let mut depth = 0;
                 let mut current_z = z;
                 let mut tiles_to_draw = Vec::new();
@@ -219,28 +199,37 @@ impl Chunk {
                     bottom_tile.draw(renderer, draw_pos, c);
                 }
 
-                // Draw tiles from bottom to top
-                for tile in tiles_to_draw.iter().rev() {
-                    let mut c = tile.color();
-                    if tile.tile_type.is_transparent() {
-                        tile.draw(renderer, draw_pos, c);
+                // Draw the next transparent tiles
+                if let Some(next_tile) = tiles_to_draw.pop() {
+                    if !next_tile.tile_type.is_transparent() {
+                        break;
                     }
+                    // fog rendering
+                    let mut c = next_tile.color();
+                    c.a = c.a * (1 + (tiles_to_draw.len() as u8)) / 2;
+                    next_tile.draw(renderer, draw_pos, c);
 
-                    // Clouds
-                    if CLOUDS_RENDERING {
-                        if z > (SEA_LEVEL as i32) + (MAX_AIR_DEPTH as i32) / 2 {
-                            let (x, y) = Renderer::tile_to_world_coords((pos_x, pos_y), (x, y));
-                            let (x, y, z) = (x as f64, y as f64, z as f64);
+                    ////////////////////////////////////////////////////////////////
+                    ////////////////////////Clouds//////////////////////////////////
+                    ////////////////////////////////////////////////////////////////
+                    if CLOUDS_RENDERING && z >= CLOUDS_HEIGHT {
+                        'clouds_rendering: loop {
+                            // Convert into world coords f64
+                            // Allows use of perlin.get[coords]
+                            let (x, y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
+                            let (x, y, z) = (x as f64, y as f64, CLOUDS_HEIGHT as f64);
+
                             // Find cloud value
                             c.a = ((c.a as f64) +
                                 renderer.noise.get_cloud_value(
-                                    x + timestamp * 5.0,
-                                    y + timestamp * 2.5,
+                                    x + timestamp * 7.5,
+                                    y + timestamp * 3.5,
                                     z,
-                                    timestamp / 10.0
+                                    timestamp / 25.0
                                 ) *
                                     255.0) as u8;
-                            tile.draw(renderer, draw_pos, c);
+                            next_tile.draw(renderer, draw_pos, c);
+                            break 'clouds_rendering;
                         }
                     }
                 }

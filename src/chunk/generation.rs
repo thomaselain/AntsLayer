@@ -1,7 +1,34 @@
-use super::{ biomes::Params, manager::LoadedChunk, tile::Tile, Chunk, CHUNK_HEIGHT };
 
-pub const SEA_LEVEL: usize = (CHUNK_HEIGHT as f64 * 0.7) as usize;
+use std::ops::Range;
 
+use super::{ biomes::Params, manager::LoadedChunk, tile::Tile, Chunk, ChunkManager as Manager, CHUNK_HEIGHT };
+
+pub const SEA_LEVEL: usize = (CHUNK_HEIGHT as f64 * 0.6) as usize;
+pub const STARTING_AREA: i32 = 10;
+
+impl Manager {
+    pub fn generate_range(
+        x_range: Range<i32>,
+        y_range: Range<i32>,
+        p: Option<Params>
+    ) -> Vec<LoadedChunk> {
+        let mut m = Vec::new();
+
+        for j in y_range {
+            for i in x_range.clone() {
+                // Biome as arg : use it
+                if let Some(ref p) = p {
+                    m.push(Chunk::from_biome((i, j), &p));
+                } else {
+                    // No biome given : generate empty
+                    m.push(Chunk::new((i, j)));
+                }
+            }
+        }
+
+        m
+    }
+}
 impl Chunk {
     pub fn from_biome(pos: (i32, i32), b: &Params) -> LoadedChunk {
         let mut chunk = Chunk::new(pos);        

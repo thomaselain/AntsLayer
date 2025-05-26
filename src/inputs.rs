@@ -1,15 +1,6 @@
 use sdl2::{ event::Event, keyboard::Keycode, mouse::MouseWheelDirection };
 
-use crate::{ renderer::Renderer, Game };
-
-pub enum Direction {
-    Up,
-    Down,
-    North,
-    East,
-    South,
-    West,
-}
+use crate::{ ant::Direction, chunk::CHUNK_HEIGHT, renderer::Renderer, Game };
 
 pub trait ToDirection {
     fn to_direction(self) -> Result<Direction, Keycode>;
@@ -25,8 +16,8 @@ pub trait ToDirection {
 impl ToDirection for Keycode {
     fn to_direction(self) -> Result<Direction, Keycode> {
         match self {
-            Keycode::C => Ok(Direction::Down),
-            Keycode::W => Ok(Direction::Up),
+            Keycode::C => Ok(Direction::Up),
+            Keycode::W => Ok(Direction::Down),
             Keycode::Z => Ok(Direction::North),
             Keycode::S => Ok(Direction::South),
             Keycode::Q => Ok(Direction::West),
@@ -115,7 +106,6 @@ impl Game {
                     self.renderer.tile_size = self.renderer.tile_size.saturating_sub(1);
                 }
                 self.renderer.tile_size = self.renderer.tile_size.clamp(4, 64);
-                
             }
         }
         Ok(())
@@ -124,16 +114,20 @@ impl Game {
 
 impl Renderer {
     pub fn move_camera(&mut self, dir: Direction) {
-        let c = self.camera;
-        let mv = match dir {
-            Direction::Up => (0, 0, -1),
-            Direction::Down => (0, 0, 1),
+        let (x, y, z) = self.camera;
+        let (mv) = match dir {
+            Direction::Up if z < (CHUNK_HEIGHT as i32) => (0, 0, 1),
+            Direction::Down if z > 0 => (0, 0, -1),
+
             Direction::North => (0, 1, 0),
             Direction::East => (-1, 0, 0),
             Direction::South => (0, -1, 0),
             Direction::West => (1, 0, 0),
+
+            // Don't move if nothing matches
+            _ => { (0, 0, 0) }
         };
 
-        self.camera = (c.0 + mv.0, c.1 + mv.1, c.2 + mv.2);
+        self.camera = (x + mv.0, y + mv.1, z + mv.2);
     }
 }

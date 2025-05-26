@@ -21,8 +21,8 @@ pub mod index;
 #[derive(Hash, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct ChunkContent([Tile; FLAT_CHUNK_SIZE]);
 const FLAT_CHUNK_SIZE: usize = CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT;
-pub const CHUNK_WIDTH: usize = 8;
-pub const CHUNK_HEIGHT: usize = 64;
+pub const CHUNK_WIDTH: usize = 16;
+pub const CHUNK_HEIGHT: usize = 128;
 pub const SEA_LEVEL: usize = generation::SEA_LEVEL;
 
 /// Allows ASCII display
