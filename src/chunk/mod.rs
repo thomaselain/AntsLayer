@@ -1,8 +1,6 @@
-use std::{ collections::btree_map::Range, fmt::{ self } };
+use std::{  fmt::{ self } };
 
-use biomes::Params;
 use manager::LoadedChunk;
-use noise::{ Fbm, NoiseFn, Perlin };
 use tile::Tile;
 
 pub mod biomes;
@@ -75,30 +73,6 @@ impl Chunk {
     }
 }
 
-impl Chunk {
-    pub fn generate(&mut self, pos: (i32, i32), b: Params, p: Fbm<Perlin>) {
-        for z in 0..CHUNK_HEIGHT as i32 {
-            for x in 0..CHUNK_WIDTH as i32 {
-                for y in 0..CHUNK_WIDTH as i32 {
-                    let (nx, ny) = (
-                        (x as f64) + (pos.0 as f64) * (CHUNK_WIDTH as f64),
-                        (y as f64) + (pos.1 as f64) * (CHUNK_WIDTH as f64),
-                    );
-                    let v = p.get([
-                        b.noise.scale * nx,
-                        b.noise.scale * ny,
-                        b.noise.scale * (z as f64),
-                    ]);
-
-                    // eprintln!("{:.2?}", v);
-
-                    self.content[(x, y, z)] = b.tile_at((x, y, z), v);
-                }
-            }
-        }
-    }
-}
-
 //
 //
 //
@@ -110,6 +84,7 @@ impl Chunk {
 mod tests {
     use crate::chunk::*;
     use crate::ChunkManager;
+    use super::biomes::Params;
 
     #[test]
     fn all_biomes() {

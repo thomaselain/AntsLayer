@@ -7,6 +7,7 @@ use crate::{
         biomes::NoiseParams,
         index::flatten_index_i32,
         manager::LoadedChunk,
+        tile::{ Gas, TileFlag, TileType },
         Chunk,
         ChunkContent,
         CHUNK_WIDTH,
@@ -16,16 +17,16 @@ use crate::{
 
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
 /// This is maximum of air tiles to display
-pub const MAX_AIR_DEPTH: u8 = 20;
+pub const MAX_AIR_DEPTH: u8 = 6;
 // Width of a renderer tile (in pixels)
 pub const DEFAULT_TILE_SIZE: usize = 16;
 pub const MIN_TILE_SIZE: usize = 1;
 pub const MAX_TILE_SIZE: usize = 100;
-const IS_GRID_ENABLED: bool = true;
-const GRID_COLOR: Color = Color::BLACK;
+const IS_GRID_ENABLED: bool = false;
+const GRID_COLOR: Color = Color::RGBA(0, 0, 0, 25);
 
 //
-const CLOUD_COLOR: Color = Color::RGBA(255, 255, 255, 255 / (MAX_AIR_DEPTH as u8));
+const CLOUD_COLOR: Color = Color::RGBA(250, 250, 250, 225 / (MAX_AIR_DEPTH as u8));
 pub const CLOUDS_HEIGHT: i32 = (SEA_LEVEL as i32) + (MAX_AIR_DEPTH as i32) / 2;
 pub const CLOUDS_RENDERING: bool = true;
 pub const VIEW_DISTANCE: i32 = (CHUNK_WIDTH as i32) * 4;
@@ -66,12 +67,12 @@ pub struct Renderer {
 impl NoiseParams {
     pub fn clouds() -> Self {
         Self {
-            fbm: Fbm::new(69_420),
+            fbm: Fbm::new(69_42),
             octaves: 2,
-            frequency: 10.0,
-            lacunarity: 20.0,
-            persistence: 3.0,
-            scale: 0.05,
+            frequency: 1.0,
+            lacunarity: 2.0,
+            persistence: 0.8,
+            scale: 0.04,
         }
     }
 }
@@ -226,6 +227,7 @@ impl Chunk {
         renderer: &mut Renderer,
         // Chunk coordinates
         (pos_x, pos_y): (i32, i32),
+        ants: &Vec<Ant>,
         timestamp: f64
     ) {
         let mut tiles_to_draw = Vec::with_capacity((MAX_AIR_DEPTH as usize) + 1);
@@ -237,12 +239,18 @@ impl Chunk {
                 let (world_x, world_y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
                 let draw_pos = renderer.tile_to_screen_coords((world_x, world_y));
 
-                let mut depth = 0;
-                let mut current_z = z;
+                for a in ants {
+                    if a.pos == (x, y, z) {
+                        let (ant_x, ant_y) = (x, y);
+                        renderer.draw_tile((ant_x, ant_y), Color::RED);
+                    }
+                }
 
                 ////////////////////////////////////////////////////////////////
                 //////////////////     FOG     RENDERING  //////////////////////
                 ////////////////////////////////////////////////////////////////
+                let mut depth = 1;
+                let mut current_z = z;
                 'find_deepest: loop {
                     let idx = flatten_index_i32((x, y, current_z));
                     let tile = &self.content[idx];
@@ -251,7 +259,8 @@ impl Chunk {
 
                     if
                         // current tile is not transparent
-                        !tile.tile_type.is_transparent() ||
+                        !tile.properties.contains(TileFlag::TRANSPARENT) ||
+                        // tile.tile_type != TileType::Gas(Gas::Air) ||
                         // Reached bottom
                         current_z == 0 ||
                         // Dont draw too much
@@ -272,39 +281,54 @@ impl Chunk {
                 }
 
                 // Draw the fog layer
-                if let Some(next_tile) = tiles_to_draw.pop() {
-                    let mut fog = CLOUD_COLOR;
-                    fog.a *= (1 + tiles_to_draw.len()) as u8;
-                    renderer.fill_rect(draw_pos, fog);
-                    tiles_to_draw.clear();
-
-                    ////////////////////////////////////////////////////////////////
-                    ////////////////////////Clouds//////////////////////////////////
-                    ////////////////////////////////////////////////////////////////
-                    if CLOUDS_RENDERING && z >= CLOUDS_HEIGHT {
-                        let mut cloud = CLOUD_COLOR;
-                        // Convert into world coords f64
-                        // Allows use of perlin.get[coords]
-                        let (x, y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
-                        let (x, y, z) = (x as f64, y as f64, CLOUDS_HEIGHT as f64);
-
-                        // Find cloud value
-                        let cloud_value = ((fog.a as f64) +
-                            renderer.noise.get_cloud_value(
-                                x + timestamp * 1.5,
-                                y + timestamp * 1.1,
-                                z,
-                                timestamp / 100.0
-                            ) *
-                                255.0) as u8;
-                        cloud.a = match cloud_value{
-                            0..100 => 150,
-                            100..125 => 50,
-                            _ => 0,
-                        };
-                        renderer.fill_rect(draw_pos, cloud);
+                // And water depth
+                'bottom_to_top: loop {
+                    if let Some(tile) = tiles_to_draw.pop() {
+                        let mut fog = tile.color();
+                        fog.a += tile.color().a;
+                        renderer.fill_rect(draw_pos, fog);
+                    } else {
+                        break 'bottom_to_top;
                     }
                 }
+
+                ////////////////////////////////////////////////////////////////
+                ////////////////////////Clouds//////////////////////////////////
+                ////////////////////////////////////////////////////////////////
+                if CLOUDS_RENDERING && z >= CLOUDS_HEIGHT {
+                    let mut cloud = CLOUD_COLOR;
+                    // Convert into world coords f64
+                    // Allows use of perlin.get[coords]
+                    let (x, y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
+                    let (x, y, z) = (x as f64, y as f64, CLOUDS_HEIGHT as f64);
+
+                    // Find cloud value
+                    let cloud_value = ((cloud.a as f64) +
+                        renderer.noise.get_cloud_value(
+                            x + timestamp * 1.5,
+                            y + timestamp * 1.1,
+                            z,
+                            timestamp / 75.0
+                        ) *
+                            255.0) as u8;
+                    cloud.a = match cloud_value {
+                        0..50 => 150,
+                        50..75 => 100,
+                        75..79 => 50,
+                        140..150 => 75,
+                        150..160 => 15,
+                        _ => 0,
+                    };
+                    renderer.fill_rect(draw_pos, cloud);
+                }
+
+                ////////////////////////////////////////////////////////////////
+                if IS_GRID_ENABLED {
+                    renderer.rect(draw_pos, GRID_COLOR);
+                }
+                ////////////////////////////////////////////////////////////////
+
+                tiles_to_draw.clear();
             }
         }
     }

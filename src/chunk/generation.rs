@@ -1,5 +1,7 @@
 use std::{ ops::Range };
 
+use noise::{ Fbm, NoiseFn, Perlin };
+
 use super::{
     biomes::Params,
     manager::LoadedChunk,
@@ -7,6 +9,7 @@ use super::{
     Chunk,
     ChunkManager as Manager,
     CHUNK_HEIGHT,
+    CHUNK_WIDTH,
 };
 
 pub const SEA_LEVEL: usize = ((CHUNK_HEIGHT as f64) * 0.6) as usize;
@@ -19,7 +22,7 @@ pub enum MapShape {
 }
 #[allow(unused)]
 pub const TEST_MAP_SIZE: i32 = 5;
-pub const STARTING_AREA: i32 = 10;
+pub const STARTING_AREA: i32 = 15;
 pub const STARTING_MAP_SHAPE: MapShape = MapShape::RECT;
 
 impl Manager {
@@ -54,12 +57,37 @@ impl Chunk {
     }
 }
 
+impl Chunk {
+    pub fn generate(&mut self, pos: (i32, i32), b: Params, p: Fbm<Perlin>) {
+        for z in 0..CHUNK_HEIGHT as i32 {
+            for x in 0..CHUNK_WIDTH as i32 {
+                for y in 0..CHUNK_WIDTH as i32 {
+                    let (nx, ny) = (
+                        (x as f64) + (pos.0 as f64) * (CHUNK_WIDTH as f64),
+                        (y as f64) + (pos.1 as f64) * (CHUNK_WIDTH as f64),
+                    );
+                    let v = p.get([
+                        b.noise.scale * nx,
+                        b.noise.scale * ny,
+                        b.noise.scale * (z as f64),
+                    ]);
+
+                    // eprintln!("{:.2?}", v);
+
+                    self.content[(x, y, z)] = b.tile_at((x, y, z), v);
+                }
+            }
+        }
+    }
+}
+
 impl Params {
     pub fn tile_at(&self, (x, y, z): (i32, i32, i32), v: f64) -> Tile {
         let above_sea_level = z > (SEA_LEVEL as i32);
 
         let v = if z > (SEA_LEVEL as i32) {
-            v * 0.3 * (z as f64)
+            // v * 0.3 * (z as f64)
+            0.0
         } else {
             // v - 0.2
             v

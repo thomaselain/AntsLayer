@@ -1,4 +1,4 @@
-use crate::{ chunk::{ biomes::Params }, renderer::{ Renderer } };
+use crate::{ ant::{ Ant, AntManager }, chunk::biomes::Params, renderer::Renderer };
 
 use super::{
     generation::{ MapShape, STARTING_AREA, STARTING_MAP_SHAPE },
@@ -17,7 +17,25 @@ pub struct LoadedChunk {
     pub pos: (i32, i32),
     pub c: Chunk,
 }
+impl LoadedChunk {
+    // Checks if this xyz is in this chunk (un peu crado)
+    pub fn has(&self, (x, y, _z): (i32, i32, i32)) -> bool {
+        let (x_min, x_max) = (
+            self.pos.0 * (CHUNK_WIDTH as i32),
+            (self.pos.0 + 1) * (CHUNK_WIDTH as i32) - 1,
+        );
+        let (y_min, y_max) = (
+            self.pos.1 * (CHUNK_WIDTH as i32),
+            (self.pos.1 + 1) * (CHUNK_WIDTH as i32) - 1,
+        );
 
+        if x > x_min && x < x_max && y > y_min && y < y_max {
+            true
+        } else {
+            false
+        }
+    }
+}
 impl Manager {
     pub fn new() -> Self {
         let default_biome = Params::ocean();
@@ -46,9 +64,13 @@ impl Manager {
             test_biome: default_biome.clone(),
         }
     }
-    pub fn render(&mut self, renderer: &mut Renderer, timestamp: f64) {
+    pub fn render(&mut self, renderer: &mut Renderer, ants: Vec<Ant>, timestamp: f64) {
         for chunk in renderer.visible_chunks(self.loaded_chunks.clone()) {
-            chunk.c.render(renderer, chunk.pos, timestamp);
+            let ants_in_chunk = AntManager::find_from_chunk(&ants, &chunk);
+
+            println!("Found {:?} ants to render !", ants_in_chunk.len());
+
+            chunk.c.render(renderer, chunk.pos, &ants_in_chunk, timestamp);
         }
     }
     pub fn tile_at(&self, p: (i32, i32, i32)) -> Option<Tile> {

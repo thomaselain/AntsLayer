@@ -8,7 +8,7 @@ use std::time::Instant;
 pub use manager::Manager as AntManager;
 use rand::{ distributions::{ Standard }, prelude::Distribution, Rng };
 
-use crate::{ chunk::tile::Tile };
+use crate::chunk::{manager::LoadedChunk, tile::Tile, CHUNK_WIDTH};
 #[allow(unused)]
 use crate::renderer::{ self, Renderer };
 
@@ -96,5 +96,25 @@ impl Ant {
     pub fn act() {}
     pub fn find_tile() -> Option<Tile> {
         None
+    }
+}
+impl Ant {
+    // Checks if this xyz is in this chunk (un peu crado)
+    pub fn is_in(&self, c:LoadedChunk) -> bool {
+        let (x,y, width) = (c.pos.0, c.pos.1, CHUNK_WIDTH as i32);
+        let (x_min, x_max) = (
+            self.pos.0 / (width),
+            (self.pos.0 + width) / (width) - 1,
+        );
+        let (y_min, y_max) = (
+            self.pos.1 / (width),
+            (self.pos.1 + width) / (width) - 1,
+        );
+
+        if x > x_min && x < x_max && y > y_min && y < y_max {
+            true
+        } else {
+            false
+        }
     }
 }

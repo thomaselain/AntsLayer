@@ -1,6 +1,6 @@
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use std::{ fmt::Debug, time::{ Duration, Instant } };
+use std::{ fmt::Debug };
 
 use crate::{
     chunk::generation::{ MapShape, STARTING_AREA, STARTING_MAP_SHAPE },
@@ -53,10 +53,7 @@ impl Game {
         self.display_info_at(format!("Clouds height : {:?}", CLOUDS_HEIGHT), 6)?;
 
         if let Some(joette) = self.ant_manager.ants.first() {
-            self.display_info_at(
-                format!("Joette's pos {:?}", joette.pos),
-                9
-            )?;
+            self.display_info_at(format!("Joette's pos {:?}", joette.pos), 9)?;
         }
 
         self.display_info_at(

@@ -1,12 +1,28 @@
-use std::{ collections::HashSet, fmt };
+use std::{ fmt };
 
 use bitflags::bitflags;
-use sdl2::{ pixels::Color, rect::Rect };
+use sdl2::{ pixels::Color };
 use serde::{ Deserialize, Serialize };
 
-use crate::{ ant::Ant, renderer::Renderer };
+use crate::{ renderer::Renderer };
 
-use super::{ CHUNK_HEIGHT, CHUNK_WIDTH };
+// Stores additional metadata about the Tile
+const GAS_FLAGS: TileFlag = TileFlag::from_bits_retain(0b1000001);
+// const FLUID_FLAGS: TileFlag = TileFlag::from_bits_retain(0b1000001);
+const FLUID_FLAGS: TileFlag = GAS_FLAGS;
+
+bitflags! {
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
+    pub struct TileFlag: u16 {
+        const TRAVERSABLE  = 0b0000001;
+        const DIGGABLE     = 0b0000010;
+        const BUILDABLE    = 0b0000100;
+        const TEMPERATURE  = 0b0001000;
+        const INTERACTIBLE = 0b0010000;
+        const HAS_STATE    = 0b0100000;
+        const TRANSPARENT  = 0b1000000;
+    }
+}
 
 /// Allows ASCII display
 impl fmt::Debug for Tile {
@@ -27,6 +43,7 @@ impl fmt::Debug for Tile {
 pub struct Tile {
     pub hp: u8,
     pub tile_type: TileType,
+    pub properties: TileFlag,
 }
 
 #[derive(Hash, Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
@@ -37,15 +54,6 @@ pub enum TileType {
     Gas(Gas),
     Fluid(Fluid),
     Custom(u16),
-}
-
-impl TileType {
-    pub fn is_transparent(self) -> bool {
-        match self {
-            TileType::Gas(_) => true,
-            _ => false,
-        }
-    }
 }
 
 #[derive(Hash, Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
@@ -67,48 +75,56 @@ impl Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Gas(Gas::Air),
+            properties: GAS_FLAGS,
         }
     }
     pub fn sand() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Soil(Soil::Sand),
+            properties: TileFlag::empty(),
         }
     }
     pub fn clay() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Soil(Soil::Clay),
+            properties: TileFlag::empty(),
         }
     }
     pub fn dirt() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Soil(Soil::Dirt),
+            properties: TileFlag::empty(),
         }
     }
     pub fn marble() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Stone(Stone::Marble),
+            properties: TileFlag::DIGGABLE,
         }
     }
     pub fn limestone() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Stone(Stone::Limestone),
+            properties: TileFlag::DIGGABLE,
         }
     }
     pub fn granite() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Stone(Stone::Granite),
+            properties: TileFlag::DIGGABLE,
         }
     }
     pub fn water() -> Tile {
         Tile {
             hp: 100,
             tile_type: TileType::Fluid(Fluid::Water),
+            properties: FLUID_FLAGS,
         }
     }
 }
@@ -185,26 +201,18 @@ impl Tile {
                     Soil::Clay => Color::RGB(182, 106, 80),
                 }
             }
-            TileType::Gas(_gas) => Color::RGBA(255, 255, 255, 42),
-            TileType::Fluid(_fluid) => Color::BLUE,
+            TileType::Gas(_gas) => Color::RGBA(255, 255, 255, 10),
+            TileType::Fluid(fluid) =>
+                match fluid {
+                    Fluid::Water => Color::RGBA(0, 0, 250, 150),
+                    Fluid::SaltWater => Color::RGBA(0, 0, 200, 150),
+                    Fluid::Magma => Color::RGBA(255, 0, 0, 200),
+                }
             TileType::Custom(_) => Color::RGB(255, 155, 200),
         }
     }
 
     pub fn draw(self, renderer: &mut Renderer, (x, y): (i32, i32), c: Color) {
         renderer.draw_tile((x, y), c);
-    }
-}
-
-// Stores additional metadata about the Tile
-bitflags! {
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
-    pub struct TileFlags: u16 {
-        const TRAVERSABLE  = 0b000001;
-        const DIGGABLE     = 0b000010;
-        const BUILDABLE    = 0b000100;
-        const TEMPERATURE  = 0b001000;
-        const INTERACTIBLE = 0b010000;
-        const HAS_STATE    = 0b100000;
     }
 }

@@ -2,12 +2,14 @@ use std::{ time::{ Duration, Instant } };
 
 use ant::{ AntManager };
 use chunk::{ ChunkManager };
+use debug_interface::Interface;
 use inputs::Inputs;
-use renderer::{ Renderer, WIN_DEFAULT_H, WIN_DEFAULT_W };
+use renderer::{ Renderer };
 use sdl2::{ event::Event, pixels::Color, ttf::Sdl2TtfContext, Sdl };
 
 //  ------
 mod debug;
+mod debug_interface;
 //  ------
 
 // Chunks
@@ -22,6 +24,7 @@ mod renderer;
 pub struct Game {
     // Engine
     pub running: bool,
+    pub debug_interface: Interface,
 
     // Frames and Ticks tracking
     pub tps: u32,
@@ -88,6 +91,7 @@ impl Game {
 
         Game {
             running: true,
+            debug_interface:Interface::new(),
 
             tps: Default::default(),
             fps: Default::default(),
@@ -137,6 +141,7 @@ impl Game {
         } else {
             // Otherwise, update counter
             self.fps = self.frames;
+            self.frames = 0;
             self.last_frame = Instant::now();
         }
     }
@@ -148,6 +153,7 @@ impl Game {
         } else {
             // Otherwise, update counter
             self.tps = self.ticks;
+            self.ticks = 0;
             self.last_tick = Instant::now();
         }
     }
@@ -165,9 +171,7 @@ impl Game {
         // (self.renderer.camera.1 + VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
         // );
 
-        self.chunk_manager.render(&mut self.renderer, timestamp);
-
-        self.ant_manager.render(&mut self.renderer);
+        self.chunk_manager.render(&mut self.renderer, self.ant_manager.ants.clone(), timestamp);
 
         // Top-left info display
         #[cfg(test)]
