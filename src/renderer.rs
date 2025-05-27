@@ -68,8 +68,8 @@ impl NoiseParams {
         Self {
             fbm: Fbm::new(69_420),
             octaves: 2,
-            frequency: 5.0,
-            lacunarity: 5.0,
+            frequency: 10.0,
+            lacunarity: 20.0,
             persistence: 3.0,
             scale: 0.05,
         }
@@ -274,8 +274,9 @@ impl Chunk {
                 // Draw the fog layer
                 if let Some(next_tile) = tiles_to_draw.pop() {
                     let mut fog = CLOUD_COLOR;
-                    fog.a *= tiles_to_draw.len() as u8;
+                    fog.a *= (1 + tiles_to_draw.len()) as u8;
                     renderer.fill_rect(draw_pos, fog);
+                    tiles_to_draw.clear();
 
                     ////////////////////////////////////////////////////////////////
                     ////////////////////////Clouds//////////////////////////////////
@@ -288,15 +289,20 @@ impl Chunk {
                         let (x, y, z) = (x as f64, y as f64, CLOUDS_HEIGHT as f64);
 
                         // Find cloud value
-                        let cloud_value = renderer.noise.get_cloud_value(
-                            x + timestamp * 1.5,
-                            y + timestamp * 1.1,
-                            z,
-                            timestamp / 100.0
-                        ) as u8;
-                        cloud.a = cloud_value * 255;
+                        let cloud_value = ((fog.a as f64) +
+                            renderer.noise.get_cloud_value(
+                                x + timestamp * 1.5,
+                                y + timestamp * 1.1,
+                                z,
+                                timestamp / 100.0
+                            ) *
+                                255.0) as u8;
+                        cloud.a = match cloud_value{
+                            0..100 => 150,
+                            100..125 => 50,
+                            _ => 0,
+                        };
                         renderer.fill_rect(draw_pos, cloud);
-                        tiles_to_draw.clear();
                     }
                 }
             }
