@@ -68,8 +68,6 @@ impl Manager {
         for chunk in renderer.visible_chunks(self.loaded_chunks.clone()) {
             let ants_in_chunk = AntManager::find_from_chunk(&ants, &chunk);
 
-            println!("Found {:?} ants to render !", ants_in_chunk.len());
-
             chunk.c.render(renderer, chunk.pos, &ants_in_chunk, timestamp);
         }
     }

@@ -1,6 +1,6 @@
-use sdl2::{ event::Event, keyboard::Keycode, mouse::MouseWheelDirection };
+use sdl2::{ event::Event, keyboard::Keycode, mouse::{ MouseButton } };
 
-use crate::{ ant::Direction, chunk::CHUNK_HEIGHT, renderer::Renderer, Game };
+use crate::{ ant::Direction, chunk::CHUNK_HEIGHT, interface::{ Slider }, renderer::Renderer, Game };
 
 pub trait ToDirection {
     fn to_direction(self) -> Result<Direction, Keycode>;
@@ -35,6 +35,8 @@ pub struct Inputs {
     pub pressed_keys: Vec<Keycode>,
     // Same but for inputs that are not meant to be repeated
     pub just_pressed_keys: Vec<Keycode>,
+    // save slider id when dragged
+    pub dragging_slider_id: Option<usize>,
 }
 
 impl Inputs {
@@ -42,6 +44,7 @@ impl Inputs {
         Inputs {
             pressed_keys: Vec::new(),
             just_pressed_keys: Vec::new(),
+            dragging_slider_id: None,
             // mouse_pressed: Vec::new(),
             // mouse_position: (0, 0),
             // wheel_dir: 0,
@@ -65,9 +68,40 @@ impl Inputs {
     // }
 }
 
-impl Game {
+impl<'ttf> Game<'ttf> {
     pub fn process_input(&mut self) -> Result<(), ()> {
         for event in self.events.drain(..) {
+            /////////////////
+            // Interface
+            /////////////////
+            match event {
+                Event::MouseButtonDown { x, y, .. } => {
+                    self.inputs.dragging_slider_id = self.interface.check_sliders_at((x, y));
+
+                    for button in &mut self.interface.buttons {
+                        button.handle_click(&mut self.renderer, x, y)?;
+                    }
+                }
+                Event::MouseButtonUp { .. } => {
+                    self.interface.clear_sliders_state();
+                    self.inputs.dragging_slider_id = None;
+                }
+                Event::MouseMotion { x, .. } => {
+                    if let Some(i) = self.inputs.dragging_slider_id {
+                        let slider = &mut self.interface.sliders[i];
+                        let clamped_x = (x - slider.x).clamp(0, slider.width);
+                        slider.value =
+                            slider.min +
+                            (slider.max - slider.min) *
+                                ((clamped_x as f32) / (slider.width as f32));
+                    }
+                }
+                _ => {}
+            }
+
+            /////////////////
+            // Keyboard
+            /////////////////
             if let Event::KeyDown { keycode: Some(key), repeat: _, .. } = event {
                 // Directional inputs
                 if let Ok(dir) = key.to_direction() {
@@ -84,7 +118,6 @@ impl Game {
                         }
                     }
                 }
-
                 // EXIT GAME (at next loop)
                 match key {
                     Keycode::ESCAPE => {
@@ -93,6 +126,16 @@ impl Game {
                     _ => {}
                 }
             }
+
+            /////////////////
+            // Left click
+            /////////////////
+            // if let Event::MouseButtonDown { x, y, mouse_btn: MouseButton::Left, .. } = event {
+            // }
+
+            /////////////////
+            // Mouse Wheel
+            /////////////////
             if let Event::MouseWheel { y, direction, .. } = event {
                 let scroll = match direction {
                     sdl2::mouse::MouseWheelDirection::Normal => y,
@@ -115,7 +158,7 @@ impl Game {
     }
 }
 
-impl Renderer {
+impl<'ttf> Renderer<'ttf> {
     pub fn move_camera(&mut self, dir: Direction) {
         let (x, y, z) = self.camera;
         let mv = match dir {

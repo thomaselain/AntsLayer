@@ -2,14 +2,14 @@ use std::{ time::{ Duration, Instant } };
 
 use ant::{ AntManager };
 use chunk::{ ChunkManager };
-use debug_interface::Interface;
 use inputs::Inputs;
+use interface::Interface;
 use renderer::{ Renderer };
 use sdl2::{ event::Event, pixels::Color, ttf::Sdl2TtfContext, Sdl };
 
 //  ------
 mod debug;
-mod debug_interface;
+mod interface;
 //  ------
 
 // Chunks
@@ -21,10 +21,10 @@ mod ant;
 mod inputs;
 mod renderer;
 
-pub struct Game {
+pub struct Game<'ttf> {
     // Engine
     pub running: bool,
-    pub debug_interface: Interface,
+    pub interface: Interface,
 
     // Frames and Ticks tracking
     pub tps: u32,
@@ -39,11 +39,10 @@ pub struct Game {
     // Chunk
     pub ant_manager: AntManager,
     pub chunk_manager: ChunkManager,
-    pub renderer: Renderer,
+    pub renderer: Renderer<'ttf>,
 
     // SDL2 fields
     pub sdl: Sdl,
-    pub ttf_context: Sdl2TtfContext,
     pub events: Vec<Event>,
     pub inputs: Inputs,
 }
@@ -56,7 +55,8 @@ mod tests {
     #[test]
     #[ignore = "Cannot init SDL on more than one thread"]
     fn test_main() -> Result<(), ()> {
-        let mut game = Game::new(sdl2::init().unwrap());
+        let ttf_context = sdl2::ttf::init().expect("TTF init failed");
+        let mut game = Game::new(sdl2::init().unwrap(), &ttf_context);
         game.run();
 
         // Joette
@@ -74,24 +74,15 @@ mod tests {
     }
 }
 
-impl Game {
-    // Seconds that happends since the game started
-    fn elapsed_secs(&self) -> f64 {
-        self.first_tick.clone().elapsed().as_secs_f64()
-    }
+impl <'ttf>Game<'ttf> {
+    pub fn new(sdl: Sdl, ttf_context: &'ttf Sdl2TtfContext) -> Game<'ttf> {
 
-    pub fn new(sdl: Sdl) -> Game {
-        let renderer = Renderer::new(&sdl, "Ants Layer").expect(
-            "Failed to create game renderer"
-        );
-        let ttf_context = sdl2::ttf
-            ::init()
-            .map_err(|e| e.to_string())
-            .expect("Failed to init SDL2::ttf");
-
+        let renderer = Renderer::new(&sdl, &ttf_context, "Ants Layer")
+            .expect("Failed to create game renderer");
+    
         Game {
             running: true,
-            debug_interface:Interface::new(),
+            interface: Interface::new(),
 
             tps: Default::default(),
             fps: Default::default(),
@@ -108,14 +99,20 @@ impl Game {
             renderer,
 
             sdl,
-            ttf_context,
             events: Vec::new(),
             inputs: Inputs::new(),
         }
     }
 }
 
-impl Game {
+impl <'ttf>Game<'ttf> {
+    // Seconds that happends since the game started
+    fn elapsed_secs(&self) -> f64 {
+        self.first_tick.clone().elapsed().as_secs_f64()
+    }
+}
+
+impl <'ttf>Game<'ttf> {
     pub fn create_world(&mut self) -> Result<(), ()> {
         self.chunk_manager = ChunkManager::new();
 
@@ -157,6 +154,7 @@ impl Game {
             self.last_tick = Instant::now();
         }
     }
+
     fn render(&mut self) {
         let timestamp = self.elapsed_secs();
 
@@ -172,6 +170,8 @@ impl Game {
         // );
 
         self.chunk_manager.render(&mut self.renderer, self.ant_manager.ants.clone(), timestamp);
+
+        self.interface.render(&mut self.renderer);
 
         // Top-left info display
         #[cfg(test)]
@@ -206,7 +206,8 @@ impl Game {
 }
 
 fn main() -> Result<(), ()> {
-    let mut game = Game::new(sdl2::init().unwrap());
+    let ttf_context = sdl2::ttf::init().expect("TTF init failed");
+    let mut game = Game::new(sdl2::init().unwrap(), &ttf_context);
     game.run();
 
     eprintln!("Active ants   : {:?}", game.ant_manager.ants.len());

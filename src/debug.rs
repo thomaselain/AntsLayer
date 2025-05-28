@@ -21,11 +21,12 @@ impl Debug for MapShape {
 const INFO_DISPLAY_HEIGHT: u32 = 25;
 const DEBUG_BACKGROUND_COLOR: Color = Color::RGBA(5, 5, 5, 150);
 
-impl Game {
+impl <'ttf>Game<'ttf> {
     pub fn display_info(&mut self) -> Result<(), String> {
         // Black background
         self.renderer.canvas.set_draw_color(DEBUG_BACKGROUND_COLOR);
         self.renderer.canvas.fill_rect(Rect::new(0, 0, 250, INFO_DISPLAY_HEIGHT * 11))?;
+
         self.display_info_at(
             format!(
                 "win:{:?}|||FPS  :{:?}|||TPS  :{:?}|||",
@@ -65,15 +66,11 @@ impl Game {
     }
     pub fn display_info_at(&mut self, info: String, index: i32) -> Result<(), String> {
         // Load font
-        let font = self.ttf_context
-            .load_font("assets/Minecraft.ttf", 16)
-            .expect("Failed to load Font");
-
         // Text to display
         let text = info;
 
         // Turn text into a surface and then a texture
-        let surface = font
+        let surface = self.renderer.font
             .render(&text)
             .blended(Color::WHITE)
             .map_err(|e| e.to_string())?;

@@ -1,5 +1,5 @@
 use noise::{ Fbm, NoiseFn };
-use sdl2::{ pixels::Color, rect::Rect, Sdl };
+use sdl2::{ pixels::Color, rect::Rect, ttf::{ self, Font, Sdl2TtfContext }, Sdl };
 
 use crate::{
     ant::Ant,
@@ -7,7 +7,7 @@ use crate::{
         biomes::NoiseParams,
         index::flatten_index_i32,
         manager::LoadedChunk,
-        tile::{ Gas, TileFlag, TileType },
+        tile::{ TileFlag },
         Chunk,
         ChunkContent,
         CHUNK_WIDTH,
@@ -17,7 +17,7 @@ use crate::{
 
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
 /// This is maximum of air tiles to display
-pub const MAX_AIR_DEPTH: u8 = 6;
+pub const MAX_AIR_DEPTH: u8 = 10;
 // Width of a renderer tile (in pixels)
 pub const DEFAULT_TILE_SIZE: usize = 16;
 pub const MIN_TILE_SIZE: usize = 1;
@@ -27,8 +27,8 @@ const GRID_COLOR: Color = Color::RGBA(0, 0, 0, 25);
 
 //
 const CLOUD_COLOR: Color = Color::RGBA(250, 250, 250, 225 / (MAX_AIR_DEPTH as u8));
-pub const CLOUDS_HEIGHT: i32 = (SEA_LEVEL as i32) + (MAX_AIR_DEPTH as i32) / 2;
-pub const CLOUDS_RENDERING: bool = true;
+pub const CLOUDS_HEIGHT: i32 = (SEA_LEVEL as i32) + (MAX_AIR_DEPTH as i32);
+pub const CLOUDS_RENDERING: bool = false;
 pub const VIEW_DISTANCE: i32 = (CHUNK_WIDTH as i32) * 4;
 // pub const MAX_VISIBLE_CHUNKS: usize = VIEW_DISTANCE.pow(2) as usize;
 
@@ -51,13 +51,13 @@ impl RendererNoise {
     }
 }
 
-pub struct Renderer {
+pub struct Renderer<'ttf> {
     pub canvas: sdl2::render::Canvas<sdl2::video::Window>,
     pub camera: (i32, i32, i32),
     pub view_distance: i32,
     pub dims: (u32, u32),
     pub is_grid_enabled: bool,
-
+    pub font: Font<'ttf, 'static>,
     // Width of a renderer tile (in pixels)
     pub tile_size: usize,
 
@@ -77,9 +77,10 @@ impl NoiseParams {
     }
 }
 
-impl Renderer {
-    pub fn new(sdl: &Sdl, title: &str) -> Result<Self, String> {
+impl <'ttf>Renderer<'ttf> {
+    pub fn new(sdl: &Sdl, ttf_context: &'ttf Sdl2TtfContext, title: &str) -> Result<Renderer<'ttf>, String> {
         let video_subsystem = sdl.video()?;
+
         let window = video_subsystem
             .window(title, WIN_DEFAULT_W, WIN_DEFAULT_H)
             .position_centered()
@@ -91,9 +92,13 @@ impl Renderer {
             .into_canvas()
             .build()
             .map_err(|e| e.to_string())?;
+
         canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
 
-        Ok(Renderer {
+        let font = ttf_context.load_font("assets/font/Minecraft.ttf", 24)?;
+
+        Ok(Renderer::<'ttf>{
+            font,
             is_grid_enabled: IS_GRID_ENABLED,
             canvas,
             // camera: (
@@ -102,7 +107,7 @@ impl Renderer {
             //     // y
             //     -((CHUNK_WIDTH as i32) * STARTING_AREA) / 2,
             //     // z
-            //     crate::chunk::SEA_LEVEL as i32,
+            //     crate::chunk::SEA_LEVEL as i32 +1,
             // ),
             camera: (
                 // x
@@ -110,15 +115,19 @@ impl Renderer {
                 // y
                 0,
                 // z
-                crate::chunk::SEA_LEVEL as i32,
+                (crate::chunk::SEA_LEVEL as i32) + 1,
             ),
             dims: (WIN_DEFAULT_W, WIN_DEFAULT_H),
             noise: RendererNoise::new(),
             tile_size: DEFAULT_TILE_SIZE,
             view_distance: VIEW_DISTANCE,
+            // font: todo!(),
         })
     }
+}
 
+// Calculation
+impl <'ttf>Renderer<'ttf> {
     pub fn update_window_size(&mut self) {
         self.dims = self.canvas.output_size().expect("Failed to get window size");
     }
@@ -134,6 +143,7 @@ impl Renderer {
 
         (offset_x, offset_y)
     }
+
     // Converts Tile coords into displayable coords (x,y)
     pub fn tile_to_screen_coords(&self, (x, y): (i32, i32)) -> (i32, i32) {
         let offset = self.get_offset();
@@ -142,29 +152,6 @@ impl Renderer {
         let pixel_y = offset.1 + y * (self.tile_size as i32);
 
         (pixel_x, pixel_y)
-    }
-
-    pub fn draw_tile(&mut self, (x, y): (i32, i32), c: Color) {
-        self.fill_rect((x, y), c);
-
-        if self.is_grid_enabled {
-            self.rect((x, y), c);
-        }
-    }
-    pub fn rect(&mut self, (x, y): (i32, i32), c: Color) {
-        self.canvas.set_draw_color(c);
-        self.canvas
-            .draw_rect(Rect::new(x, y, self.tile_size as u32, self.tile_size as u32))
-            .expect(&format!("Failed to draw tile at {:?}", (x, y)));
-        self.canvas.set_draw_color(Color::BLACK);
-    }
-
-    pub fn fill_rect(&mut self, (x, y): (i32, i32), c: Color) {
-        self.canvas.set_draw_color(c);
-        self.canvas
-            .fill_rect(Rect::new(x, y, self.tile_size as u32, self.tile_size as u32))
-            .expect(&format!("Failed to draw tile at {:?}", (x, y)));
-        self.canvas.set_draw_color(Color::BLACK);
     }
 
     pub fn to_world_coords(chunk_pos: (i32, i32), tile_pos: (i32, i32)) -> (i32, i32) {
@@ -196,7 +183,10 @@ impl Renderer {
         let y_overlap = bottom > 0 && top < win_h;
         x_overlap && y_overlap
     }
+}
 
+// Camera
+impl <'ttf>Renderer<'ttf> {
     /// Filtre la liste des LoadedChunk pour ne garder que ceux visibles
     pub fn visible_chunks(&self, chunks: Vec<LoadedChunk>) -> Vec<LoadedChunk> {
         let mut v = Vec::with_capacity(chunks.len());
@@ -206,6 +196,51 @@ impl Renderer {
             }
         }
         v
+    }
+
+    pub fn zoom_in(&mut self) -> Result<(), ()> {
+        self.tile_size += 1;
+        Ok(())
+    }
+    pub fn zoom_out(&mut self) -> Result<(), ()> {
+        self.tile_size -= 1;
+        Ok(())
+    }
+}
+
+// SDL
+impl <'ttf>Renderer<'ttf> {
+    pub fn draw_text(&mut self, text: &str, x: i32, y: i32) {
+        let surface = self.font.render(text).blended(Color::WHITE).expect("Failed to render text");
+
+        let texture_creator = self.canvas.texture_creator();
+        let texture = texture_creator
+            .create_texture_from_surface(&surface)
+            .expect("Failed to create texture");
+
+        let target = Rect::new(x, y, surface.width(), surface.height());
+        self.canvas.copy(&texture, None, Some(target)).unwrap();
+    }
+    pub fn draw_tile(&mut self, (x, y): (i32, i32), c: Color) {
+        self.fill_rect((x, y), c);
+
+        if self.is_grid_enabled {
+            self.rect((x, y), Color::BLACK);
+        }
+    }
+    pub fn rect(&mut self, (x, y): (i32, i32), c: Color) {
+        self.canvas.set_draw_color(c);
+        self.canvas
+            .draw_rect(Rect::new(x, y, self.tile_size as u32, self.tile_size as u32))
+            .expect(&format!("Failed to draw rect at {:?}", (x, y)));
+        self.canvas.set_draw_color(Color::BLACK);
+    }
+    pub fn fill_rect(&mut self, (x, y): (i32, i32), c: Color) {
+        self.canvas.set_draw_color(c);
+        self.canvas
+            .fill_rect(Rect::new(x, y, self.tile_size as u32, self.tile_size as u32))
+            .expect(&format!("Failed to draw tile at {:?}", (x, y)));
+        self.canvas.set_draw_color(Color::BLACK);
     }
 }
 
@@ -239,12 +274,11 @@ impl Chunk {
                 let (world_x, world_y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
                 let draw_pos = renderer.tile_to_screen_coords((world_x, world_y));
 
-                for a in ants {
-                    if a.pos == (x, y, z) {
-                        let (ant_x, ant_y) = (x, y);
-                        renderer.draw_tile((ant_x, ant_y), Color::RED);
-                    }
+                ////////////////////////////////////////////////////////////////
+                if ants.len() > 0 {
+                    println!("Chunk at {:?} has {:?} ants", (pos_x, pos_y), ants.len());
                 }
+                ////////////////////////////////////////////////////////////////
 
                 ////////////////////////////////////////////////////////////////
                 //////////////////     FOG     RENDERING  //////////////////////
@@ -284,6 +318,18 @@ impl Chunk {
                 // And water depth
                 'bottom_to_top: loop {
                     if let Some(tile) = tiles_to_draw.pop() {
+                        ////////////////////////////////////////////////////////////////
+                        ////////////////////  Ants  Rendering //////////////////////////
+                        ////////////////////////////////////////////////////////////////
+                        for a in ants {
+                            if a.pos == (x, y, z) {
+                                let (ant_x, ant_y) = (x, y);
+                                renderer.draw_tile((ant_x, ant_y), Color::RED);
+                                break 'bottom_to_top;
+                            }
+                        }
+                        ////////////////////////////////////////////////////////////////
+
                         let mut fog = tile.color();
                         fog.a += tile.color().a;
                         renderer.fill_rect(draw_pos, fog);
