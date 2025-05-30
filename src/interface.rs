@@ -1,98 +1,197 @@
+use std::collections::HashMap;
+
 use sdl2::{ pixels::Color, rect::{ Point, Rect } };
 
-use crate::{ renderer::Renderer };
+use crate::{ chunk::{ CHUNK_HEIGHT, SEA_LEVEL }, renderer::{ Renderer, DEFAULT_TILE_SIZE } };
+
+///////////////////////////////////////////////////////
+type InterfaceAction = Box<dyn FnMut(&mut Renderer) -> Result<(), ()>>;
+///////////////////////////////////////////////////////
 
 // #[allow(unused)]
 const BACKGROUND_COLOR: Color = Color::BLACK;
 
+const CURSOR_HEIGHT: i32 = 20;
+const CURSOR_WIDTH: i32 = CURSOR_HEIGHT / 2;
+const SLIDER_HEIGHT: i32 = 20;
+const SLIDER_WIDTH: i32 = 250;
+const BUTTON_SIZE: i32 = 250;
+
+#[derive(Copy, Clone, Hash, Ord, PartialEq, PartialOrd, Eq)]
+pub enum Id {
+    Zoom,
+    CameraZ,
+    Plus,
+    Minus,
+}
+
 #[allow(unused)]
 pub struct Interface {
-    pub buttons: Vec<Button>,
-    pub sliders: Vec<Slider>,
+    pub buttons: HashMap<Id, Button>,
+    pub sliders: HashMap<Id, Slider>,
+}
+
+impl Interface {
+    pub fn render(&mut self, renderer: &mut Renderer) {
+        for (_, b) in &self.buttons {
+            b.draw(renderer);
+        }
+        for (_, s) in &mut self.sliders {
+            s.draw(renderer);
+        }
+    }
 }
 
 impl Interface {
     pub fn new() -> Self {
-        Self {
-            buttons: vec![Button::zoom_in(), Button::zoom_out()],
-            sliders: vec![Slider {
-                x: 0,
-                y: 0,
-                width: 150,
-                min: 0.0,
-                max: 1.0,
-                value: 0.5,
-                is_dragging: false,
-            }],
-        }
-    }
-}
+        let mut sliders = HashMap::new();
 
-#[derive(Clone, Copy)]
-pub struct Slider {
-    pub x: i32,
-    pub y: i32,
-    pub width: i32,
-    pub min: f32,
-    pub max: f32,
-    pub value: f32,
-    pub is_dragging: bool,
-}
-impl Slider {
-    pub fn contains_point(&self, px: i32, py: i32) -> bool {
-        let normalized = (self.value - self.min) / (self.max - self.min);
-        let handle_x = self.x + ((normalized * (self.width as f32)) as i32);
-        let handle_rect = Rect::new(handle_x - 5, self.y - 4, 10, 14);
-        handle_rect.contains_point(Point::new(px, py))
+        sliders.insert(Id::Zoom, Slider {
+            x: 20,
+            y: 300,
+            width: SLIDER_WIDTH,
+            min: 5,
+            max: 64,
+            value: DEFAULT_TILE_SIZE as i32,
+            is_dragging: false,
+            on_change: Some(
+                Box::new(|new_value| {
+                    // println!("Zoom level changed to {new_value}");
+                })
+            ),
+        });
+        sliders.insert(Id::CameraZ, Slider {
+            x: 20,
+            y: 350,
+            width: SLIDER_WIDTH,
+            min: 0,
+            max: CHUNK_HEIGHT as i32,
+            value: SEA_LEVEL as i32,
+            is_dragging: false,
+            on_change: Some(Box::new(|v| {
+                // println!("Height changed to  {v}");
+            })),
+        
+        });
+
+        let buttons = HashMap::new();
+        // (Id::Plus, Button::zoom_in()),
+        // (Id::Minus, Button::zoom_out())
+
+        Self {
+            buttons,
+            sliders,
+        }
     }
 }
 
 impl Interface {
-    pub fn check_sliders_at(&mut self, (x, y): (i32, i32)) -> Option<usize> {
-        for (i, s) in self.sliders.iter_mut().enumerate() {
+    pub fn update(&mut self, id: Id, mouse_pos: i32) -> i32 {
+        if let Some(slider) = self.sliders.get_mut(&id) {
+            match id {
+                Id::Zoom | Id::CameraZ => {
+                    slider.update(mouse_pos);
+                }
+                Id::Plus | Id::Minus => todo!("Buttons update"),
+            }
+
+            // Return the slider value
+            //(Interface usage clarity)
+            return slider.value;
+        } else {
+            panic!("Unknown interface clicked : SHOULD NOT HAPPEN")
+        }
+    }
+}
+
+// #[derive(Hash, Ord, PartialEq, PartialOrd, Eq)]
+pub struct Slider {
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub min: i32,
+    pub max: i32,
+    pub value: i32,
+    pub is_dragging: bool,
+    pub on_change: Option<Box<dyn FnMut(i32)>>,
+}
+
+impl Slider {
+    pub fn draw(&mut self, renderer: &'_ mut Renderer) {
+        let rect = Rect::new(self.x, self.y, self.width as u32, 10);
+        renderer.canvas.set_draw_color(Color::GRAY);
+        let _ = renderer.canvas.fill_rect(rect);
+
+        let normalized = ((self.value - self.min) as f32) / ((self.max - self.min) as f32);
+        let handle_x = self.x + ((normalized * (self.width as f32)) as i32);
+
+        let handle_rect = Rect::new(
+            handle_x - CURSOR_WIDTH / 2,
+            self.y - CURSOR_HEIGHT / 4,
+            CURSOR_WIDTH as u32,
+            CURSOR_HEIGHT as u32
+        );
+
+        let value_label = format!("{}", self.value);
+        renderer.draw_text(&value_label, self.x - 15, self.y - 5);
+
+        renderer.canvas.set_draw_color(Color::WHITE);
+        let _ = renderer.canvas.fill_rect(handle_rect);
+    }
+}
+
+impl Slider {
+    pub fn contains_point(&self, px: i32, py: i32) -> bool {
+        let normalized = ((self.value - self.min) as f32) / ((self.max - self.min) as f32);
+        let handle_x = self.x + ((normalized * (self.width as f32)) as i32);
+        let handle_rect = Rect::new(handle_x - 5, self.y - 4, 10, 14);
+        handle_rect.contains_point(Point::new(px, py))
+    }
+
+    
+    fn update(&mut self, mouse_pos: i32) {
+        let clamped_x = (mouse_pos - self.x).clamp(0, self.width);
+        let ratio = (clamped_x as f32) / (self.width as f32);
+        let new_value = self.min + ((((self.max - self.min) as f32) * ratio).round() as i32);
+
+        if new_value != self.value {
+            self.value = new_value;
+            if let Some(callback) = &mut self.on_change {
+                callback(self.value);
+            }
+        }
+    }
+
+    // fn update(&mut self, mouse_pos: i32) {
+    //     let clamped_x = (mouse_pos - self.x).clamp(0, self.width);
+    //     let ratio = (clamped_x as f32) / (self.width as f32);
+
+    //     self.value = self.min + ((((self.max - self.min) as f32) * ratio) as i32);
+    // }
+}
+
+impl Interface {
+    pub fn check_sliders_at(&mut self, (x, y): (i32, i32)) -> Option<Id> {
+        for (_i, (id, s)) in self.sliders.iter_mut().enumerate() {
             if s.contains_point(x, y) {
                 s.is_dragging = true;
-                return Some(i);
+                return Some(*id);
             }
         }
         None
     }
-        pub fn clear_sliders_state(&mut self) {
-        for s in &mut self.sliders {
+    pub fn clear_sliders_state(&mut self) {
+        for (_, s) in &mut self.sliders {
             s.is_dragging = false;
         }
     }
 }
 
-impl Slider {
-    pub fn draw(&mut self, renderer: &'_ mut Renderer) {
-        let rect = Rect::new(self.x, self.y, self.width as u32, 6);
-        renderer.canvas.set_draw_color(Color::GRAY);
-        let _ = renderer.canvas.fill_rect(rect);
-
-        let normalized = (self.value - self.min) / (self.max - self.min);
-        let handle_x = self.x + ((normalized * (self.width as f32)) as i32);
-
-        let handle_rect = Rect::new(handle_x - 5, self.y - 4, 10, 14);
-        renderer.canvas.set_draw_color(Color::WHITE);
-        let _ = renderer.canvas.fill_rect(handle_rect);
-    }
-}
-impl Interface {
-    pub fn render(&mut self, renderer: &mut Renderer) {
-        for b in &self.buttons {
-            b.draw(renderer);
-        }
-        for s in &mut self.sliders {
-            s.draw(renderer);
-        }
-    }
-}
 pub struct Button {
     rect: Rect,
     color: Color,
     label: String,
-    action: ButtonAction,
+    action: InterfaceAction,
 }
 
 #[allow(unused)]
@@ -103,9 +202,8 @@ enum ButtonType {
     SINGLE,
 }
 
-type ButtonAction = Box<dyn FnMut(&mut Renderer) -> Result<(), ()>>;
 impl Button {
-    pub fn zoom_in() -> Self {
+    pub fn plus() -> Self {
         Self {
             rect: (0, 0, 30, 30).into(),
             color: Color::RGBA(255, 25, 120, 200),
@@ -113,7 +211,7 @@ impl Button {
             action: Box::new(|renderer: &mut Renderer| { renderer.zoom_in() }),
         }
     }
-    pub fn zoom_out() -> Self {
+    pub fn minus() -> Self {
         Self {
             rect: (0, 51, 30, 30).into(),
             color: Color::RGBA(255, 25, 120, 200),
@@ -126,7 +224,7 @@ impl Button {
         (x, y, w, h): (i32, i32, u32, u32),
         label: &str,
         color: Color,
-        action: ButtonAction
+        action: InterfaceAction
     ) -> Self {
         Self {
             rect: Rect::new(x, y, w, h),

@@ -1,5 +1,5 @@
 use noise::{ Fbm, NoiseFn };
-use sdl2::{ pixels::Color, rect::Rect, ttf::{ self, Font, Sdl2TtfContext }, Sdl };
+use sdl2::{ pixels::Color, rect::Rect, ttf::{ Font, Sdl2TtfContext }, Sdl };
 
 use crate::{
     ant::Ant,
@@ -7,33 +7,37 @@ use crate::{
         biomes::NoiseParams,
         index::flatten_index_i32,
         manager::LoadedChunk,
-        tile::{ TileFlag },
+        tile::TileFlag,
         Chunk,
         ChunkContent,
+        CHUNK_HEIGHT,
         CHUNK_WIDTH,
-        SEA_LEVEL,
     },
 };
 
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
 /// This is maximum of air tiles to display
-pub const MAX_AIR_DEPTH: u8 = 10;
-// Width of a renderer tile (in pixels)
+pub const MAX_RENDERING_DEPTH: u8 = 10;
+
+/// Width of a renderer tile (in pixels)
 pub const DEFAULT_TILE_SIZE: usize = 16;
-pub const MIN_TILE_SIZE: usize = 1;
-pub const MAX_TILE_SIZE: usize = 100;
 const IS_GRID_ENABLED: bool = false;
 const GRID_COLOR: Color = Color::RGBA(0, 0, 0, 25);
 
-//
-const CLOUD_COLOR: Color = Color::RGBA(250, 250, 250, 225 / (MAX_AIR_DEPTH as u8));
-pub const CLOUDS_HEIGHT: i32 = (SEA_LEVEL as i32) + (MAX_AIR_DEPTH as i32);
-pub const CLOUDS_RENDERING: bool = false;
+/// Clouds rendering
+const CLOUD_COLOR: Color = Color::RGBA(250, 250, 250, 225 / (MAX_RENDERING_DEPTH as u8));
+pub const CLOUDS_HEIGHT: i32 = (CHUNK_HEIGHT as i32) - (MAX_RENDERING_DEPTH as i32);
+pub const CLOUDS_RENDERING: bool = true;
 pub const VIEW_DISTANCE: i32 = (CHUNK_WIDTH as i32) * 4;
-// pub const MAX_VISIBLE_CHUNKS: usize = VIEW_DISTANCE.pow(2) as usize;
 
+/// Window starting dimentions
 pub const WIN_DEFAULT_W: u32 = 800;
 pub const WIN_DEFAULT_H: u32 = 600;
+
+/// Rendering sizes
+pub const FONT_SIZE: u16 = 15;
+pub const MIN_TILE_SIZE: usize = 1;
+pub const MAX_TILE_SIZE: usize = 100;
 
 // Struct for rendering with noise
 pub struct RendererNoise {
@@ -77,8 +81,12 @@ impl NoiseParams {
     }
 }
 
-impl <'ttf>Renderer<'ttf> {
-    pub fn new(sdl: &Sdl, ttf_context: &'ttf Sdl2TtfContext, title: &str) -> Result<Renderer<'ttf>, String> {
+impl<'ttf> Renderer<'ttf> {
+    pub fn new(
+        sdl: &Sdl,
+        ttf_context: &'ttf Sdl2TtfContext,
+        title: &str
+    ) -> Result<Renderer<'ttf>, String> {
         let video_subsystem = sdl.video()?;
 
         let window = video_subsystem
@@ -95,9 +103,9 @@ impl <'ttf>Renderer<'ttf> {
 
         canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
 
-        let font = ttf_context.load_font("assets/font/Minecraft.ttf", 24)?;
+        let font = ttf_context.load_font("assets/font/Minecraft.ttf", FONT_SIZE)?;
 
-        Ok(Renderer::<'ttf>{
+        Ok(Renderer::<'ttf> {
             font,
             is_grid_enabled: IS_GRID_ENABLED,
             canvas,
@@ -127,7 +135,7 @@ impl <'ttf>Renderer<'ttf> {
 }
 
 // Calculation
-impl <'ttf>Renderer<'ttf> {
+impl<'ttf> Renderer<'ttf> {
     pub fn update_window_size(&mut self) {
         self.dims = self.canvas.output_size().expect("Failed to get window size");
     }
@@ -186,7 +194,7 @@ impl <'ttf>Renderer<'ttf> {
 }
 
 // Camera
-impl <'ttf>Renderer<'ttf> {
+impl<'ttf> Renderer<'ttf> {
     /// Filtre la liste des LoadedChunk pour ne garder que ceux visibles
     pub fn visible_chunks(&self, chunks: Vec<LoadedChunk>) -> Vec<LoadedChunk> {
         let mut v = Vec::with_capacity(chunks.len());
@@ -209,7 +217,7 @@ impl <'ttf>Renderer<'ttf> {
 }
 
 // SDL
-impl <'ttf>Renderer<'ttf> {
+impl<'ttf> Renderer<'ttf> {
     pub fn draw_text(&mut self, text: &str, x: i32, y: i32) {
         let surface = self.font.render(text).blended(Color::WHITE).expect("Failed to render text");
 
@@ -223,6 +231,8 @@ impl <'ttf>Renderer<'ttf> {
     }
     pub fn draw_tile(&mut self, (x, y): (i32, i32), c: Color) {
         self.fill_rect((x, y), c);
+        
+        println!("COUCOU je suis une fourmi");
 
         if self.is_grid_enabled {
             self.rect((x, y), Color::BLACK);
@@ -265,7 +275,7 @@ impl Chunk {
         ants: &Vec<Ant>,
         timestamp: f64
     ) {
-        let mut tiles_to_draw = Vec::with_capacity((MAX_AIR_DEPTH as usize) + 1);
+        let mut tiles_to_draw = Vec::with_capacity((MAX_RENDERING_DEPTH as usize) + 1);
 
         for index in 0..ChunkContent::len() {
             let (x, y, z) = ChunkContent::index_to_xyz(index);
@@ -298,7 +308,7 @@ impl Chunk {
                         // Reached bottom
                         current_z == 0 ||
                         // Dont draw too much
-                        depth >= MAX_AIR_DEPTH
+                        depth >= MAX_RENDERING_DEPTH
                     {
                         break 'find_deepest;
                     }

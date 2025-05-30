@@ -1,7 +1,7 @@
-use std::{ time::{ Duration, Instant } };
+use std::{ sync::{ Arc, Mutex }, time::{ Duration, Instant } };
 
-use ant::{ AntManager };
-use chunk::{ ChunkManager };
+use ant::{ Ant, AntManager };
+use chunk::{ ChunkManager, SEA_LEVEL };
 use inputs::Inputs;
 use interface::Interface;
 use renderer::{ Renderer };
@@ -27,8 +27,8 @@ pub struct Game<'ttf> {
     pub interface: Interface,
 
     // Frames and Ticks tracking
-    pub tps: u32,
-    pub fps: u32,
+    pub tps: Arc<Mutex<u32>>,
+    pub fps: Arc<Mutex<u32>>,
     pub ticks: u32,
     pub frames: u32,
     pub last_frame: Instant,
@@ -37,8 +37,8 @@ pub struct Game<'ttf> {
     pub tick_rate: Duration,
 
     // Chunk
-    pub ant_manager: AntManager,
-    pub chunk_manager: ChunkManager,
+    pub ant_manager: Arc<Mutex<AntManager>>,
+    pub chunk_manager: Arc<Mutex<ChunkManager>>,
     pub renderer: Renderer<'ttf>,
 
     // SDL2 fields
@@ -65,21 +65,21 @@ mod tests {
         for i in 10..20 {
             ants.push(Ant::new((i, i, SEA_LEVEL as i32), Type::Fetcher));
         }
-
-        // Check if ants are copied correctly
-        assert!(game.ant_manager.ants.is_empty());
-        game.ant_manager.ants = ants;
-
+        if let Some(mut mngr) = game.ant_manager.lock().ok() {
+            // Check if ants are copied correctly
+            assert!(mngr.ants.is_empty());
+            mngr.ants = ants;
+        }
         Ok(())
     }
 }
 
-impl <'ttf>Game<'ttf> {
+impl<'ttf> Game<'ttf> {
     pub fn new(sdl: Sdl, ttf_context: &'ttf Sdl2TtfContext) -> Game<'ttf> {
+        let renderer = Renderer::new(&sdl, &ttf_context, "Ants Layer").expect(
+            "Failed to create game renderer"
+        );
 
-        let renderer = Renderer::new(&sdl, &ttf_context, "Ants Layer")
-            .expect("Failed to create game renderer");
-    
         Game {
             running: true,
             interface: Interface::new(),
@@ -94,8 +94,8 @@ impl <'ttf>Game<'ttf> {
             first_tick: Instant::now(),
             tick_rate: Duration::from_secs_f64(1.0 / 60.0),
 
-            ant_manager: AntManager::new(),
-            chunk_manager: ChunkManager::new(),
+            ant_manager: Arc::new(Mutex::new(AntManager::new())),
+            chunk_manager: Arc::new(Mutex::new(ChunkManager::new())),
             renderer,
 
             sdl,
@@ -105,27 +105,24 @@ impl <'ttf>Game<'ttf> {
     }
 }
 
-impl <'ttf>Game<'ttf> {
+impl<'ttf> Game<'ttf> {
     // Seconds that happends since the game started
     fn elapsed_secs(&self) -> f64 {
         self.first_tick.clone().elapsed().as_secs_f64()
     }
 }
 
-impl <'ttf>Game<'ttf> {
-    pub fn create_world(&mut self) -> Result<(), ()> {
-        self.chunk_manager = ChunkManager::new();
-
-        Ok(())
-    }
-
+impl<'ttf> Game<'ttf> {
     pub fn tick(&mut self) {
         #[cfg(test)]
         self.update_tps();
 
         // Let the ants think !
-        self.ant_manager.tick(&self.chunk_manager, self.last_tick);
-
+        if let Some(mut ant_mngr) = self.ant_manager.lock().ok() {
+            if let Some(chunk_mngr) = self.chunk_manager.lock().ok() {
+                ant_mngr.tick(&chunk_mngr, self.last_tick);
+            }
+        }
         if self.process_input().is_err() {
             todo!("Invalid input handling");
         }
@@ -137,9 +134,11 @@ impl <'ttf>Game<'ttf> {
             self.frames += 1;
         } else {
             // Otherwise, update counter
-            self.fps = self.frames;
-            self.frames = 0;
-            self.last_frame = Instant::now();
+            if let Some(mut fps) = self.fps.lock().ok() {
+                *fps = self.frames;
+                self.frames = 0;
+                self.last_frame = Instant::now();
+            }
         }
     }
     #[allow(unused)]
@@ -149,14 +148,17 @@ impl <'ttf>Game<'ttf> {
             self.ticks += 1;
         } else {
             // Otherwise, update counter
-            self.tps = self.ticks;
-            self.ticks = 0;
-            self.last_tick = Instant::now();
+            if let Some(mut tps) = self.tps.lock().ok() {
+                *tps = self.ticks;
+                self.ticks = 0;
+                self.last_tick = Instant::now();
+            }
         }
     }
 
     fn render(&mut self) {
         let timestamp = self.elapsed_secs();
+        // let dims = self.renderer.dims;
 
         #[cfg(test)]
         self.update_fps();
@@ -169,15 +171,16 @@ impl <'ttf>Game<'ttf> {
         // (self.renderer.camera.1 + VIEW_DISTANCE) / (CHUNK_WIDTH as i32),
         // );
 
-        self.chunk_manager.render(&mut self.renderer, self.ant_manager.ants.clone(), timestamp);
+        if let Some(mut c_mngr) = self.chunk_manager.lock().ok() {
+            c_mngr.render(&mut self.renderer, self.ant_manager.clone(), timestamp);
 
-        self.interface.render(&mut self.renderer);
-
-        // Top-left info display
-        #[cfg(test)]
-        {
-            self.display_info().unwrap();
+            // Top-left info display
+            #[cfg(test)]
+            {
+                // self.display_info().unwrap();
+            }
         }
+        self.interface.render(&mut self.renderer);
     }
 
     pub fn run(&mut self) {
@@ -208,10 +211,26 @@ impl <'ttf>Game<'ttf> {
 fn main() -> Result<(), ()> {
     let ttf_context = sdl2::ttf::init().expect("TTF init failed");
     let mut game = Game::new(sdl2::init().unwrap(), &ttf_context);
+
+    if
+        let (Some(c_mngr), Some(mut a_mngr)) = (
+            game.chunk_manager.lock().ok(),
+            game.ant_manager.lock().ok(),
+        )
+    {
+        a_mngr.add(Ant::new((0, 0, (SEA_LEVEL as i32) + 10), ant::Type::Explorer));
+    }
+
     game.run();
 
-    eprintln!("Active ants   : {:?}", game.ant_manager.ants.len());
-    eprintln!("Active chunks : {:?}", game.chunk_manager.loaded_chunks.len());
-
+    if
+        let (Some(c_mngr), Some(a_mngr)) = (
+            game.chunk_manager.lock().ok(),
+            game.ant_manager.lock().ok(),
+        )
+    {
+        eprintln!("Active ants   : {:?}", a_mngr.ants.len());
+        eprintln!("Active chunks : {:?}", c_mngr.loaded_chunks.len());
+    }
     Ok(())
 }

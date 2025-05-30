@@ -17,6 +17,7 @@ impl Manager {
     pub fn add(&mut self, ant: Ant) {
         self.ants.insert(0, ant);
     }
+
     pub fn find_from_chunk(ants: &Vec<Ant>, chunk: &LoadedChunk) -> Vec<Ant> {
         let mut v = vec![];
 

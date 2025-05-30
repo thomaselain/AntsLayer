@@ -21,7 +21,7 @@ pub enum MapShape {
     ROUND,
 }
 #[allow(unused)]
-pub const TEST_MAP_SIZE: i32 = 5;
+pub const TEST_MAP_SIZE: i32 = 2;
 pub const STARTING_AREA: i32 = 2;
 pub const STARTING_MAP_SHAPE: MapShape = MapShape::SQUARE;
 

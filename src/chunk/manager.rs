@@ -1,3 +1,5 @@
+use std::sync::{ Arc, Mutex };
+
 use crate::{ ant::{ Ant, AntManager }, chunk::biomes::Params, renderer::Renderer };
 
 use super::{
@@ -64,11 +66,18 @@ impl Manager {
             test_biome: default_biome.clone(),
         }
     }
-    pub fn render(&mut self, renderer: &mut Renderer, ants: Vec<Ant>, timestamp: f64) {
-        for chunk in renderer.visible_chunks(self.loaded_chunks.clone()) {
-            let ants_in_chunk = AntManager::find_from_chunk(&ants, &chunk);
+    pub fn render(
+        &mut self,
+        renderer: &mut Renderer,
+        a_mngr: Arc<Mutex<AntManager>>,
+        timestamp: f64
+    ) {
+        if let Some(a_mngr) = a_mngr.lock().ok() {
+            for chunk in renderer.visible_chunks(self.loaded_chunks.clone()) {
+                let ants_in_chunk = AntManager::find_from_chunk(&a_mngr.ants, &chunk);
 
-            chunk.c.render(renderer, chunk.pos, &ants_in_chunk, timestamp);
+                chunk.c.render(renderer, chunk.pos, &ants_in_chunk, timestamp);
+            }
         }
     }
     pub fn tile_at(&self, p: (i32, i32, i32)) -> Option<Tile> {

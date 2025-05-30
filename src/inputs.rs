@@ -1,6 +1,12 @@
 use sdl2::{ event::Event, keyboard::Keycode, mouse::{ MouseButton } };
 
-use crate::{ ant::Direction, chunk::CHUNK_HEIGHT, interface::{ Slider }, renderer::Renderer, Game };
+use crate::{
+    ant::Direction,
+    chunk::CHUNK_HEIGHT,
+    interface::{ self, Interface, Slider },
+    renderer::Renderer,
+    Game,
+};
 
 pub trait ToDirection {
     fn to_direction(self) -> Result<Direction, Keycode>;
@@ -29,14 +35,14 @@ impl ToDirection for Keycode {
 }
 
 // Inputs are all handled thanks to this struct
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct Inputs {
     // A vector of all the current unprocessed queued pressed keys
     pub pressed_keys: Vec<Keycode>,
     // Same but for inputs that are not meant to be repeated
     pub just_pressed_keys: Vec<Keycode>,
     // save slider id when dragged
-    pub dragging_slider_id: Option<usize>,
+    pub dragging_slider_id: Option<interface::Id>,
 }
 
 impl Inputs {
@@ -71,29 +77,34 @@ impl Inputs {
 impl<'ttf> Game<'ttf> {
     pub fn process_input(&mut self) -> Result<(), ()> {
         for event in self.events.drain(..) {
-            /////////////////
-            // Interface
-            /////////////////
+            ///////////////////////////
+            //      Interface
+            // (Sliders and buttons)
+            ///////////////////////////
             match event {
                 Event::MouseButtonDown { x, y, .. } => {
+                    // Find wich slider is clicked on, if any
                     self.inputs.dragging_slider_id = self.interface.check_sliders_at((x, y));
 
-                    for button in &mut self.interface.buttons {
+                    for (_label, button) in &mut self.interface.buttons {
                         button.handle_click(&mut self.renderer, x, y)?;
                     }
                 }
                 Event::MouseButtonUp { .. } => {
+                    // Reset all sliders on mouse release
                     self.interface.clear_sliders_state();
                     self.inputs.dragging_slider_id = None;
                 }
                 Event::MouseMotion { x, .. } => {
-                    if let Some(i) = self.inputs.dragging_slider_id {
-                        let slider = &mut self.interface.sliders[i];
-                        let clamped_x = (x - slider.x).clamp(0, slider.width);
-                        slider.value =
-                            slider.min +
-                            (slider.max - slider.min) *
-                                ((clamped_x as f32) / (slider.width as f32));
+                    //
+                    if let Some(id) = self.inputs.dragging_slider_id {
+                        let slider_value = self.interface.update(id, x);
+                        match id {
+                            interface::Id::Zoom => self.renderer.tile_size = slider_value as usize,
+                            interface::Id::CameraZ => self.renderer.camera.2 = slider_value,
+                            interface::Id::Plus => todo!(),
+                            interface::Id::Minus => todo!(),
+                        }
                     }
                 }
                 _ => {}
