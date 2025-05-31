@@ -73,10 +73,12 @@ impl Manager {
         timestamp: f64
     ) {
         if let Some(a_mngr) = a_mngr.lock().ok() {
-            for chunk in renderer.visible_chunks(self.loaded_chunks.clone()) {
-                let ants_in_chunk = AntManager::find_from_chunk(&a_mngr.ants, &chunk);
+            for chunk in renderer.visible_chunks(&self.loaded_chunks) {
+                // let ants_in_chunk = AntManager::find_from_chunk(&a_mngr.ants, &chunk);
+                // chunk.c.render(renderer, chunk.pos, &ants_in_chunk, timestamp);
 
-                chunk.c.render(renderer, chunk.pos, &ants_in_chunk, timestamp);
+
+                chunk.c.render(renderer, chunk.pos, &a_mngr.ants, timestamp);
             }
         }
     }

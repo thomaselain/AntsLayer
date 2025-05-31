@@ -1,6 +1,9 @@
 use std::time::{ Duration, Instant };
 
-use crate::{ ant::Direction, chunk::{ manager::LoadedChunk, tile::TileFlag, ChunkManager } };
+use crate::{
+    ant::Direction,
+    chunk::{ manager::LoadedChunk, tile::TileFlag, ChunkManager, SEA_LEVEL },
+};
 
 use super::Ant;
 
@@ -11,7 +14,7 @@ pub struct Manager {
 impl Manager {
     pub fn new() -> Self {
         Self {
-            ants: vec![],
+            ants: Self::generate_colony(25),
         }
     }
     pub fn add(&mut self, ant: Ant) {
@@ -28,6 +31,15 @@ impl Manager {
         }
 
         v
+    }
+    pub fn generate_colony(n: usize) -> Vec<Ant> {
+        let mut ants = vec![];
+
+        for i in 0..n {
+            ants.push(Ant::new((-15, 0, (SEA_LEVEL as i32) + 15), super::Type::Explorer));
+        }
+
+        ants
     }
 }
 

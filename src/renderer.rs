@@ -2,7 +2,7 @@ use noise::{ Fbm, NoiseFn };
 use sdl2::{ pixels::Color, rect::Rect, ttf::{ Font, Sdl2TtfContext }, Sdl };
 
 use crate::{
-    ant::Ant,
+    ant::{ Ant, AntManager },
     chunk::{
         biomes::NoiseParams,
         index::flatten_index_i32,
@@ -21,13 +21,13 @@ pub const MAX_RENDERING_DEPTH: u8 = 10;
 
 /// Width of a renderer tile (in pixels)
 pub const DEFAULT_TILE_SIZE: usize = 16;
-const IS_GRID_ENABLED: bool = false;
+const IS_GRID_ENABLED: bool = true;
 const GRID_COLOR: Color = Color::RGBA(0, 0, 0, 25);
 
 /// Clouds rendering
 const CLOUD_COLOR: Color = Color::RGBA(250, 250, 250, 225 / (MAX_RENDERING_DEPTH as u8));
 pub const CLOUDS_HEIGHT: i32 = (CHUNK_HEIGHT as i32) - (MAX_RENDERING_DEPTH as i32);
-pub const CLOUDS_RENDERING: bool = true;
+pub const CLOUDS_RENDERING: bool = false;
 pub const VIEW_DISTANCE: i32 = (CHUNK_WIDTH as i32) * 4;
 
 /// Window starting dimentions
@@ -196,11 +196,11 @@ impl<'ttf> Renderer<'ttf> {
 // Camera
 impl<'ttf> Renderer<'ttf> {
     /// Filtre la liste des LoadedChunk pour ne garder que ceux visibles
-    pub fn visible_chunks(&self, chunks: Vec<LoadedChunk>) -> Vec<LoadedChunk> {
-        let mut v = Vec::with_capacity(chunks.len());
+    pub fn visible_chunks(&self, chunks: &Vec<LoadedChunk>) -> Vec<LoadedChunk> {
+        let mut v: Vec<LoadedChunk> = Vec::with_capacity(chunks.len());
         for c in chunks {
             if self.is_chunk_on_screen(c.pos) {
-                v.push(c);
+                v.push(*c);
             }
         }
         v
@@ -231,8 +231,6 @@ impl<'ttf> Renderer<'ttf> {
     }
     pub fn draw_tile(&mut self, (x, y): (i32, i32), c: Color) {
         self.fill_rect((x, y), c);
-        
-        println!("COUCOU je suis une fourmi");
 
         if self.is_grid_enabled {
             self.rect((x, y), Color::BLACK);
@@ -286,7 +284,12 @@ impl Chunk {
 
                 ////////////////////////////////////////////////////////////////
                 if ants.len() > 0 {
-                    println!("Chunk at {:?} has {:?} ants", (pos_x, pos_y), ants.len());
+                    // todo!("Chunk at {:?} has {:?} ants", (pos_x, pos_y), ants.len());
+                    for a in ants {
+                        if z == a.pos.2 {
+                            a.render(renderer);
+                        }
+                    }
                 }
                 ////////////////////////////////////////////////////////////////
 
@@ -331,13 +334,13 @@ impl Chunk {
                         ////////////////////////////////////////////////////////////////
                         ////////////////////  Ants  Rendering //////////////////////////
                         ////////////////////////////////////////////////////////////////
-                        for a in ants {
-                            if a.pos == (x, y, z) {
-                                let (ant_x, ant_y) = (x, y);
-                                renderer.draw_tile((ant_x, ant_y), Color::RED);
-                                break 'bottom_to_top;
-                            }
-                        }
+                        // for a in ants {
+                        //     if a.pos == (x, y, z) {
+                        //         let (ant_x, ant_y) = (x, y);
+                        //         renderer.draw_tile((ant_x, ant_y), Color::RED);
+                        //         break 'bottom_to_top;
+                        //     }
+                        // }
                         ////////////////////////////////////////////////////////////////
 
                         let mut fog = tile.color();
@@ -364,7 +367,7 @@ impl Chunk {
                             x + timestamp * 1.5,
                             y + timestamp * 1.1,
                             z,
-                            timestamp / 75.0
+                            timestamp / 69.0
                         ) *
                             255.0) as u8;
                     cloud.a = match cloud_value {
@@ -373,6 +376,7 @@ impl Chunk {
                         75..79 => 50,
                         140..150 => 75,
                         150..160 => 15,
+                        170..180 => 175,
                         _ => 0,
                     };
                     renderer.fill_rect(draw_pos, cloud);
