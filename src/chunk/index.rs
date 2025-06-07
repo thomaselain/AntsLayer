@@ -9,6 +9,16 @@ pub fn flatten_index_i32((x, y, z): (i32, i32, i32)) -> usize {
 pub fn flatten_index_usize((x, y, z): (usize, usize, usize)) -> usize {
     x + y * CHUNK_WIDTH + z * CHUNK_WIDTH * CHUNK_WIDTH
 }
+pub fn to_xyz(index: usize) -> (i32, i32, i32) {
+    (
+        // X
+        (index % CHUNK_WIDTH) as i32,
+        // Y
+        ((index / CHUNK_WIDTH) % CHUNK_WIDTH) as i32,
+        // Z
+        ((index / CHUNK_WIDTH.pow(2)) % super::CHUNK_HEIGHT) as i32,
+    )
+}
 
 /// ChunkContent[(i32, i32, i32)]
 impl IndexMut<(i32, i32, i32)> for ChunkContent {

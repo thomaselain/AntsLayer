@@ -1,10 +1,9 @@
 use noise::{ NoiseFn };
 use sdl2::{ pixels::Color, ttf::{ Font, Sdl2TtfContext }, Sdl };
 
-use crate::{
-    ant::{ Ant },
-    chunk::{ biomes::NoiseParams, CHUNK_HEIGHT, CHUNK_WIDTH },
-};
+use crate::chunk::CHUNK_WIDTH;
+#[allow(unused)]
+use crate::{ ant::Ant, chunk::{ biomes::NoiseParams, CHUNK_HEIGHT, SEA_LEVEL } };
 
 /// SDL methods for drawing squares
 /// for tiles rendering
@@ -23,17 +22,18 @@ mod camera;
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
 /// This is maximum of air tiles to display
 pub const MAX_RENDERING_DEPTH: u8 = 10;
+// pub const MAX_RENDERING_DEPTH: u8 = (CHUNK_HEIGHT as u8) / 4;
 
 /// Width of a renderer tile (in pixels)
 pub const DEFAULT_TILE_SIZE: usize = 16;
-const IS_GRID_ENABLED: bool = true;
+const IS_GRID_ENABLED: bool = false;
 const GRID_COLOR: Color = Color::RGBA(0, 0, 0, 25);
 
 /// Clouds rendering
-const CLOUD_COLOR: Color = Color::RGBA(250, 250, 250, 225 / (MAX_RENDERING_DEPTH as u8));
-pub const CLOUDS_HEIGHT: i32 = (CHUNK_HEIGHT as i32) - (MAX_RENDERING_DEPTH as i32);
+pub const CLOUDS_HEIGHT: i32 = (SEA_LEVEL as i32) + 10;
 pub const CLOUDS_RENDERING: bool = false;
-pub const VIEW_DISTANCE: i32 = (CHUNK_WIDTH as i32) * 4;
+///
+pub const VIEW_DISTANCE: i32 = if cfg!(test){ CHUNK_WIDTH as i32 * 5 } else {CHUNK_WIDTH as i32 * 10};
 
 /// Window starting dimentions
 pub const WIN_DEFAULT_W: u32 = 800;
@@ -63,6 +63,7 @@ impl RendererNoise {
 pub struct Renderer<'ttf> {
     pub canvas: sdl2::render::Canvas<sdl2::video::Window>,
     pub camera: (i32, i32, i32),
+    pub camera_speed: f64,
     pub view_distance: i32,
     pub dims: (u32, u32),
     pub is_grid_enabled: bool,
@@ -81,12 +82,25 @@ impl<'ttf> Renderer<'ttf> {
     ) -> Result<Renderer<'ttf>, String> {
         let video_subsystem = sdl.video()?;
 
-        let window = video_subsystem
-            .window(title, WIN_DEFAULT_W, WIN_DEFAULT_H)
-            .position_centered()
-            .resizable()
-            .build()
-            .map_err(|e| e.to_string())?;
+        let window = match cfg!(test) {
+            true => {
+                video_subsystem
+                    .window(title, WIN_DEFAULT_W, WIN_DEFAULT_H)
+                    .position_centered()
+                    .resizable()
+                    .build()
+                    .map_err(|e| e.to_string())?
+            }
+            // Go fullscreen in release mode
+            false => {
+                video_subsystem
+                    .window(title, WIN_DEFAULT_W, WIN_DEFAULT_H)
+                    .position_centered()
+                    .fullscreen()
+                    .build()
+                    .map_err(|e| e.to_string())?
+            }
+        };
 
         let mut canvas = window
             .into_canvas()
@@ -100,15 +114,8 @@ impl<'ttf> Renderer<'ttf> {
         Ok(Renderer::<'ttf> {
             font,
             is_grid_enabled: IS_GRID_ENABLED,
+            camera_speed: 10.0,
             canvas,
-            // camera: (
-            //     // x
-            //     -((CHUNK_WIDTH as i32) * STARTING_AREA) / 2,
-            //     // y
-            //     -((CHUNK_WIDTH as i32) * STARTING_AREA) / 2,
-            //     // z
-            //     crate::chunk::SEA_LEVEL as i32 +1,
-            // ),
             camera: (
                 // x
                 0,
@@ -121,7 +128,6 @@ impl<'ttf> Renderer<'ttf> {
             noise: RendererNoise::new(),
             tile_size: DEFAULT_TILE_SIZE,
             view_distance: VIEW_DISTANCE,
-            // font: todo!(),
         })
     }
 }

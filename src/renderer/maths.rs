@@ -2,7 +2,6 @@ use crate::chunk::CHUNK_WIDTH;
 
 use super::Renderer;
 
-
 // Calculation
 impl<'ttf> Renderer<'ttf> {
     pub fn update_window_size(&mut self) {

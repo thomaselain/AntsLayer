@@ -1,25 +1,56 @@
-use crate::{ant::Ant, chunk::{index::flatten_index_i32, tile::TileFlag, Chunk, ChunkContent}};
+use sdl2::pixels::Color;
 
-use super::{Renderer, CLOUDS_HEIGHT, CLOUDS_RENDERING, CLOUD_COLOR, GRID_COLOR, IS_GRID_ENABLED, MAX_RENDERING_DEPTH};
+use crate::{
+    ant::Ant,
+    chunk::{
+        index::{ self, flatten_index_i32 },
+        manager::LoadedChunk,
+        tile::TileFlag,
+        ChunkContent,
+    },
+};
+
+#[allow(unused)]
+use super::{
+    Renderer,
+    CLOUDS_HEIGHT,
+    CLOUDS_RENDERING,
+    GRID_COLOR,
+    IS_GRID_ENABLED,
+    MAX_RENDERING_DEPTH,
+};
 
 /// Chunk rendering
 ///
-impl Chunk {
-    pub fn render(
-        &self,
-        renderer: &mut Renderer,
-        // Chunk coordinates
-        (pos_x, pos_y): (i32, i32),
-        ants: &Vec<Ant>,
-        timestamp: f64
-    ) {
+impl LoadedChunk {
+    fn biome_render(&self, renderer: &mut Renderer, draw_pos: (i32, i32), timestamp: f64) {
+        renderer.draw_chunk(draw_pos, self.biome_id.into());
+
+        #[allow(unused)]
+        if cfg!(test) {
+            let (d, h, m) = crate::time::game_time(timestamp);
+            let c = Color::RGBA(255, 0, 255, 10 + 10 * (h as u8));
+            renderer.draw_chunk(draw_pos, c);
+        }
+    }
+    pub fn render(&self, renderer: &mut Renderer, ants: &Vec<Ant>, timestamp: f64) {
+        if renderer.tile_size < 7 {
+            let (world_x, world_y) = Renderer::to_world_coords((self.pos.0, self.pos.1), (0, 0));
+            let draw_pos = renderer.tile_to_screen_coords((world_x, world_y));
+            self.biome_render(renderer, draw_pos, timestamp);
+            return;
+        }
+
         let mut tiles_to_draw = Vec::with_capacity((MAX_RENDERING_DEPTH as usize) + 1);
 
         for index in 0..ChunkContent::len() {
-            let (x, y, z) = ChunkContent::index_to_xyz(index);
+            let (x, y, z) = index::to_xyz(index);
 
             if z == renderer.camera.2 {
-                let (world_x, world_y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
+                let (world_x, world_y) = Renderer::to_world_coords(
+                    (self.pos.0, self.pos.1),
+                    (x, y)
+                );
                 let draw_pos = renderer.tile_to_screen_coords((world_x, world_y));
 
                 ////////////////////////////////////////////////////////////////
@@ -29,7 +60,7 @@ impl Chunk {
                 let mut current_z = z;
                 'find_deepest: loop {
                     let idx = flatten_index_i32((x, y, current_z));
-                    let tile = &self.content[idx];
+                    let tile = self.access_tile_from_index(&idx);
 
                     tiles_to_draw.push(tile);
 
@@ -63,14 +94,14 @@ impl Chunk {
                         ////////////////////////////////////////////////////////////////
                         ////////////////////  Ants  Rendering //////////////////////////
                         ////////////////////////////////////////////////////////////////
-                        if ants.len() > 0 {
-                            // todo!("Chunk at {:?} has {:?} ants", (pos_x, pos_y), ants.len());
-                            for a in ants {
-                                if a.pos.2 <= z {
-                                    a.render(renderer);
-                                }
-                            }
-                        }
+                        // if ants.len() > 0 {
+                        //     // todo!("Chunk at {:?} has {:?} ants", (pos_x, pos_y), ants.len());
+                        //     for a in ants {
+                        //         if a.pos.2 <= z {
+                        //             a.render(renderer);
+                        //         }
+                        //     }
+                        // }
                         ////////////////////////////////////////////////////////////////
 
                         let mut fog = tile.color();
@@ -81,42 +112,16 @@ impl Chunk {
                     }
                 }
 
-                ////////////////////////////////////////////////////////////////
                 ////////////////////////Clouds//////////////////////////////////
-                ////////////////////////////////////////////////////////////////
                 if CLOUDS_RENDERING && z >= CLOUDS_HEIGHT {
-                    let mut cloud = CLOUD_COLOR;
-                    // Convert into world coords f64
-                    // Allows use of perlin.get[coords]
-                    let (x, y) = Renderer::to_world_coords((pos_x, pos_y), (x, y));
-                    let (x, y, z) = (x as f64, y as f64, CLOUDS_HEIGHT as f64);
-
-                    // Find cloud value
-                    let cloud_value = ((cloud.a as f64) +
-                        renderer.noise.get_cloud_value(
-                            x + timestamp * 1.5,
-                            y + timestamp * 1.1,
-                            z,
-                            timestamp / 69.0
-                        ) *
-                            255.0) as u8;
-                    cloud.a = match cloud_value {
-                        0..50 => 150,
-                        50..75 => 100,
-                        75..79 => 50,
-                        140..150 => 75,
-                        150..160 => 15,
-                        170..180 => 175,
-                        _ => 0,
-                    };
-                    renderer.fill_rect(draw_pos, cloud);
+                    renderer.draw_cloud(self.pos, (x, y), draw_pos, timestamp);
+                    continue;
                 }
 
-                ////////////////////////////////////////////////////////////////
-                if IS_GRID_ENABLED {
+                //////////////////////// Grid //////////////////////////////////
+                if renderer.is_grid_enabled {
                     renderer.rect(draw_pos, GRID_COLOR);
                 }
-                ////////////////////////////////////////////////////////////////
 
                 tiles_to_draw.clear();
             }

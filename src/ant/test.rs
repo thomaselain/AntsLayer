@@ -16,14 +16,7 @@ fn joette_the_ant() -> Result<(), ()> {
     let mut game = Game::new(sdl2::init().unwrap(), &ttf_context);
 
     // Joette enters the game
-    if
-        let (Some(c_mngr), Some(mut a_mngr)) = (
-            game.chunk_manager.lock().ok(),
-            game.ant_manager.lock().ok(),
-        )
-    {
-        a_mngr.add(joe);
-    }
+    game.ant_manager.add(joe);
 
     // Game starts
     game.run();

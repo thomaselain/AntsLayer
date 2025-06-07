@@ -8,14 +8,12 @@ use crate::{ chunk::{ CHUNK_HEIGHT, SEA_LEVEL }, renderer::{ Renderer, DEFAULT_T
 type InterfaceAction = Box<dyn FnMut(&mut Renderer) -> Result<(), ()>>;
 ///////////////////////////////////////////////////////
 
-// #[allow(unused)]
+#[allow(unused)]
 const BACKGROUND_COLOR: Color = Color::BLACK;
 
 const CURSOR_HEIGHT: i32 = 20;
 const CURSOR_WIDTH: i32 = CURSOR_HEIGHT / 2;
-const SLIDER_HEIGHT: i32 = 20;
 const SLIDER_WIDTH: i32 = 250;
-const BUTTON_SIZE: i32 = 250;
 
 #[derive(Copy, Clone, Hash, Ord, PartialEq, PartialOrd, Eq)]
 pub enum Id {
@@ -50,12 +48,12 @@ impl Interface {
             x: 20,
             y: 300,
             width: SLIDER_WIDTH,
-            min: 5,
-            max: 64,
+            min: 0,
+            max: 100,
             value: DEFAULT_TILE_SIZE as i32,
             is_dragging: false,
             on_change: Some(
-                Box::new(|new_value| {
+                Box::new(|_new_value| {
                     // println!("Zoom level changed to {new_value}");
                 })
             ),
@@ -68,15 +66,15 @@ impl Interface {
             max: CHUNK_HEIGHT as i32,
             value: SEA_LEVEL as i32,
             is_dragging: false,
-            on_change: Some(Box::new(|v| {
+            on_change: Some(Box::new(|_v| {
                 // println!("Height changed to  {v}");
             })),
         
         });
 
-        let buttons = HashMap::new();
-        // (Id::Plus, Button::zoom_in()),
-        // (Id::Minus, Button::zoom_out())
+        let mut buttons = HashMap::new();
+        buttons.insert(Id::Plus, Button::plus());
+        buttons.insert(Id::Minus, Button::minus());
 
         Self {
             buttons,
@@ -205,18 +203,18 @@ enum ButtonType {
 impl Button {
     pub fn plus() -> Self {
         Self {
-            rect: (0, 0, 30, 30).into(),
-            color: Color::RGBA(255, 25, 120, 200),
+            rect: (0, 175, 30, 30).into(),
+            color: Color::RGBA(255, 25, 120, 255),
             label: "+".to_string(),
-            action: Box::new(|renderer: &mut Renderer| { renderer.zoom_in() }),
+            action: Box::new(|renderer: &mut Renderer| { renderer.increase_view_dist() }),
         }
     }
     pub fn minus() -> Self {
         Self {
-            rect: (0, 51, 30, 30).into(),
-            color: Color::RGBA(255, 25, 120, 200),
+            rect: (0, 200, 30, 30).into(),
+            color: Color::RGBA(255, 25, 120, 255),
             label: "-".to_string(),
-            action: Box::new(|renderer: &mut Renderer| { renderer.zoom_out() }),
+            action: Box::new(|renderer: &mut Renderer| { renderer.decrease_view_dist() }),
         }
     }
 

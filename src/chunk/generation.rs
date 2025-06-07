@@ -1,6 +1,7 @@
-use std::{ ops::Range };
+#[allow(unused)]
+use std::{ ops::Range, thread::{ self, JoinHandle }, time::Duration };
 
-use noise::{ Fbm, NoiseFn, Perlin };
+use crate::{ chunk::ChunkContent, renderer::Renderer };
 
 use super::{
     biomes::Params,
@@ -21,27 +22,41 @@ pub enum MapShape {
     ROUND,
 }
 #[allow(unused)]
-pub const TEST_MAP_SIZE: i32 = 2;
-pub const STARTING_AREA: i32 = 2;
-pub const STARTING_MAP_SHAPE: MapShape = MapShape::SQUARE;
+pub const STARTING_AREA: i32 = if cfg!(test) { 20 } else { 10 };
+pub const STARTING_MAP_SHAPE: MapShape = if cfg!(test) { MapShape::SQUARE } else { MapShape::RECT };
 
 impl Manager {
+    pub fn look_for_new_chunks(&mut self, renderer: &mut Renderer) {
+        let (x_min, x_max, y_min, y_max) = renderer.camera_range_i32();
+        let mut new_chunks = vec![];
+        for x in x_min..x_max {
+            for y in y_min..y_max {
+                if !self.loaded_chunks.contains_key(&(x, y)) {
+                    new_chunks.push(self.generate(&(x, y)));
+                }
+            }
+        }
+        //
+        for handle in new_chunks {
+            let chunk = handle.join().unwrap();
+            self.loaded_chunks.insert(chunk.pos, chunk);
+        }
+    }
+    pub fn generate(&self, (x, y): &(i32, i32)) -> JoinHandle<LoadedChunk> {
+        let biome = &self.biome_at((*x, *y));
+
+        Chunk::from_biome((*x, *y), biome)
+    }
     pub fn generate_range(
+        &self,
         x_range: Range<i32>,
-        y_range: Range<i32>,
-        p: Option<Params>
-    ) -> Vec<LoadedChunk> {
+        y_range: Range<i32>
+    ) -> Vec<JoinHandle<LoadedChunk>> {
         let mut m = Vec::new();
 
         for j in y_range {
             for i in x_range.clone() {
-                // Biome as arg : use it
-                if let Some(ref p) = p {
-                    m.push(Chunk::from_biome((i, j), &p));
-                } else {
-                    // No biome given : generate empty
-                    m.push(Chunk::new((i, j)));
-                }
+                m.push(self.generate(&(i, j)));
             }
         }
 
@@ -49,35 +64,49 @@ impl Manager {
     }
 }
 impl Chunk {
-    pub fn from_biome(pos: (i32, i32), b: &Params) -> LoadedChunk {
-        let mut chunk = Chunk::new(pos);
-
-        chunk.c.generate(pos, b.clone(), b.noise.fbm.clone());
-        chunk
+    pub fn new() -> Self {
+        Self { content: ChunkContent::new() }
+    }
+    pub fn from_biome(pos: (i32, i32), b: &Params) -> JoinHandle<LoadedChunk> {
+        Chunk::generate(pos, b.clone())
     }
 }
 
 impl Chunk {
-    pub fn generate(&mut self, pos: (i32, i32), b: Params, p: Fbm<Perlin>) {
-        for z in 0..CHUNK_HEIGHT as i32 {
-            for x in 0..CHUNK_WIDTH as i32 {
-                for y in 0..CHUNK_WIDTH as i32 {
-                    let (nx, ny) = (
-                        (x as f64) + (pos.0 as f64) * (CHUNK_WIDTH as f64),
-                        (y as f64) + (pos.1 as f64) * (CHUNK_WIDTH as f64),
-                    );
-                    let v = p.get([
-                        b.noise.scale * nx,
-                        b.noise.scale * ny,
-                        b.noise.scale * (z as f64),
-                    ]);
+    pub fn generate(pos: (i32, i32), b: Params) -> JoinHandle<LoadedChunk> {
+        thread::spawn(move || {
+            let chunk = LoadedChunk::new(b.id, pos);
 
-                    // eprintln!("{:.2?}", v);
+            for z in 0..CHUNK_HEIGHT as i32 {
+                for x in 0..CHUNK_WIDTH as i32 {
+                    for y in 0..CHUNK_WIDTH as i32 {
+                        // Get  noise value
+                        let (nx, ny) = (
+                            (x as f64) + (pos.0 as f64) * (CHUNK_WIDTH as f64),
+                            (y as f64) + (pos.1 as f64) * (CHUNK_WIDTH as f64),
+                        );
+                        let v = b.noise.get((
+                            //
+                            nx as f64,
+                            //
+                            ny as f64,
+                            //
+                            z as f64,
+                        ));
 
-                    self.content[(x, y, z)] = b.tile_at((x, y, z), v);
+                        // Set the tile
+                        let tile = b.tile_at((x, y, z), v);
+                        chunk.c.lock().unwrap().set((x, y, z), tile);
+                    }
                 }
             }
-        }
+            //////////////////////////////////////////////////////
+            // #[cfg(test)]
+            // thread::sleep(Duration::from_millis(15));
+            //////////////////////////////////////////////////////
+
+            chunk
+        })
     }
 }
 
@@ -101,20 +130,20 @@ impl Params {
                 //Boolean that tells if z > SEA_LEVEL
                 above_sea_level,
                 //Biome's name
-                self.name.as_str(),
+                self.id,
                 //Noise value (from 0.0 to 1.0)
                 v,
             )
         {
+            // Should be air above sea level, regardless of noise values
+            (true, _, _) => Tile::air(),
             // -----------------
             // ----- Ocean -----
             // -----------------
-            // Should be air above sea level, regardless of noise values
-            (true, "Ocean", _) => Tile::air(),
 
-            (false, "Ocean", 0.0..0.01) => Tile::marble(),
-            (false, "Ocean", 0.01..0.9) => Tile::dirt(),
-            (false, "Ocean", _) => Tile::water(),
+            // (false, Id::Ocean, 0.0..0.01) => Tile::marble(),
+            // (false, Id::Ocean, 0.01..0.9) => Tile::dirt(),
+            // (false, Id::Ocean, _) => Tile::water(),
             // ------------------
 
             // -----------------

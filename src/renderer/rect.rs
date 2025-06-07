@@ -1,4 +1,6 @@
-use sdl2::{pixels::Color, rect::Rect};
+use sdl2::{ pixels::Color, rect::Rect };
+
+use crate::chunk::{ CHUNK_WIDTH };
 
 use super::Renderer;
 
@@ -33,6 +35,14 @@ impl<'ttf> Renderer<'ttf> {
         self.canvas.set_draw_color(c);
         self.canvas
             .fill_rect(Rect::new(x, y, self.tile_size as u32, self.tile_size as u32))
+            .expect(&format!("Failed to draw tile at {:?}", (x, y)));
+        self.canvas.set_draw_color(Color::BLACK);
+    }
+    pub fn draw_chunk(&mut self, (x, y): (i32, i32), c: Color) {
+        let rect_size = (self.tile_size as u32) * (CHUNK_WIDTH as u32);
+        self.canvas.set_draw_color(c);
+        self.canvas
+            .fill_rect(Rect::new(x, y, rect_size, rect_size))
             .expect(&format!("Failed to draw tile at {:?}", (x, y)));
         self.canvas.set_draw_color(Color::BLACK);
     }

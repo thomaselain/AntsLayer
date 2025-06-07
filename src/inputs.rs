@@ -1,10 +1,8 @@
-use sdl2::{ event::Event, keyboard::Keycode, mouse::{ MouseButton } };
+use sdl2::{ event::Event, keyboard::Keycode };
 
 use crate::{
     ant::Direction,
-    chunk::CHUNK_HEIGHT,
-    interface::{ self, Interface, Slider },
-    renderer::Renderer,
+    interface::{ self },
     Game,
 };
 
@@ -12,7 +10,9 @@ pub trait ToDirection {
     fn to_direction(self) -> Result<Direction, Keycode>;
 }
 
-/// Movement inputs
+/// Movement inputs (AZERTY)
+/// A => Decrease camera range
+/// E => Increase camera range
 /// C => Down
 /// W => Up
 /// Z => North
@@ -100,10 +100,14 @@ impl<'ttf> Game<'ttf> {
                     if let Some(id) = self.inputs.dragging_slider_id {
                         let slider_value = self.interface.update(id, x);
                         match id {
-                            interface::Id::Zoom => self.renderer.tile_size = slider_value as usize,
-                            interface::Id::CameraZ => self.renderer.camera.2 = slider_value,
-                            interface::Id::Plus => todo!(),
-                            interface::Id::Minus => todo!(),
+                            interface::Id::Zoom => {
+                                self.renderer.tile_size = slider_value as usize;
+                            }
+                            interface::Id::CameraZ => {
+                                self.renderer.camera.2 = slider_value;
+                            }
+                            //
+                            _ => {}
                         }
                     }
                 }
@@ -131,7 +135,22 @@ impl<'ttf> Game<'ttf> {
                 }
                 // EXIT GAME (at next loop)
                 match key {
+                    Keycode::G => {
+                        self.renderer.is_grid_enabled = if self.renderer.is_grid_enabled {
+                            false
+                        } else {
+                            true
+                        };
+                    }
+                    Keycode::A => {
+                        self.renderer.decrease_view_dist().unwrap();
+                    }
+                    Keycode::E => {
+                        self.renderer.increase_view_dist().unwrap();
+                    }
                     Keycode::ESCAPE => {
+                        self.ant_manager.ants.clear();
+                        self.chunk_manager.loaded_chunks.clear();
                         self.running = false;
                     }
                     _ => {}
@@ -166,25 +185,5 @@ impl<'ttf> Game<'ttf> {
             }
         }
         Ok(())
-    }
-}
-
-impl<'ttf> Renderer<'ttf> {
-    pub fn move_camera(&mut self, dir: Direction) {
-        let (x, y, z) = self.camera;
-        let mv = match dir {
-            Direction::Up if z < (CHUNK_HEIGHT as i32) => (0, 0, 1),
-            Direction::Down if z > 0 => (0, 0, -1),
-
-            Direction::North => (0, 1, 0),
-            Direction::East => (-1, 0, 0),
-            Direction::South => (0, -1, 0),
-            Direction::West => (1, 0, 0),
-
-            // Don't move if nothing matches
-            _ => { (0, 0, 0) }
-        };
-
-        self.camera = (x + mv.0, y + mv.1, z + mv.2);
     }
 }

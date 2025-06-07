@@ -2,7 +2,7 @@ use std::time::{ Duration, Instant };
 
 use crate::{
     ant::Direction,
-    chunk::{ manager::LoadedChunk, tile::TileFlag, ChunkManager, SEA_LEVEL },
+    chunk::{tile::TileFlag, ChunkManager, SEA_LEVEL },
 };
 
 use super::Ant;
@@ -21,21 +21,10 @@ impl Manager {
         self.ants.insert(0, ant);
     }
 
-    pub fn find_from_chunk(ants: &Vec<Ant>, chunk: &LoadedChunk) -> Vec<Ant> {
-        let mut v = vec![];
-
-        for a in ants {
-            if a.is_in(*chunk) {
-                v.push(*a);
-            }
-        }
-
-        v
-    }
     pub fn generate_colony(n: usize) -> Vec<Ant> {
         let mut ants = vec![];
 
-        for i in 0..n {
+        for _i in 0..n {
             ants.push(Ant::new((-15, 0, (SEA_LEVEL as i32) + 15), super::Type::Explorer));
         }
 
