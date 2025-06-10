@@ -91,7 +91,7 @@ impl NoiseParams {
             frequency: 1.0,
             lacunarity: 2.0,
             persistence: 1.5,
-            scale: 0.05,
+            scale: 0.009,
         }
     }
 }

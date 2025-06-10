@@ -67,7 +67,6 @@ impl LoadedChunk {
                     if
                         // current tile is not transparent
                         !tile.properties.contains(TileFlag::TRANSPARENT) ||
-                        // tile.tile_type != TileType::Gas(Gas::Air) ||
                         // Reached bottom
                         current_z == 0 ||
                         // Dont draw too much
@@ -94,14 +93,15 @@ impl LoadedChunk {
                         ////////////////////////////////////////////////////////////////
                         ////////////////////  Ants  Rendering //////////////////////////
                         ////////////////////////////////////////////////////////////////
-                        // if ants.len() > 0 {
-                        //     // todo!("Chunk at {:?} has {:?} ants", (pos_x, pos_y), ants.len());
-                        //     for a in ants {
-                        //         if a.pos.2 <= z {
-                        //             a.render(renderer);
-                        //         }
-                        //     }
-                        // }
+                        if ants.len() > 0 {
+                            // todo!("Chunk at {:?} has {:?} ants", (pos_x, pos_y), ants.len());
+                            for a in ants {
+                                if a.pos.2 == z {
+                                    a.render(renderer);
+                                    // break;
+                                }
+                            }
+                        }
                         ////////////////////////////////////////////////////////////////
 
                         let mut fog = tile.color();

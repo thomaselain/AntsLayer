@@ -19,7 +19,7 @@ impl<'ttf> Renderer<'ttf> {
     /// Filtre la liste des LoadedChunk pour ne garder que ceux visibles
     pub fn filter_visible_chunks(
         &self,
-        mut chunks: HashMap<(i32, i32), LoadedChunk>
+        chunks: &mut HashMap<(i32, i32), LoadedChunk>
     )  {
         let (x_min, x_max, y_min, y_max) = self.camera_range_i32();
         for x in x_min..x_max {

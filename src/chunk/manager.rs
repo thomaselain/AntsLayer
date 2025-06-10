@@ -1,6 +1,12 @@
 use std::{ collections::HashMap, sync::{ mpsc::{ self, Receiver, Sender }, Arc, Mutex } };
 
-use crate::{ ant::AntManager, chunk::biomes::{ Id, NoiseParams, Params }, renderer::Renderer };
+use noise::Fbm;
+
+use crate::{
+    ant::AntManager,
+    chunk::{ biomes::{ Id, NoiseParams, Params }, generation::WorldNoise },
+    renderer::Renderer,
+};
 
 use super::{
     generation::{ MapShape, STARTING_AREA, STARTING_MAP_SHAPE },
@@ -12,10 +18,11 @@ use super::{
 pub struct Manager {
     pub biomes: Vec<Params>,
     pub biome_noise: NoiseParams,
+    pub world_noise: WorldNoise,
     pub rx: Sender<LoadedChunk>,
     pub tx: Receiver<LoadedChunk>,
     pub pending_chunks: Vec<LoadedChunk>,
-    pub loaded_chunks: HashMap<(i32,i32),LoadedChunk>,
+    pub loaded_chunks: HashMap<(i32, i32), LoadedChunk>,
 }
 
 #[derive(Clone)]
@@ -26,7 +33,7 @@ pub struct LoadedChunk {
 }
 impl Manager {
     pub fn render(&mut self, renderer: &mut Renderer, a_mngr: &AntManager, timestamp: f64) {
-        renderer.filter_visible_chunks(self.loaded_chunks.clone());
+        renderer.filter_visible_chunks(&mut self.loaded_chunks);
 
         for (_pos, loaded) in self.loaded_chunks.clone() {
             loaded.render(renderer, &a_mngr.ants, timestamp);
@@ -56,7 +63,7 @@ impl Manager {
     }
     pub fn tile_at(&self, p: (i32, i32, i32)) -> Option<Tile> {
         let chunk_pos = (p.0 / (CHUNK_WIDTH as i32), p.1 / (CHUNK_WIDTH as i32));
-        for (_pos,loaded_chunk) in &self.loaded_chunks {
+        for (_pos, loaded_chunk) in &self.loaded_chunks {
             if loaded_chunk.pos == chunk_pos {
                 return Some(loaded_chunk.c.lock().unwrap().get(p));
             }
@@ -65,12 +72,56 @@ impl Manager {
         None
     }
 }
+
 impl Manager {
+    pub const SURFACE: usize = 0;
+    pub const DETAIL: usize = 1;
+    pub const CAVES: usize = 2;
+    pub const LAYERS: usize = 3;
+
     fn empty() -> Self {
         let (rx, tx) = mpsc::channel();
         Self {
             biomes: Params::all(),
             biome_noise: NoiseParams::biomes(),
+            world_noise: Arc::new([
+                // Surface
+                NoiseParams {
+                    fbm: Fbm::new(1),
+                    octaves: 4,
+                    frequency: 0.04,
+                    lacunarity: 2.0,
+                    persistence: 0.5,
+                    scale: 0.2, //Used as a cursor for Y axis
+                },
+                // Details
+                NoiseParams {
+                    fbm: Fbm::new(1),
+                    octaves: 4,
+                    frequency: 0.5,
+                    lacunarity: 2.0,
+                    persistence: 0.5,
+                    scale: 0.05,
+                },
+                // Caves
+                NoiseParams {
+                    fbm: Fbm::new(2),
+                    octaves: 4,
+                    frequency: 0.5,
+                    lacunarity: 2.0,
+                    persistence: 0.9,
+                    scale: 0.03,
+                },
+                // Layers
+                NoiseParams {
+                    fbm: Fbm::new(3),
+                    octaves: 4,
+                    frequency: 0.02,
+                    lacunarity: 2.0,
+                    persistence: 0.4,
+                    scale: 0.009,
+                },
+            ]),
             rx,
             tx,
             pending_chunks: vec![],

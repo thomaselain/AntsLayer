@@ -20,7 +20,7 @@ pub struct ChunkContent([Tile; FLAT_CHUNK_SIZE]);
 const FLAT_CHUNK_SIZE: usize = CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT;
 
 pub const CHUNK_WIDTH: usize = if cfg!(test) { 8 } else { 8 };
-pub const CHUNK_HEIGHT: usize = if cfg!(test) { 128 } else { 128 };
+pub const CHUNK_HEIGHT: usize = if cfg!(test) { 64 } else { 64 };
 pub const SEA_LEVEL: usize = generation::SEA_LEVEL;
 
 /// Allows ASCII display
@@ -78,8 +78,11 @@ mod tests {
     fn all_biomes() {
         let biomes = Params::all();
 
+        let mngr = ChunkManager::default();
+        assert!(!mngr.loaded_chunks.is_empty());
+
         for b in biomes {
-            let chunk = Chunk::from_biome((0, 0), &b);
+            let chunk = Chunk::from_biome((0, 0), &b, &mngr.world_noise);
             let chunk = chunk.join().ok().unwrap();
             println!("{:?}: \n{:?}\n", b.id, chunk.c);
         }

@@ -14,7 +14,7 @@ pub struct Manager {
 impl Manager {
     pub fn new() -> Self {
         Self {
-            ants: Self::generate_colony(25),
+            ants: Self::generate_colony(1),
         }
     }
     pub fn add(&mut self, ant: Ant) {
