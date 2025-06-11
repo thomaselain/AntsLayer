@@ -8,7 +8,7 @@ use std::time::Instant;
 pub use manager::Manager as AntManager;
 use rand::{ distributions::{ Standard }, prelude::Distribution, Rng };
 
-use crate::chunk::{manager::LoadedChunk, tile::Tile, CHUNK_WIDTH};
+use crate::chunk::{ manager::LoadedChunk, tile::Tile, CHUNK_WIDTH };
 #[allow(unused)]
 use crate::renderer::{ self, Renderer };
 
@@ -25,7 +25,9 @@ pub enum Type {
     Fetcher,
     Warrior,
 }
-
+pub enum Action {
+    Walk(Direction),
+}
 pub enum Direction {
     Up,
     Down,
@@ -65,7 +67,7 @@ impl Direction {
 // let direction: Direction = rand::random();
 impl Distribution<Direction> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Direction {
-        match rng.gen_range(0..5) {
+        match rng.gen_range(0..=5) {
             0 => { Direction::Up }
             1 => { Direction::Down }
             2 => { Direction::North }
@@ -81,17 +83,23 @@ impl Ant {
     pub fn new(pos: (i32, i32, i32), t: Type) -> Self {
         Self { last_action: Instant::now(), pos, t }
     }
-    pub fn think(&mut self) {
+    pub fn think(&mut self) -> Option<Action> {
         let direction: Direction = rand::random();
 
         match direction {
-            Direction::Up | Direction::Down => {}
-            _ => self.walk(direction),
+            Direction::Up | Direction::Down => {
+                return None;
+            }
+            _ => {
+                return Some(Action::Walk(direction));
+            }
         }
-        self.last_action = Instant::now();
+
+        None
     }
     pub fn walk(&mut self, d: Direction) {
         self.pos = d.add_to(self.pos);
+        self.last_action = Instant::now();
     }
     pub fn act() {}
     pub fn find_tile() -> Option<Tile> {
@@ -100,16 +108,10 @@ impl Ant {
 }
 impl Ant {
     // Checks if this xyz is in this chunk (un peu crado)
-    pub fn is_in(&self, c:LoadedChunk) -> bool {
-        let (x,y, width) = (c.pos.0, c.pos.1, CHUNK_WIDTH as i32);
-        let (x_min, x_max) = (
-            self.pos.0 / (width),
-            (self.pos.0 + width) / (width) - 1,
-        );
-        let (y_min, y_max) = (
-            self.pos.1 / (width),
-            (self.pos.1 + width) / (width) - 1,
-        );
+    pub fn is_in(&self, c: LoadedChunk) -> bool {
+        let (x, y, width) = (c.pos.0, c.pos.1, CHUNK_WIDTH as i32);
+        let (x_min, x_max) = (self.pos.0 / width, (self.pos.0 + width) / width - 1);
+        let (y_min, y_max) = (self.pos.1 / width, (self.pos.1 + width) / width - 1);
 
         if x > x_min && x < x_max && y > y_min && y < y_max {
             true

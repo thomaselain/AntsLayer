@@ -34,7 +34,7 @@ impl LoadedChunk {
         }
     }
     pub fn render(&self, renderer: &mut Renderer, ants: &Vec<Ant>, timestamp: f64) {
-        if renderer.tile_size < 7 {
+        if !cfg!(test) && renderer.tile_size < 5 {
             let (world_x, world_y) = Renderer::to_world_coords((self.pos.0, self.pos.1), (0, 0));
             let draw_pos = renderer.tile_to_screen_coords((world_x, world_y));
             self.biome_render(renderer, draw_pos, timestamp);
@@ -93,13 +93,10 @@ impl LoadedChunk {
                         ////////////////////////////////////////////////////////////////
                         ////////////////////  Ants  Rendering //////////////////////////
                         ////////////////////////////////////////////////////////////////
-                        if ants.len() > 0 {
-                            // todo!("Chunk at {:?} has {:?} ants", (pos_x, pos_y), ants.len());
-                            for a in ants {
-                                if a.pos.2 == z {
-                                    a.render(renderer);
-                                    // break;
-                                }
+                        for a in ants {
+                            if a.pos.2 == z {
+                                a.render(renderer);
+                                continue;
                             }
                         }
                         ////////////////////////////////////////////////////////////////

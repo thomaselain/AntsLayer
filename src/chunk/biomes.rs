@@ -3,12 +3,25 @@ use std::{ fmt::Debug };
 use noise::{ Fbm, NoiseFn, Perlin };
 use sdl2::pixels::Color;
 
+use crate::chunk::manager::AMOUNT_OF_BIOMES;
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 pub enum Id {
     Ocean,
     Plain,
     Coast,
     Mountain,
+}
+impl From<i32> for Id {
+    fn from(value: i32) -> Self {
+        match value{
+            0 => {Id::Ocean},
+            1 => {Id::Plain},
+            2 => {Id::Coast},
+            3 => {Id::Mountain},
+            _=>panic!()
+        }
+    }
 }
 impl Debug for Id {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -83,6 +96,8 @@ impl Default for NoiseParams {
         }
     }
 }
+
+// Global noise for Biome choosing
 impl NoiseParams {
     pub fn biomes() -> Self {
         Self {
@@ -99,17 +114,17 @@ impl NoiseParams {
 #[derive(Debug, Clone)]
 pub struct TerrainParams {
     /// Humidity
-    pub humidity: u8,
+    pub humidity: f64,
 
     /// Temperature
-    pub temperature: u8,
+    pub temperature: f64,
 
     /// Elevation
-    pub elevation: u8,
+    pub elevation: f64,
 
     /// Roughness
     /// The harder the biome is, the more stony the terrain will be
-    pub roughness: u8,
+    pub roughness: f64,
 }
 
 impl Into<f64> for TerrainParams {
@@ -120,10 +135,10 @@ impl Into<f64> for TerrainParams {
 impl Default for TerrainParams {
     fn default() -> Self {
         Self {
-            humidity: 6,
-            temperature: 25,
-            elevation: 2,
-            roughness: 2,
+            humidity: 6.0,
+            temperature: 25.0,
+            elevation: 2.0,
+            roughness: 2.0,
         }
     }
 }
@@ -140,55 +155,83 @@ impl Into<Color> for Id {
 
 // Hard coded biome parameters
 impl Params {
-    pub fn all() -> Vec<Self> {
-        vec![Self::plain(), Self::coast(), Self::ocean(), Self::mountain()]
+    pub fn all() -> [Self; AMOUNT_OF_BIOMES] {
+        [Self::plain(), Self::coast(), Self::ocean(), Self::mountain()]
     }
     pub fn plain() -> Self {
         Self {
             id: Id::Plain,
             terrain: TerrainParams {
-                humidity: 6,
-                temperature: 25,
-                elevation: 2,
-                roughness: 2,
+                humidity: 6.0,
+                temperature: 25.0,
+                elevation: 2.0,
+                roughness: 2.0,
             },
-            noise: NoiseParams::default(),
+            noise: NoiseParams {
+                fbm: Fbm::new(0),
+                octaves: 5,
+                frequency: 1.0,
+                lacunarity: 2.0,
+                persistence: 1.0,
+                scale: 0.16,
+            },
         }
     }
     pub fn coast() -> Self {
         Self {
             id: Id::Coast,
             terrain: TerrainParams {
-                humidity: 8,
-                temperature: 19,
-                elevation: 1,
-                roughness: 1,
+                humidity: 8.0,
+                temperature: 19.0,
+                elevation: 1.0,
+                roughness: 1.0,
             },
-            noise: NoiseParams::default(),
+            noise: NoiseParams {
+                fbm: Fbm::new(0),
+                octaves: 5,
+                frequency: 1.0,
+                lacunarity: 2.0,
+                persistence: 1.0,
+                scale: 0.15,
+            },
         }
     }
     pub fn ocean() -> Self {
         Self {
             id: Id::Ocean,
             terrain: TerrainParams {
-                humidity: 10,
-                temperature: 15,
-                elevation: 0,
-                roughness: 0,
+                humidity: 10.0,
+                temperature: 15.0,
+                elevation: 0.0,
+                roughness: 0.0,
             },
-            noise: NoiseParams::default(),
+            noise: NoiseParams {
+                fbm: Fbm::new(0),
+                octaves: 5,
+                frequency: 1.0,
+                lacunarity: 2.0,
+                persistence: 1.0,
+                scale: 0.09,
+            },
         }
     }
     pub fn mountain() -> Self {
         Self {
             id: Id::Plain,
             terrain: TerrainParams {
-                humidity: 8,
-                temperature: 8,
-                elevation: 8,
-                roughness: 10,
+                humidity: 8.0,
+                temperature: 8.0,
+                elevation: 10.0,
+                roughness: 10.0,
             },
-            noise: NoiseParams::default(),
+            noise: NoiseParams {
+                fbm: Fbm::new(0),
+                octaves: 5,
+                frequency: 1.0,
+                lacunarity: 2.0,
+                persistence: 1.0,
+                scale: 0.1,
+            },
         }
     }
 }

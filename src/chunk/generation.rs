@@ -2,7 +2,7 @@ use std::sync::Arc;
 #[allow(unused)]
 use std::{ ops::Range, thread::{ self, JoinHandle }, time::Duration };
 
-use crate::{ chunk::{ biomes::NoiseParams, ChunkContent }, renderer::Renderer };
+use crate::{ chunk::{ biomes::NoiseParams, ChunkContent, SEA_LEVEL }, renderer::Renderer };
 
 use super::{
     biomes::Params,
@@ -14,7 +14,6 @@ use super::{
     CHUNK_WIDTH,
 };
 
-pub const SEA_LEVEL: usize = ((CHUNK_HEIGHT as f64) * 0.6) as usize;
 #[allow(unused)]
 pub enum MapShape {
     SQUARE,
@@ -24,10 +23,11 @@ pub enum MapShape {
 }
 
 #[allow(unused)]
-pub const STARTING_AREA: i32 = if cfg!(test) { 20 } else { 10 };
+pub const STARTING_AREA: i32 = if cfg!(test) { 25 } else { 10 };
 pub const STARTING_MAP_SHAPE: MapShape = if cfg!(test) { MapShape::SQUARE } else { MapShape::RECT };
 
-pub type WorldNoise = Arc<[NoiseParams; 4]>;
+const CAVE_HEIGHT: f64 = (CHUNK_HEIGHT as f64) * 0.4; // Keep under *0.5
+pub type WorldNoise = Arc<[NoiseParams; 5]>;
 
 impl Manager {
     pub fn look_for_new_chunks(&mut self, renderer: &mut Renderer) {
@@ -129,56 +129,105 @@ impl Chunk {
         })
     }
 }
+
 impl Params {
+    fn surface(surface_height: f64, (x, y, z): (f64, f64, f64)) -> Tile {
+        if z < surface_height - 5.0 {
+            Tile::granite()
+        } else if z < surface_height - 4.0 {
+            Tile::clay()
+        } else if z < surface_height - 2.0 {
+            Tile::dirt()
+        } else {
+            Tile::air()
+        }
+    }
+
+    fn stratification(
+        surface_height: f64,
+        (x, y, z): (f64, f64, f64),
+        world_noise: &WorldNoise
+    ) -> Option<Tile> {
+        let scale = world_noise[Manager::LAYERS].scale;
+        let noise = world_noise[Manager::LAYERS].get((x * scale, y * scale, z * scale));
+
+        match noise {
+            s if s < 0.0 => {
+                Some(Tile::dirt());
+            }
+            s if s < 0.1 => {
+                Some(Tile::clay());
+            }
+            s if s < 0.15 => {
+                Some(Tile::limestone());
+            }
+            s if s < 0.25 => {
+                Some(Tile::marble());
+            }
+            s if s < 0.3 => {
+                Some(Tile::water());
+            }
+            _ => {
+                Some(Tile::air());
+            }
+        }
+        None
+    }
+
+    fn cave_noise(
+        surface_height: f64,
+        (x, y, z): (f64, f64, f64),
+        world_noise: &WorldNoise
+    ) -> Option<Tile> {
+        let scale = world_noise[Manager::CAVES].scale;
+        let noise = world_noise[Manager::CAVES].get((x * scale, y * scale, z * scale));
+        if z < CAVE_HEIGHT && z < surface_height {
+            if noise < -0.24 {
+                return Some(Tile::air());
+            }
+            // Stones
+            #[allow(unused)] // Needed for parenthesis (C pas moi c rust)
+            if
+                let Some(stone) = (match noise {
+                    0.0..0.1 => Some(Tile::dirt()),
+                    0.1..0.3 => Some(Tile::marble()),
+                    0.3..0.4 => Some(Tile::limestone()),
+                    0.4..0.45 => Some(Tile::water()),
+                    0.45..0.5 => Some(Tile::clay()),
+                    _ => None,
+                })
+            {
+                return Some(stone);
+            } else {
+                return Some(Tile::dirt());
+            }
+        }
+        None
+    }
     pub fn tile_at(&self, (x, y, z): (i32, i32, i32), v: f64, world_noise: &WorldNoise) -> Tile {
-        let (x, y, z) = (x as f64, y as f64, z as f64); // x, y = horizontaux, z = hauteur
+        let (x, y, z) = (x as f64, y as f64, z as f64);
 
-        let s = world_noise[Manager::SURFACE].scale;
-        // let cliff_factor = world_noise[Manager::SURFACE].frequency;
+        let scale = world_noise[Manager::SURFACE].scale;
 
-        // let base_height = world_noise[Manager::SURFACE].get((x * s, y * s, 0.0));
-        // let cliff_detail = world_noise[Manager::SURFACE].get((x * s, y * s, 10.0)) * cliff_factor;
+        let surface_noise = world_noise[Manager::SURFACE].get((x * scale, y * scale, 0.0));
+        let detail_noise = world_noise[Manager::DETAIL].get((
+            x * scale * 0.5,
+            y * scale * 0.5,
+            0.0,
+        ));
 
-        // let surface_height = (base_height + cliff_detail) * (CHUNK_HEIGHT as f64);
-        // let surface_height = v;
+        let surface_height = (surface_noise + detail_noise) * (CHUNK_HEIGHT as f64 - SEA_LEVEL as f64);
 
-        let surface_noise = world_noise[Manager::SURFACE].get((x * 0.01, y * 0.01, 0.0)); // grandes structures
-        let detail_noise = world_noise[Manager::DETAIL].get((x * 0.05, y * 0.05, 0.0)); // petites variations
-
-        let surface_height = (surface_noise + detail_noise) * CHUNK_HEIGHT as f64;
+        //////////////////LAYERS///////////////////////////
+        if let Some(tile) = Self::stratification(surface_height, (x, y, z), world_noise) {
+            return tile;
+        }
 
         //////////////////CAVES///////////////////////////
-        if z < surface_height {
-            if world_noise[Manager::CAVES].get((x * s, y * s, z * s)) > 0.3 {
-                return Tile::air();
-            }
-            //////////////////VEINS///////////////////////////
-            let stratification = world_noise[Manager::LAYERS].get((x * s, y * s, z * s));
-            match stratification {
-                s if s < 0.2 => {
-                    return Tile::dirt();
-                }
-                s if s < 0.5 => {
-                    return Tile::clay();
-                }
-                _ => {
-                    return Tile::air();
-                }
-            }
+        if let Some(tile) = Self::cave_noise(surface_height, (x, y, z), world_noise) {
+            return tile;
         }
-        // fallback
-        let raw = world_noise[Manager::SURFACE].get((x * s, y * s, z * s));
-        let normalized = (raw + 1.0) / 2.0; // range [0.0, 1.0]
 
-        let surface_height =
-            (SEA_LEVEL as f64) + normalized * ((CHUNK_HEIGHT as f64) - (SEA_LEVEL as f64));
-
-        if z < surface_height - 20.0 {
-            return Tile::limestone();
-        } else if z < surface_height - 5.0 {
-            return Tile::clay();
-        } else {
-            return Tile::air();
-        }
+        Self::surface(surface_noise * (CHUNK_HEIGHT as f64) + (SEA_LEVEL as f64), (x, y, z))
     }
 }

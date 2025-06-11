@@ -14,10 +14,11 @@ use super::{
     Chunk,
     CHUNK_WIDTH,
 };
+pub const AMOUNT_OF_BIOMES: usize = 4;
+pub type BiomeNoise = [Params; AMOUNT_OF_BIOMES];
 
 pub struct Manager {
-    pub biomes: Vec<Params>,
-    pub biome_noise: NoiseParams,
+    pub biomes: BiomeNoise,
     pub world_noise: WorldNoise,
     pub rx: Sender<LoadedChunk>,
     pub tx: Receiver<LoadedChunk>,
@@ -40,7 +41,7 @@ impl Manager {
         }
     }
     pub fn biome_at(&self, (x, y): (i32, i32)) -> Params {
-        let v = self.biome_noise.get((
+        let v = self.world_noise[Manager::SURFACE].get((
             //
             x as f64,
             //
@@ -48,13 +49,8 @@ impl Manager {
             //
             0.0,
         ));
-        let id = match v {
-            -1.0..-0.5 => { Id::Ocean }
-            -0.5..0.0 => { Id::Coast }
-            0.0..0.5 => { Id::Plain }
-            0.5..1.0 => { Id::Mountain }
-            _ => { Id::Mountain }
-        };
+        let id = ((((AMOUNT_OF_BIOMES as f64) + v) / (AMOUNT_OF_BIOMES as f64)) as i32).into();
+
         if let Some(biome) = self.biomes.iter().find(|b| { b.id == id }) {
             biome.clone()
         } else {
@@ -75,15 +71,15 @@ impl Manager {
 
 impl Manager {
     pub const SURFACE: usize = 0;
-    pub const DETAIL: usize = 1;
-    pub const CAVES: usize = 2;
-    pub const LAYERS: usize = 3;
+    pub const VARIATIONS: usize = 1;
+    pub const DETAIL: usize = 2;
+    pub const CAVES: usize = 3;
+    pub const LAYERS: usize = 4;
 
     fn empty() -> Self {
         let (rx, tx) = mpsc::channel();
         Self {
             biomes: Params::all(),
-            biome_noise: NoiseParams::biomes(),
             world_noise: Arc::new([
                 // Surface
                 NoiseParams {
@@ -92,7 +88,16 @@ impl Manager {
                     frequency: 0.04,
                     lacunarity: 2.0,
                     persistence: 0.5,
-                    scale: 0.2, //Used as a cursor for Y axis
+                    scale: 0.05,
+                },
+                // Variations
+                NoiseParams {
+                    fbm: Fbm::new(1),
+                    octaves: 4,
+                    frequency: 0.5,
+                    lacunarity: 2.0,
+                    persistence: 0.5,
+                    scale: 0.025,
                 },
                 // Details
                 NoiseParams {
@@ -101,7 +106,7 @@ impl Manager {
                     frequency: 0.5,
                     lacunarity: 2.0,
                     persistence: 0.5,
-                    scale: 0.05,
+                    scale: 0.1,
                 },
                 // Caves
                 NoiseParams {
@@ -110,7 +115,7 @@ impl Manager {
                     frequency: 0.5,
                     lacunarity: 2.0,
                     persistence: 0.9,
-                    scale: 0.03,
+                    scale: 0.18,
                 },
                 // Layers
                 NoiseParams {
@@ -119,7 +124,7 @@ impl Manager {
                     frequency: 0.02,
                     lacunarity: 2.0,
                     persistence: 0.4,
-                    scale: 0.009,
+                    scale: 0.09,
                 },
             ]),
             rx,

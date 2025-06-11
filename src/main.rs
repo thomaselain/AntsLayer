@@ -50,8 +50,9 @@ pub struct Game<'ttf> {
 
 #[cfg(test)]
 mod tests {
+    use crate::chunk::SEA_LEVEL;
     #[allow(unused_imports)]
-    use crate::{ main, ant::{ Ant, Type }, chunk::generation::SEA_LEVEL, Game };
+    use crate::{ main, ant::{ Ant, Type }, Game };
 
     #[test]
     #[ignore = "Cannot init SDL on more than one thread"]

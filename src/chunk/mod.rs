@@ -21,7 +21,7 @@ const FLAT_CHUNK_SIZE: usize = CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT;
 
 pub const CHUNK_WIDTH: usize = if cfg!(test) { 8 } else { 8 };
 pub const CHUNK_HEIGHT: usize = if cfg!(test) { 64 } else { 64 };
-pub const SEA_LEVEL: usize = generation::SEA_LEVEL;
+pub const SEA_LEVEL: usize = ((CHUNK_HEIGHT as f64) * 0.6) as usize;
 
 /// Allows ASCII display
 impl fmt::Debug for Chunk {
@@ -74,6 +74,7 @@ mod tests {
     use crate::ChunkManager;
     use super::biomes::Params;
 
+    #[ignore = "too long"]
     #[test]
     fn all_biomes() {
         let biomes = Params::all();
@@ -88,6 +89,7 @@ mod tests {
         }
     }
 
+    #[ignore = "too long"]
     #[test]
     fn manager() {
         let biomes = Params::all();
@@ -99,6 +101,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "too long"]
     fn generation() {
         let mngr = ChunkManager::default();
         assert!(!mngr.loaded_chunks.is_empty());

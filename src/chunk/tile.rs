@@ -201,7 +201,7 @@ impl Tile {
                     Soil::Clay => Color::RGB(182, 106, 80),
                 }
             }
-            TileType::Gas(_gas) => Color::RGBA(255, 255, 255, 10),
+            TileType::Gas(_gas) => Color::RGBA(15, 15, 15, 10),
             TileType::Fluid(fluid) =>
                 match fluid {
                     Fluid::Water => Color::RGBA(0, 0, 250, 150),
