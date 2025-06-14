@@ -8,7 +8,7 @@ use std::time::Instant;
 pub use manager::Manager as AntManager;
 use rand::{ distributions::{ Standard }, prelude::Distribution, Rng };
 
-use crate::chunk::{ manager::LoadedChunk, tile::Tile, CHUNK_WIDTH };
+use crate::chunk::{ manager::LoadedChunk, tile::Tile, WIDTH };
 #[allow(unused)]
 use crate::renderer::{ self, Renderer };
 
@@ -37,20 +37,20 @@ pub enum Direction {
     West,
 }
 impl Direction {
-    pub fn add_to(&self, p: (i32, i32, i32)) -> (i32, i32, i32) {
+    pub fn add_to(&self, p: &(i32, i32, i32)) -> (i32, i32, i32) {
         let (mut x, mut y, mut z) = p;
         match self {
             Direction::West => {
-                x -= 1;
-            }
-            Direction::East => {
                 x += 1;
             }
+            Direction::East => {
+                x -= 1;
+            }
             Direction::North => {
-                y -= 1;
+                y += 1;
             }
             Direction::South => {
-                y += 1;
+                y -= 1;
             }
             Direction::Up => {
                 z += 1;
@@ -98,7 +98,7 @@ impl Ant {
         None
     }
     pub fn walk(&mut self, d: Direction) {
-        self.pos = d.add_to(self.pos);
+        self.pos = d.add_to(&self.pos);
         self.last_action = Instant::now();
     }
     pub fn act() {}
@@ -109,7 +109,7 @@ impl Ant {
 impl Ant {
     // Checks if this xyz is in this chunk (un peu crado)
     pub fn is_in(&self, c: LoadedChunk) -> bool {
-        let (x, y, width) = (c.pos.0, c.pos.1, CHUNK_WIDTH as i32);
+        let (x, y, width) = (c.pos.0, c.pos.1, WIDTH as i32);
         let (x_min, x_max) = (self.pos.0 / width, (self.pos.0 + width) / width - 1);
         let (y_min, y_max) = (self.pos.1 / width, (self.pos.1 + width) / width - 1);
 

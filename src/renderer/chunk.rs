@@ -85,9 +85,14 @@ impl LoadedChunk {
                     let c = bottom_tile.color();
                     renderer.fill_rect(draw_pos, c);
                 }
+                // Grey filter for walls
+                if tiles_to_draw.is_empty() {
+                    let c = Color::RGBA(25, 25, 25, 175);
+                    renderer.fill_rect(draw_pos, c);
+                }
 
-                // Draw the fog layer
-                // And water depth
+
+                // Draw transparent blocks
                 'bottom_to_top: loop {
                     if let Some(tile) = tiles_to_draw.pop() {
                         ////////////////////////////////////////////////////////////////

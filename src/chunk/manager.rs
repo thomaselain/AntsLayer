@@ -12,7 +12,7 @@ use super::{
     generation::{ MapShape, STARTING_AREA, STARTING_MAP_SHAPE },
     tile::Tile,
     Chunk,
-    CHUNK_WIDTH,
+    WIDTH,
 };
 pub const AMOUNT_OF_BIOMES: usize = 4;
 pub type BiomeNoise = [Params; AMOUNT_OF_BIOMES];
@@ -58,7 +58,7 @@ impl Manager {
         }
     }
     pub fn tile_at(&self, p: (i32, i32, i32)) -> Option<Tile> {
-        let chunk_pos = (p.0 / (CHUNK_WIDTH as i32), p.1 / (CHUNK_WIDTH as i32));
+        let chunk_pos = (p.0 / (WIDTH as i32), p.1 / (WIDTH as i32));
         for (_pos, loaded_chunk) in &self.loaded_chunks {
             if loaded_chunk.pos == chunk_pos {
                 return Some(loaded_chunk.c.lock().unwrap().get(p));
@@ -74,7 +74,7 @@ impl Manager {
     pub const VARIATIONS: usize = 1;
     pub const DETAIL: usize = 2;
     pub const CAVES: usize = 3;
-    pub const LAYERS: usize = 4;
+    pub const VEINS: usize = 4;
 
     fn empty() -> Self {
         let (rx, tx) = mpsc::channel();
@@ -88,7 +88,7 @@ impl Manager {
                     frequency: 0.04,
                     lacunarity: 2.0,
                     persistence: 0.5,
-                    scale: 0.05,
+                    scale: 0.0015,
                 },
                 // Variations
                 NoiseParams {
@@ -115,7 +115,7 @@ impl Manager {
                     frequency: 0.5,
                     lacunarity: 2.0,
                     persistence: 0.9,
-                    scale: 0.18,
+                    scale: 0.018,
                 },
                 // Layers
                 NoiseParams {

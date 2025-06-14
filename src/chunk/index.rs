@@ -1,22 +1,22 @@
 use std::ops::{ Index, IndexMut };
 
-use super::{ tile::Tile, ChunkContent, CHUNK_WIDTH };
+use super::{ tile::Tile, ChunkContent, WIDTH };
 
 pub fn flatten_index_i32((x, y, z): (i32, i32, i32)) -> usize {
     let (x, y, z) = (x as usize, y as usize, z as usize);
-    x + y * CHUNK_WIDTH + z * CHUNK_WIDTH * CHUNK_WIDTH
+    x + y * WIDTH + z * WIDTH * WIDTH
 }
 pub fn flatten_index_usize((x, y, z): (usize, usize, usize)) -> usize {
-    x + y * CHUNK_WIDTH + z * CHUNK_WIDTH * CHUNK_WIDTH
+    x + y * WIDTH + z * WIDTH * WIDTH
 }
 pub fn to_xyz(index: usize) -> (i32, i32, i32) {
     (
         // X
-        (index % CHUNK_WIDTH) as i32,
+        (index % WIDTH) as i32,
         // Y
-        ((index / CHUNK_WIDTH) % CHUNK_WIDTH) as i32,
+        ((index / WIDTH) % WIDTH) as i32,
         // Z
-        ((index / CHUNK_WIDTH.pow(2)) % super::CHUNK_HEIGHT) as i32,
+        ((index / WIDTH.pow(2)) % super::HEIGHT) as i32,
     )
 }
 

@@ -1,9 +1,9 @@
 use noise::{ NoiseFn };
 use sdl2::{ pixels::Color, ttf::{ Font, Sdl2TtfContext }, Sdl };
 
-use crate::chunk::CHUNK_WIDTH;
+use crate::chunk::WIDTH;
 #[allow(unused)]
-use crate::{ ant::Ant, chunk::{ biomes::NoiseParams, CHUNK_HEIGHT, SEA_LEVEL } };
+use crate::{ ant::Ant, chunk::{ biomes::NoiseParams, HEIGHT, SEA_LEVEL } };
 
 /// SDL methods for drawing squares
 /// for tiles rendering
@@ -33,7 +33,7 @@ const GRID_COLOR: Color = Color::RGBA(0, 0, 0, 25);
 pub const CLOUDS_HEIGHT: i32 = (SEA_LEVEL as i32) + 10;
 pub const CLOUDS_RENDERING: bool = false;
 ///
-pub const VIEW_DISTANCE: i32 = if cfg!(test){ CHUNK_WIDTH as i32 * 25 } else {CHUNK_WIDTH as i32 * 10};
+pub const VIEW_DISTANCE: i32 = if cfg!(test){ WIDTH as i32 * 15 } else {WIDTH as i32 * 5};
 
 /// Window starting dimentions
 pub const WIN_DEFAULT_W: u32 = 800;

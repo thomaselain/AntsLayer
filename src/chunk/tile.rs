@@ -5,12 +5,11 @@ use sdl2::{ pixels::Color };
 use serde::{ Deserialize, Serialize };
 
 use crate::{ renderer::Renderer };
-
-// Stores additional metadata about the Tile
-const GAS_FLAGS: TileFlag = TileFlag::from_bits_retain(0b1000001);
-// const FLUID_FLAGS: TileFlag = TileFlag::from_bits_retain(0b1000001);
-const FLUID_FLAGS: TileFlag = GAS_FLAGS;
-
+impl TileFlag {
+    const GAS: TileFlag = TileFlag::from_bits_retain(0b1000001);
+    // const FLUID_FLAGS: TileFlag = TileFlag::from_bits_retain(0b1000001);
+    const FLUID: TileFlag = Self::GAS;
+}
 bitflags! {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, Hash)]
     pub struct TileFlag: u16 {
@@ -55,6 +54,59 @@ pub enum TileType {
     Fluid(Fluid),
     Custom(u16),
 }
+impl TileType {
+    pub const ERROR: TileType = TileType::Custom(0);
+    pub const AIR: TileType = TileType::Gas(Gas::Air);
+    pub const WATER: TileType = TileType::Fluid(Fluid::Water);
+}
+impl Tile {
+    // Placeholder tile for cases that should not happen
+    pub const ERROR: Tile = Tile {
+        hp: 0,
+        tile_type: TileType::ERROR,
+        properties: TileFlag::empty(),
+    };
+    pub const AIR: Tile = Tile {
+        hp: 100,
+        tile_type: TileType::AIR,
+        properties: TileFlag::GAS,
+    };
+    pub const SAND: Tile = Tile {
+        hp: 100,
+        tile_type: TileType::Soil(Soil::Sand),
+        properties: TileFlag::empty(),
+    };
+    pub const CLAY: Tile = Tile {
+        hp: 100,
+        tile_type: TileType::Soil(Soil::Clay),
+        properties: TileFlag::empty(),
+    };
+    pub const DIRT: Tile = Tile {
+        hp: 100,
+        tile_type: TileType::Soil(Soil::Dirt),
+        properties: TileFlag::empty(),
+    };
+    pub const MARBLE: Tile = Tile {
+        hp: 100,
+        tile_type: TileType::Stone(Stone::Marble),
+        properties: TileFlag::DIGGABLE,
+    };
+    pub const LIMESTONE: Tile = Tile {
+        hp: 100,
+        tile_type: TileType::Stone(Stone::Limestone),
+        properties: TileFlag::DIGGABLE,
+    };
+    pub const GRANITE: Tile = Tile {
+        hp: 100,
+        tile_type: TileType::Stone(Stone::Granite),
+        properties: TileFlag::DIGGABLE,
+    };
+    pub const WATER: Tile = Tile {
+        hp: 100,
+        tile_type: TileType::WATER,
+        properties: TileFlag::GAS,
+    };
+}
 
 #[derive(Hash, Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u16)]
@@ -67,66 +119,6 @@ pub enum Fluid {
 #[repr(u16)]
 pub enum Gas {
     Air,
-}
-
-/// Hard coded Tiles
-impl Tile {
-    pub fn air() -> Tile {
-        Tile {
-            hp: 100,
-            tile_type: TileType::Gas(Gas::Air),
-            properties: GAS_FLAGS,
-        }
-    }
-    pub fn sand() -> Tile {
-        Tile {
-            hp: 100,
-            tile_type: TileType::Soil(Soil::Sand),
-            properties: TileFlag::empty(),
-        }
-    }
-    pub fn clay() -> Tile {
-        Tile {
-            hp: 100,
-            tile_type: TileType::Soil(Soil::Clay),
-            properties: TileFlag::empty(),
-        }
-    }
-    pub fn dirt() -> Tile {
-        Tile {
-            hp: 100,
-            tile_type: TileType::Soil(Soil::Dirt),
-            properties: TileFlag::empty(),
-        }
-    }
-    pub fn marble() -> Tile {
-        Tile {
-            hp: 100,
-            tile_type: TileType::Stone(Stone::Marble),
-            properties: TileFlag::DIGGABLE,
-        }
-    }
-    pub fn limestone() -> Tile {
-        Tile {
-            hp: 100,
-            tile_type: TileType::Stone(Stone::Limestone),
-            properties: TileFlag::DIGGABLE,
-        }
-    }
-    pub fn granite() -> Tile {
-        Tile {
-            hp: 100,
-            tile_type: TileType::Stone(Stone::Granite),
-            properties: TileFlag::DIGGABLE,
-        }
-    }
-    pub fn water() -> Tile {
-        Tile {
-            hp: 100,
-            tile_type: TileType::Fluid(Fluid::Water),
-            properties: FLUID_FLAGS,
-        }
-    }
 }
 
 #[derive(Hash, Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
@@ -197,18 +189,18 @@ impl Tile {
             TileType::Soil(soil) => {
                 match soil {
                     Soil::Dirt => Color::RGB(111, 78, 55),
-                    Soil::Sand => Color::RGB(220, 220, 10),
+                    Soil::Sand => Color::RGB(150, 124, 32),
                     Soil::Clay => Color::RGB(182, 106, 80),
                 }
             }
             TileType::Gas(_gas) => Color::RGBA(15, 15, 15, 10),
             TileType::Fluid(fluid) =>
                 match fluid {
-                    Fluid::Water => Color::RGBA(0, 0, 250, 150),
+                    Fluid::Water => Color::RGBA(0, 0, 250, 200),
                     Fluid::SaltWater => Color::RGBA(0, 0, 200, 150),
                     Fluid::Magma => Color::RGBA(255, 0, 0, 200),
                 }
-            TileType::Custom(_) => Color::RGB(255, 155, 200),
+            TileType::Custom(_error) => Color::RGB(255, 155, 200),
         }
     }
 

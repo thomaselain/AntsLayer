@@ -16,8 +16,8 @@ impl From<i32> for Id {
     fn from(value: i32) -> Self {
         match value{
             0 => {Id::Ocean},
-            1 => {Id::Plain},
-            2 => {Id::Coast},
+            1 => {Id::Coast},
+            2 => {Id::Plain},
             3 => {Id::Mountain},
             _=>panic!()
         }
@@ -202,7 +202,7 @@ impl Params {
             terrain: TerrainParams {
                 humidity: 10.0,
                 temperature: 15.0,
-                elevation: 0.0,
+                elevation: -15.0,
                 roughness: 0.0,
             },
             noise: NoiseParams {

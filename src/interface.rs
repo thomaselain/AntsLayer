@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use sdl2::{ pixels::Color, rect::{ Point, Rect } };
 
-use crate::{ chunk::{ CHUNK_HEIGHT, SEA_LEVEL }, renderer::{ Renderer, DEFAULT_TILE_SIZE } };
+use crate::{ chunk::{ HEIGHT, SEA_LEVEL }, renderer::{ Renderer, DEFAULT_TILE_SIZE } };
 
 ///////////////////////////////////////////////////////
 type InterfaceAction = Box<dyn FnMut(&mut Renderer) -> Result<(), ()>>;
@@ -63,7 +63,7 @@ impl Interface {
             y: 350,
             width: SLIDER_WIDTH,
             min: 0,
-            max: CHUNK_HEIGHT as i32,
+            max: HEIGHT as i32,
             value: SEA_LEVEL as i32,
             is_dragging: false,
             on_change: Some(Box::new(|_v| {

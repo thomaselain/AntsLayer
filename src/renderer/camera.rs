@@ -1,6 +1,6 @@
 use std::{ collections::HashMap };
 
-use crate::{ ant::Direction, chunk::{ manager::LoadedChunk, CHUNK_HEIGHT, CHUNK_WIDTH } };
+use crate::{ ant::Direction, chunk::{ manager::LoadedChunk, HEIGHT, WIDTH} };
 
 use super::Renderer;
 
@@ -9,10 +9,10 @@ impl<'ttf> Renderer<'ttf> {
     pub fn camera_range_i32(&self) -> (i32, i32, i32, i32) {
         // Render distance calucation
         (
-            (-self.camera.0 - self.view_distance) / (CHUNK_WIDTH as i32),
-            (-self.camera.0 + self.view_distance) / (CHUNK_WIDTH as i32),
-            (-self.camera.1 - self.view_distance) / (CHUNK_WIDTH as i32),
-            (-self.camera.1 + self.view_distance) / (CHUNK_WIDTH as i32),
+            (-self.camera.0 - self.view_distance) / (WIDTH as i32),
+            (-self.camera.0 + self.view_distance) / (WIDTH as i32),
+            (-self.camera.1 - self.view_distance) / (WIDTH as i32),
+            (-self.camera.1 + self.view_distance) / (WIDTH as i32),
         )
     }
 
@@ -26,12 +26,12 @@ impl<'ttf> Renderer<'ttf> {
     }
     
     pub fn increase_view_dist(&mut self) -> Result<(), ()> {
-        self.view_distance += 1;
+        self.view_distance += WIDTH as i32;
         Ok(())
     }
     pub fn decrease_view_dist(&mut self) -> Result<(), ()> {
-        if self.view_distance > 0 {
-            self.view_distance -= 1;
+        if self.view_distance > WIDTH as i32 {
+            self.view_distance -= WIDTH as i32;
         } else {
             self.view_distance = 0;
         }
@@ -51,7 +51,7 @@ impl<'ttf> Renderer<'ttf> {
         let speed = self.camera_speed as i32;
 
         let mv = match dir {
-            Direction::Up if z < (CHUNK_HEIGHT as i32) => (0, 0, 1),
+            Direction::Up if z < (HEIGHT as i32) => (0, 0, 1),
             Direction::Down if z > 0 => (0, 0, -1),
 
             Direction::North => (0, speed, 0),

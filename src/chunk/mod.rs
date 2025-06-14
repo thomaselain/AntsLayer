@@ -16,17 +16,18 @@ pub mod thread;
 
 /// Chunk's data
 #[derive(Hash, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
-pub struct ChunkContent([Tile; FLAT_CHUNK_SIZE]);
-const FLAT_CHUNK_SIZE: usize = CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT;
-
-pub const CHUNK_WIDTH: usize = if cfg!(test) { 8 } else { 8 };
-pub const CHUNK_HEIGHT: usize = if cfg!(test) { 64 } else { 64 };
-pub const SEA_LEVEL: usize = ((CHUNK_HEIGHT as f64) * 0.6) as usize;
+pub struct ChunkContent([Tile; Self::FLAT_SIZE]);
+impl ChunkContent {
+    const FLAT_SIZE: usize = WIDTH * WIDTH * HEIGHT;
+}
+pub const WIDTH: usize = if cfg!(test) { 8 } else { 8 };
+pub const HEIGHT: usize = if cfg!(test) { 64 } else { 64 };
+pub const SEA_LEVEL: usize = ((HEIGHT as f64) * 0.5) as usize;
 
 /// Allows ASCII display
 impl fmt::Debug for Chunk {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-        for i in 0..FLAT_CHUNK_SIZE {
+        for i in 0..ChunkContent::FLAT_SIZE {
             write!(f, "{:?}", self.get(index::to_xyz(i)))?;
         }
         Ok(())
@@ -35,15 +36,15 @@ impl fmt::Debug for Chunk {
 
 impl ChunkContent {
     pub fn new() -> Self {
-        Self([Tile::air(); FLAT_CHUNK_SIZE])
+        Self([Tile::AIR; ChunkContent::FLAT_SIZE])
     }
     pub fn len() -> usize {
-        FLAT_CHUNK_SIZE
+        ChunkContent::FLAT_SIZE
     }
     pub fn column(index: i32) -> Vec<(i32, i32, i32)> {
-        assert!(index >= 0 && index < ((CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT) as i32));
+        assert!(index >= 0 && index < ((WIDTH * WIDTH * HEIGHT) as i32));
         let (x, y, _) = index::to_xyz(index as usize);
-        (0..CHUNK_HEIGHT as i32).map(|z| (x, y, z)).collect()
+        (0..HEIGHT as i32).map(|z| (x, y, z)).collect()
     }
 }
 

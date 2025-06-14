@@ -1,4 +1,4 @@
-use crate::chunk::CHUNK_WIDTH;
+use crate::chunk::WIDTH;
 
 use super::Renderer;
 
@@ -31,18 +31,18 @@ impl<'ttf> Renderer<'ttf> {
     }
 
     pub fn to_world_coords(chunk_pos: (i32, i32), tile_pos: (i32, i32)) -> (i32, i32) {
-        let x = chunk_pos.0 * (CHUNK_WIDTH as i32) + tile_pos.0;
-        let y = chunk_pos.1 * (CHUNK_WIDTH as i32) + tile_pos.1;
+        let x = chunk_pos.0 * (WIDTH as i32) + tile_pos.0;
+        let y = chunk_pos.1 * (WIDTH as i32) + tile_pos.1;
 
         (x, y)
     }
 
     pub fn is_chunk_on_screen(&self, chunk_pos: (i32, i32)) -> bool {
-        let world_x = chunk_pos.0 * (CHUNK_WIDTH as i32);
-        let world_y = chunk_pos.1 * (CHUNK_WIDTH as i32);
+        let world_x = chunk_pos.0 * (WIDTH as i32);
+        let world_y = chunk_pos.1 * (WIDTH as i32);
         let (screen_x, screen_y) = self.tile_to_screen_coords((world_x, world_y));
 
-        let chunk_px = (CHUNK_WIDTH as i32) * (self.tile_size as i32);
+        let chunk_px = (WIDTH as i32) * (self.tile_size as i32);
 
         // 3) Bornes du chunk à l’écran
         let left = screen_x;

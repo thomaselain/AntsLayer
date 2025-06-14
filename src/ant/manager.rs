@@ -11,7 +11,7 @@ pub struct Manager {
 impl Manager {
     pub fn new() -> Self {
         Self {
-            ants: Self::generate_colony(1),
+            ants: Self::generate_colony(0),
         }
     }
     pub fn add(&mut self, ant: Ant) {
@@ -33,10 +33,10 @@ impl Manager {
     pub fn tick(&mut self, chunk_mngr: &ChunkManager, last_tick: Instant) {
         for a in self.ants.as_mut_slice() {
             // Gravity check !
-            if let Some(tile) = chunk_mngr.tile_at(Direction::Down.add_to(a.pos)) {
+            if let Some(tile) = chunk_mngr.tile_at(Direction::Down.add_to(&a.pos)) {
                 // Is is traversable ?
                 if tile.properties.contains(TileFlag::TRAVERSABLE) && a.pos.2 > 0 {
-                    a.pos = Direction::Down.add_to(a.pos);
+                    a.pos = Direction::Down.add_to(&a.pos);
                 }
             }
 
@@ -45,13 +45,13 @@ impl Manager {
                 action_attempts += 1;
 
                 if
-                    Instant::now().duration_since(a.last_action) > Duration::from_millis(1000) &&
-                    action_attempts < 5
+                    Instant::now().duration_since(a.last_action) > Duration::from_millis(250) &&
+                    action_attempts < 4
                 {
                     if let Some(action) = a.think() {
                         match action {
                             Action::Walk(direction) => if
-                                let Some(tile) = chunk_mngr.tile_at(direction.add_to(a.pos))
+                                let Some(tile) = chunk_mngr.tile_at(direction.add_to(&a.pos))
                             {
                                 if tile.properties.contains(TileFlag::TRAVERSABLE) {
                                     a.walk(direction);
