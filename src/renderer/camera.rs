@@ -7,7 +7,6 @@ use super::Renderer;
 // Camera
 impl<'ttf> Renderer<'ttf> {
     pub fn camera_range_i32(&self) -> (i32, i32, i32, i32) {
-        // Render distance calucation
         (
             (-self.camera.0 - self.view_distance) / (WIDTH as i32),
             (-self.camera.0 + self.view_distance) / (WIDTH as i32),

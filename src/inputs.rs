@@ -1,7 +1,8 @@
-use sdl2::{ event::Event, keyboard::Keycode };
+use sdl2::{ event::Event, keyboard::Keycode, mouse::MouseButton };
 
 use crate::{
-    ant::Direction,
+    ant::{ AntManager, Direction },
+    chunk::{ biomes::Biome, Chunk },
     interface::{ self },
     Game,
 };
@@ -160,8 +161,24 @@ impl<'ttf> Game<'ttf> {
             /////////////////
             // Left click
             /////////////////
-            // if let Event::MouseButtonDown { x, y, mouse_btn: MouseButton::Left, .. } = event {
-            // }
+            if let Event::MouseButtonDown { x, y, mouse_btn: MouseButton::Left, .. } = event {
+                // self.ant_manager.ants.append(&mut AntManager::generate_colony((x, y, self.renderer.camera.2), 5));
+                let (nx, ny) = self.renderer.screen_to_tile_coords((x, y));
+                let b = Biome::get_biome_params(
+                    nx as f64,
+                    ny as f64,
+                    &self.chunk_manager.world_noise
+                );
+
+                println!(
+                    "Biome at ({:?},{:?}, {:?}) : Adds {:.4?} to surface_height \n{:?}",
+                    nx,
+                    ny,
+                    self.renderer.camera.2,
+                    b.clone().get(),
+                    b
+                );
+            }
 
             /////////////////
             // Mouse Wheel

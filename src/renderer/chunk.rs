@@ -23,15 +23,15 @@ use super::{
 /// Chunk rendering
 ///
 impl LoadedChunk {
+    #[allow(unused)]
     fn biome_render(&self, renderer: &mut Renderer, draw_pos: (i32, i32), timestamp: f64) {
-        renderer.draw_chunk(draw_pos, self.biome_id.into());
+        // renderer.draw_chunk(draw_pos, self.biome_id.into());
 
-        #[allow(unused)]
-        if cfg!(test) {
-            let (d, h, m) = crate::time::game_time(timestamp);
-            let c = Color::RGBA(255, 0, 255, 10 + 10 * (h as u8));
-            renderer.draw_chunk(draw_pos, c);
-        }
+        // if cfg!(test) {
+        //     let (d, h, m) = crate::time::game_time(timestamp);
+        //     let c = Color::RGBA(255, 0, 255, 10 + 10 * (h as u8));
+        //     renderer.draw_chunk(draw_pos, c);
+        // }
     }
     pub fn render(&self, renderer: &mut Renderer, ants: &Vec<Ant>, timestamp: f64) {
         if !cfg!(test) && renderer.tile_size < 5 {
@@ -90,7 +90,6 @@ impl LoadedChunk {
                     let c = Color::RGBA(25, 25, 25, 175);
                     renderer.fill_rect(draw_pos, c);
                 }
-
 
                 // Draw transparent blocks
                 'bottom_to_top: loop {

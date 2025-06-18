@@ -74,16 +74,21 @@ impl Tile {
     pub const SAND: Tile = Tile {
         hp: 100,
         tile_type: TileType::Soil(Soil::Sand),
-        properties: TileFlag::empty(),
+        properties: TileFlag::DIGGABLE,
     };
     pub const CLAY: Tile = Tile {
         hp: 100,
         tile_type: TileType::Soil(Soil::Clay),
-        properties: TileFlag::empty(),
+        properties: TileFlag::DIGGABLE,
     };
     pub const DIRT: Tile = Tile {
         hp: 100,
         tile_type: TileType::Soil(Soil::Dirt),
+        properties: TileFlag::DIGGABLE,
+    };
+    pub const BEDROCK: Tile = Tile {
+        hp: 100,
+        tile_type: TileType::Stone(Stone::Bedrock),
         properties: TileFlag::empty(),
     };
     pub const MARBLE: Tile = Tile {
@@ -104,7 +109,7 @@ impl Tile {
     pub const WATER: Tile = Tile {
         hp: 100,
         tile_type: TileType::WATER,
-        properties: TileFlag::GAS,
+        properties: TileFlag::FLUID,
     };
 }
 
@@ -131,6 +136,7 @@ pub enum Soil {
 #[derive(Hash, Serialize, Deserialize, Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u16)]
 pub enum Stone {
+    Bedrock,
     Granite,
     Marble,
     Limestone,
@@ -150,6 +156,7 @@ impl Into<String> for TileType {
             }
             TileType::Stone(r) => {
                 match r {
+                    Stone::Bedrock => "Bedrock",
                     Stone::Granite => "Granite",
                     Stone::Marble => "Marble",
                     Stone::Limestone => "Limestone",
@@ -181,6 +188,7 @@ impl Tile {
         match self.tile_type {
             TileType::Stone(stone) => {
                 match stone {
+                    Stone::Bedrock => Color::GREY,
                     Stone::Granite => Color::RGB(100, 100, 100),
                     Stone::Marble => Color::RGB(150, 150, 150),
                     Stone::Limestone => Color::RGB(175, 175, 175),

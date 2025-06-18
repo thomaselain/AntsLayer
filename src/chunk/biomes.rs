@@ -1,49 +1,32 @@
 use std::{ fmt::Debug };
 
 use noise::{ Fbm, NoiseFn, Perlin };
-use sdl2::pixels::Color;
 
-use crate::chunk::manager::AMOUNT_OF_BIOMES;
+use crate::chunk::{ manager::WorldNoise, ChunkManager as Manager };
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
-pub enum Id {
-    Ocean,
-    Plain,
-    Coast,
-    Mountain,
-}
-impl From<i32> for Id {
-    fn from(value: i32) -> Self {
-        match value{
-            0 => {Id::Ocean},
-            1 => {Id::Coast},
-            2 => {Id::Plain},
-            3 => {Id::Mountain},
-            _=>panic!()
-        }
-    }
-}
-impl Debug for Id {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Ocean => write!(f, "Ocean"),
-            Self::Plain => write!(f, "Plain"),
-            Self::Coast => write!(f, "Coast"),
-            Self::Mountain => write!(f, "Mountain"),
-        }
-    }
-}
+#[derive(Debug, Clone, Copy)]
+pub struct Biome {
+    /// Humidity
+    pub humidity: f64,
 
-#[derive(Debug, Clone)]
-pub struct Params {
-    pub id: Id,
-    pub noise: NoiseParams,
-    pub terrain: TerrainParams,
-}
+    /// Temperature
+    pub temperature: f64,
 
-impl Default for Params {
-    fn default() -> Self {
-        Self { id: Id::Ocean, noise: NoiseParams::default(), terrain: TerrainParams::default() }
+    /// Elevation
+    pub elevation: f64,
+
+    /// Roughness
+    /// The harder the biome is, the more stony the terrain will be
+    pub roughness: f64,
+}
+impl Biome {
+    pub fn get(self) -> f64 {
+        let climate_flatness = self.temperature * 1.05 + self.humidity * 1.04;
+        let elevation_boost = self.elevation * 1.1;
+        let biome_factor = (elevation_boost - climate_flatness).max(0.0);
+        let roughness_effect = self.roughness * 1.3;
+
+        biome_factor * roughness_effect
     }
 }
 
@@ -88,150 +71,32 @@ impl Default for NoiseParams {
     fn default() -> Self {
         Self {
             fbm: Fbm::new(42),
-            octaves: 3,
-            frequency: 1.0,
+            octaves: 4,
+            frequency: 0.5,
             lacunarity: 2.0,
             persistence: 1.1,
-            scale: 0.015,
-        }
-    }
-}
-
-// Global noise for Biome choosing
-impl NoiseParams {
-    pub fn biomes() -> Self {
-        Self {
-            fbm: Fbm::new(1),
-            octaves: 4,
-            frequency: 1.0,
-            lacunarity: 2.0,
-            persistence: 1.5,
-            scale: 0.009,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct TerrainParams {
-    /// Humidity
-    pub humidity: f64,
-
-    /// Temperature
-    pub temperature: f64,
-
-    /// Elevation
-    pub elevation: f64,
-
-    /// Roughness
-    /// The harder the biome is, the more stony the terrain will be
-    pub roughness: f64,
-}
-
-impl Into<f64> for TerrainParams {
-    fn into(self) -> f64 {
-        (self.elevation + self.humidity * self.roughness * self.temperature) as f64
-    }
-}
-impl Default for TerrainParams {
-    fn default() -> Self {
-        Self {
-            humidity: 6.0,
-            temperature: 25.0,
-            elevation: 2.0,
-            roughness: 2.0,
-        }
-    }
-}
-impl Into<Color> for Id {
-    fn into(self) -> Color {
-        match self {
-            Id::Ocean => Color::BLUE,
-            Id::Plain => Color::GREEN,
-            Id::Coast => Color::CYAN,
-            Id::Mountain => Color::GREY,
+            scale: 0.1,
         }
     }
 }
 
 // Hard coded biome parameters
-impl Params {
-    pub fn all() -> [Self; AMOUNT_OF_BIOMES] {
-        [Self::plain(), Self::coast(), Self::ocean(), Self::mountain()]
-    }
-    pub fn plain() -> Self {
+impl Biome {
+    pub fn get_biome_params(x: f64, y: f64, world_noise: &WorldNoise) -> Self {
+        let scale = world_noise[Manager::SURFACE].scale; // grande échelle = variation lente
+
+        let humidity = world_noise[Manager::HUMIDITY].get((x * scale, y * scale, 0.0));
+        let temperature = world_noise[Manager::TEMPERATURE].get((x * scale, y * scale, 5.0));
+        let elevation = world_noise[Manager::ELEVATION].get((x * scale, y * scale, 15.0));
+        let roughness = world_noise[Manager::ROUGHNESS].get((x * scale, y * scale, 20.0));
+
+        let min = -1.0;
+        let max = 1.0;
         Self {
-            id: Id::Plain,
-            terrain: TerrainParams {
-                humidity: 6.0,
-                temperature: 25.0,
-                elevation: 2.0,
-                roughness: 2.0,
-            },
-            noise: NoiseParams {
-                fbm: Fbm::new(0),
-                octaves: 5,
-                frequency: 1.0,
-                lacunarity: 2.0,
-                persistence: 1.0,
-                scale: 0.16,
-            },
-        }
-    }
-    pub fn coast() -> Self {
-        Self {
-            id: Id::Coast,
-            terrain: TerrainParams {
-                humidity: 8.0,
-                temperature: 19.0,
-                elevation: 1.0,
-                roughness: 1.0,
-            },
-            noise: NoiseParams {
-                fbm: Fbm::new(0),
-                octaves: 5,
-                frequency: 1.0,
-                lacunarity: 2.0,
-                persistence: 1.0,
-                scale: 0.15,
-            },
-        }
-    }
-    pub fn ocean() -> Self {
-        Self {
-            id: Id::Ocean,
-            terrain: TerrainParams {
-                humidity: 10.0,
-                temperature: 15.0,
-                elevation: -15.0,
-                roughness: 0.0,
-            },
-            noise: NoiseParams {
-                fbm: Fbm::new(0),
-                octaves: 5,
-                frequency: 1.0,
-                lacunarity: 2.0,
-                persistence: 1.0,
-                scale: 0.09,
-            },
-        }
-    }
-    pub fn mountain() -> Self {
-        Self {
-            id: Id::Plain,
-            terrain: TerrainParams {
-                humidity: 8.0,
-                temperature: 8.0,
-                elevation: 10.0,
-                roughness: 10.0,
-            },
-            noise: NoiseParams {
-                fbm: Fbm::new(0),
-                octaves: 5,
-                frequency: 1.0,
-                lacunarity: 2.0,
-                persistence: 1.0,
-                scale: 0.1,
-            },
+            humidity: humidity.clamp(min, max),
+            temperature: temperature.clamp(min, max),
+            elevation: elevation.clamp(min, max),
+            roughness: roughness.clamp(min, max),
         }
     }
 }

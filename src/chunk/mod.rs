@@ -22,7 +22,7 @@ impl ChunkContent {
 }
 pub const WIDTH: usize = if cfg!(test) { 8 } else { 8 };
 pub const HEIGHT: usize = if cfg!(test) { 64 } else { 64 };
-pub const SEA_LEVEL: usize = ((HEIGHT as f64) * 0.5) as usize;
+pub const SEA_LEVEL: usize = ((HEIGHT as f64) * 0.55) as usize;
 
 /// Allows ASCII display
 impl fmt::Debug for Chunk {
@@ -71,31 +71,27 @@ impl Chunk {
 //
 #[cfg(test)]
 mod tests {
+    use rand::random;
+
     use crate::chunk::*;
     use crate::ChunkManager;
-    use super::biomes::Params;
 
     #[ignore = "too long"]
     #[test]
-    fn all_biomes() {
-        let biomes = Params::all();
+    fn single_chunk() {
+        let manager = ChunkManager::default();
+        let pos = (random(), random());
+        println!("Generating chunk at {:?}", pos);
 
-        let mngr = ChunkManager::default();
-        assert!(!mngr.loaded_chunks.is_empty());
+        let chunk = Chunk::generate(pos, &manager.world_noise);
 
-        for b in biomes {
-            let chunk = Chunk::from_biome((0, 0), &b, &mngr.world_noise);
-            let chunk = chunk.join().ok().unwrap();
-            println!("{:?}: \n{:?}\n", b.id, chunk.c);
-        }
+        let chunk = chunk.join().expect("Failed to collect created chunk");
+        println!("{:?}: \n\n", chunk.c);
     }
 
     #[ignore = "too long"]
     #[test]
     fn manager() {
-        let biomes = Params::all();
-        assert!(!biomes.is_empty());
-
         // Filled manager
         let mngr = ChunkManager::default();
         assert!(!mngr.loaded_chunks.is_empty());

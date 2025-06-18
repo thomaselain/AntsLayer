@@ -2,11 +2,7 @@ use std::{ collections::HashMap, sync::{ mpsc::{ self, Receiver, Sender }, Arc, 
 
 use noise::Fbm;
 
-use crate::{
-    ant::AntManager,
-    chunk::{ biomes::{ Id, NoiseParams, Params }, generation::WorldNoise },
-    renderer::Renderer,
-};
+use crate::{ ant::AntManager, chunk::{ biomes::{ NoiseParams } }, renderer::Renderer };
 
 use super::{
     generation::{ MapShape, STARTING_AREA, STARTING_MAP_SHAPE },
@@ -14,11 +10,8 @@ use super::{
     Chunk,
     WIDTH,
 };
-pub const AMOUNT_OF_BIOMES: usize = 4;
-pub type BiomeNoise = [Params; AMOUNT_OF_BIOMES];
-
+pub type WorldNoise = Arc<[NoiseParams; 10]>;
 pub struct Manager {
-    pub biomes: BiomeNoise,
     pub world_noise: WorldNoise,
     pub rx: Sender<LoadedChunk>,
     pub tx: Receiver<LoadedChunk>,
@@ -28,7 +21,6 @@ pub struct Manager {
 
 #[derive(Clone)]
 pub struct LoadedChunk {
-    pub biome_id: crate::chunk::biomes::Id,
     pub pos: (i32, i32),
     pub c: Arc<Mutex<Chunk>>,
 }
@@ -36,27 +28,13 @@ impl Manager {
     pub fn render(&mut self, renderer: &mut Renderer, a_mngr: &AntManager, timestamp: f64) {
         renderer.filter_visible_chunks(&mut self.loaded_chunks);
 
-        for (_pos, loaded) in self.loaded_chunks.clone() {
-            loaded.render(renderer, &a_mngr.ants, timestamp);
+        for (pos, loaded) in self.loaded_chunks.clone() {
+            if renderer.is_chunk_on_screen(pos) {
+                loaded.render(renderer, &a_mngr.ants, timestamp);
+            }
         }
     }
-    pub fn biome_at(&self, (x, y): (i32, i32)) -> Params {
-        let v = self.world_noise[Manager::SURFACE].get((
-            //
-            x as f64,
-            //
-            y as f64,
-            //
-            0.0,
-        ));
-        let id = ((((AMOUNT_OF_BIOMES as f64) + v) / (AMOUNT_OF_BIOMES as f64)) as i32).into();
 
-        if let Some(biome) = self.biomes.iter().find(|b| { b.id == id }) {
-            biome.clone()
-        } else {
-            Params::default()
-        }
-    }
     pub fn tile_at(&self, p: (i32, i32, i32)) -> Option<Tile> {
         let chunk_pos = (p.0 / (WIDTH as i32), p.1 / (WIDTH as i32));
         for (_pos, loaded_chunk) in &self.loaded_chunks {
@@ -74,48 +52,61 @@ impl Manager {
     pub const VARIATIONS: usize = 1;
     pub const DETAIL: usize = 2;
     pub const CAVES: usize = 3;
-    pub const VEINS: usize = 4;
+    pub const TUNNELS: usize = 4;
+    pub const VEINS: usize = 5;
+    pub const HUMIDITY: usize = 6;
+    pub const ELEVATION: usize = 7;
+    pub const ROUGHNESS: usize = 8;
+    pub const TEMPERATURE: usize = 9;
 
     fn empty() -> Self {
         let (rx, tx) = mpsc::channel();
         Self {
-            biomes: Params::all(),
             world_noise: Arc::new([
                 // Surface
                 NoiseParams {
                     fbm: Fbm::new(1),
-                    octaves: 4,
-                    frequency: 0.04,
+                    octaves: 7,
+                    frequency: 1.3,
                     lacunarity: 2.0,
-                    persistence: 0.5,
-                    scale: 0.0015,
+                    persistence: 1.5,
+                    scale: 0.045,
                 },
                 // Variations
                 NoiseParams {
                     fbm: Fbm::new(1),
-                    octaves: 4,
-                    frequency: 0.5,
+                    octaves: 1,
+                    frequency: 1.0,
                     lacunarity: 2.0,
-                    persistence: 0.5,
-                    scale: 0.025,
+                    persistence: 1.0,
+                    scale: 1.0, // IS MULTIPLIED BY SURFACE SCALE
                 },
                 // Details
                 NoiseParams {
                     fbm: Fbm::new(1),
                     octaves: 4,
-                    frequency: 0.5,
+                    frequency: 1.0,
                     lacunarity: 2.0,
-                    persistence: 0.5,
-                    scale: 0.1,
+                    persistence: 1.0,
+                    scale: 1.0, // IS MULTIPLIED BY SURFACE SCALE
                 },
                 // Caves
                 NoiseParams {
-                    fbm: Fbm::new(2),
-                    octaves: 4,
-                    frequency: 0.5,
+                    fbm: Fbm::new(64),
+                    octaves: 1,
+                    frequency: 1.9,
                     lacunarity: 2.0,
-                    persistence: 0.9,
-                    scale: 0.018,
+                    persistence: 1.5,
+                    scale:0.9, // IS MULTIPLIED BY SURFACE SCALE
+                },
+                // Tunnels
+                NoiseParams {
+                    fbm: Fbm::new(65),
+                    octaves: 1,
+                    frequency: 1.0,
+                    lacunarity: 2.0,
+                    persistence: 0.1,
+                    scale: 1.0, // IS MULTIPLIED BY SURFACE SCALE
                 },
                 // Layers
                 NoiseParams {
@@ -125,6 +116,28 @@ impl Manager {
                     lacunarity: 2.0,
                     persistence: 0.4,
                     scale: 0.09,
+                },
+                // HUMIDITY
+                NoiseParams::default(),
+                // ELEVATION
+                NoiseParams {
+                    fbm: Fbm::new(333),
+                    octaves: 3,
+                    frequency: 1.1,
+                    lacunarity: 2.0,
+                    persistence: 1.1,
+                    scale: 0.0001,
+                },
+                // ROUGHNESS
+                NoiseParams::default(),
+                // TEMPERATURE
+                NoiseParams {
+                    fbm: Fbm::new(33),
+                    octaves: 3,
+                    frequency: 1.2,
+                    lacunarity: 2.0,
+                    persistence: 0.99,
+                    scale: 0.001,
                 },
             ]),
             rx,

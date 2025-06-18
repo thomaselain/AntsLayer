@@ -48,30 +48,6 @@ pub struct Game<'ttf> {
     pub inputs: Inputs,
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::chunk::SEA_LEVEL;
-    #[allow(unused_imports)]
-    use crate::{ main, ant::{ Ant, Type }, Game };
-
-    #[test]
-    #[ignore = "Cannot init SDL on more than one thread"]
-    fn test_main() -> Result<(), ()> {
-        let ttf_context = sdl2::ttf::init().expect("TTF init failed");
-        let mut game = Game::new(sdl2::init().unwrap(), &ttf_context);
-        game.run();
-
-        // Joette
-        let mut ants = vec![Ant::new((0, 0, SEA_LEVEL as i32), Type::Explorer)];
-
-        for i in 10..20 {
-            ants.push(Ant::new((i, i, SEA_LEVEL as i32), Type::Fetcher));
-        }
-
-        Ok(())
-    }
-}
-
 impl<'ttf> Game<'ttf> {
     pub fn new(sdl: Sdl, ttf_context: &'ttf Sdl2TtfContext) -> Game<'ttf> {
         let renderer = Renderer::new(&sdl, &ttf_context, "Ants Layer").expect(
@@ -116,7 +92,7 @@ impl<'ttf> Game<'ttf> {
         self.update_tps();
 
         // Let the ants think !
-        self.ant_manager.tick(&self.chunk_manager, self.last_tick);
+        // self.ant_manager.tick(&self.chunk_manager, self.last_tick);
 
         if self.process_input().is_err() {
             todo!("Invalid input handling");

@@ -20,7 +20,6 @@ impl<'ttf> Renderer<'ttf> {
         (offset_x, offset_y)
     }
 
-    // Converts Tile coords into displayable coords (x,y)
     pub fn tile_to_screen_coords(&self, (x, y): (i32, i32)) -> (i32, i32) {
         let offset = self.get_offset();
 
@@ -29,6 +28,15 @@ impl<'ttf> Renderer<'ttf> {
 
         (pixel_x, pixel_y)
     }
+    pub fn screen_to_tile_coords(&self, (screen_x, screen_y): (i32, i32)) -> (i32, i32) {
+        let offset = self.get_offset();
+    
+        let tile_x = (screen_x - offset.0) / (self.tile_size as i32);
+        let tile_y = (screen_y - offset.1) / (self.tile_size as i32);
+    
+        (tile_x, tile_y)
+    }
+    
 
     pub fn to_world_coords(chunk_pos: (i32, i32), tile_pos: (i32, i32)) -> (i32, i32) {
         let x = chunk_pos.0 * (WIDTH as i32) + tile_pos.0;

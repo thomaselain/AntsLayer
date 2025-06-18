@@ -21,7 +21,7 @@ mod camera;
 
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
 /// This is maximum of air tiles to display
-pub const MAX_RENDERING_DEPTH: u8 = if cfg!(test){5} else{10};
+pub const MAX_RENDERING_DEPTH: u8 = if cfg!(test){25} else{25};
 // pub const MAX_RENDERING_DEPTH: u8 = (CHUNK_HEIGHT as u8) / 4;
 
 /// Width of a renderer tile (in pixels)
@@ -33,11 +33,11 @@ const GRID_COLOR: Color = Color::RGBA(0, 0, 0, 25);
 pub const CLOUDS_HEIGHT: i32 = (SEA_LEVEL as i32) + 10;
 pub const CLOUDS_RENDERING: bool = false;
 ///
-pub const VIEW_DISTANCE: i32 = if cfg!(test){ WIDTH as i32 * 15 } else {WIDTH as i32 * 5};
+pub const VIEW_DISTANCE: i32 = if cfg!(test){ WIDTH as i32 * 10 } else {WIDTH as i32 * 5};
 
 /// Window starting dimentions
-pub const WIN_DEFAULT_W: u32 = 800;
-pub const WIN_DEFAULT_H: u32 = 600;
+pub const WIN_DEFAULT_W: u32 = 300 ;
+pub const WIN_DEFAULT_H: u32 = 300;
 
 /// Rendering sizes
 pub const FONT_SIZE: u16 = 15;
@@ -96,7 +96,8 @@ impl<'ttf> Renderer<'ttf> {
                 video_subsystem
                     .window(title, WIN_DEFAULT_W, WIN_DEFAULT_H)
                     .position_centered()
-                    .fullscreen()
+                    .resizable()
+                    // .fullscreen()
                     .build()
                     .map_err(|e| e.to_string())?
             }

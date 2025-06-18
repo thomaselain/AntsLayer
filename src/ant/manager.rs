@@ -11,18 +11,18 @@ pub struct Manager {
 impl Manager {
     pub fn new() -> Self {
         Self {
-            ants: Self::generate_colony(0),
+            ants: Self::generate_colony((0, 0, SEA_LEVEL as i32), 0),
         }
     }
     pub fn add(&mut self, ant: Ant) {
         self.ants.insert(0, ant);
     }
 
-    pub fn generate_colony(n: usize) -> Vec<Ant> {
+    pub fn generate_colony((x, y, z): (i32, i32, i32), n: usize) -> Vec<Ant> {
         let mut ants = vec![];
 
         for _i in 0..n {
-            ants.push(Ant::new((-15, 0, (SEA_LEVEL as i32) + 15), super::Type::Explorer));
+            ants.push(Ant::new((x, y, (SEA_LEVEL as i32) + 15), super::Type::Explorer));
         }
 
         ants
@@ -37,30 +37,34 @@ impl Manager {
                 // Is is traversable ?
                 if tile.properties.contains(TileFlag::TRAVERSABLE) && a.pos.2 > 0 {
                     a.pos = Direction::Down.add_to(&a.pos);
+                    break;
                 }
             }
-
             let mut action_attempts = 0;
             'walking: loop {
                 action_attempts += 1;
 
-                if
-                    Instant::now().duration_since(a.last_action) > Duration::from_millis(250) &&
-                    action_attempts < 4
-                {
+                if Instant::now().duration_since(a.last_action) > Duration::from_millis(1000) {
                     if let Some(action) = a.think() {
                         match action {
-                            Action::Walk(direction) => if
-                                let Some(tile) = chunk_mngr.tile_at(direction.add_to(&a.pos))
-                            {
-                                if tile.properties.contains(TileFlag::TRAVERSABLE) {
-                                    a.walk(direction);
-                                    break 'walking;
+                            Action::Walk(direction) => {
+                                let dest_block = direction.add_to(&a.pos);
+                                if let Some(tile) = chunk_mngr.tile_at(dest_block) {
+                                    if tile.properties.contains(TileFlag::TRAVERSABLE) {
+                                        a.walk(direction);
+                                        break 'walking;
+                                    } else {
+                                        let dest_block = Direction::Up.add_to(
+                                            &direction.add_to(&a.pos)
+                                        );
+                                        a.pos = dest_block;
+                                        break 'walking;
+                                    }
                                 }
                             }
                         }
                     }
-                } else {
+                } else if action_attempts > 4 {
                     break 'walking;
                 }
             }
