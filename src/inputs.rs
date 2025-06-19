@@ -1,10 +1,7 @@
 use sdl2::{ event::Event, keyboard::Keycode, mouse::MouseButton };
 
 use crate::{
-    ant::{ AntManager, Direction },
-    chunk::{ biomes::Biome, Chunk },
-    interface::{ self },
-    Game,
+    ant::direction::Direction, chunk::biomes::Biome, interface::{ self }, Game
 };
 
 pub trait ToDirection {
@@ -150,7 +147,6 @@ impl<'ttf> Game<'ttf> {
                         self.renderer.increase_view_dist().unwrap();
                     }
                     Keycode::ESCAPE => {
-                        self.ant_manager.ants.clear();
                         self.chunk_manager.loaded_chunks.clear();
                         self.running = false;
                     }

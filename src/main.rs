@@ -7,6 +7,8 @@ use interface::Interface;
 use renderer::{ Renderer };
 use sdl2::{ event::Event, pixels::Color, ttf::Sdl2TtfContext, Sdl };
 
+use crate::ant::colony::Colony;
+
 //  ------
 mod debug;
 mod interface;
@@ -54,6 +56,8 @@ impl<'ttf> Game<'ttf> {
             "Failed to create game renderer"
         );
 
+        let ant_manager = AntManager::new();
+
         Game {
             running: true,
             interface: Interface::new(),
@@ -68,7 +72,7 @@ impl<'ttf> Game<'ttf> {
             first_tick: Instant::now(),
             tick_rate: Duration::from_secs_f64(1.0 / 60.0),
 
-            ant_manager: AntManager::new(),
+            ant_manager,
             chunk_manager: ChunkManager::default(),
             renderer,
 
@@ -92,7 +96,7 @@ impl<'ttf> Game<'ttf> {
         self.update_tps();
 
         // Let the ants think !
-        // self.ant_manager.tick(&self.chunk_manager, self.last_tick);
+        self.ant_manager.tick(&self.chunk_manager, self.last_tick);
 
         if self.process_input().is_err() {
             todo!("Invalid input handling");
@@ -152,7 +156,6 @@ impl<'ttf> Game<'ttf> {
         while self.running {
             let mut event_pump = self.sdl.event_pump().unwrap();
 
-            // Clear screen at the start of each frame
             // (could be improved a lot)
             self.renderer.canvas.set_draw_color(Color::RGB(0, 0, 0));
             self.renderer.canvas.clear();
@@ -178,7 +181,7 @@ fn main() -> Result<(), ()> {
 
     game.run();
 
-    eprintln!("Active ants   : {:?}", game.ant_manager.ants.len());
+    eprintln!("Active colonies : {:?}", game.ant_manager.colonies.len());
     eprintln!("Active chunks : {:?}", game.chunk_manager.loaded_chunks.len());
 
     Ok(())

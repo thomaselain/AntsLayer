@@ -1,12 +1,13 @@
 use sdl2::pixels::Color;
 
 use crate::{
-    ant::Ant,
+    ant::{ colony::Colony, ColonyMember },
     chunk::{
         index::{ self, flatten_index_i32 },
         manager::LoadedChunk,
         tile::TileFlag,
         ChunkContent,
+        WIDTH,
     },
 };
 
@@ -24,20 +25,23 @@ use super::{
 ///
 impl LoadedChunk {
     #[allow(unused)]
-    fn biome_render(&self, renderer: &mut Renderer, draw_pos: (i32, i32), timestamp: f64) {
-        // renderer.draw_chunk(draw_pos, self.biome_id.into());
+    fn height_render(&self, renderer: &mut Renderer, draw_pos: (i32, i32), timestamp: f64) {
+        let column = self
+            .access_content()
+            .tiles_above_surface(((WIDTH / 2) as i32, (WIDTH / 2) as i32));
+        let mut color: Color = column.last().unwrap().color();
+        color.a = 255 - 3 * (column.len() as u8);
 
-        // if cfg!(test) {
-        //     let (d, h, m) = crate::time::game_time(timestamp);
-        //     let c = Color::RGBA(255, 0, 255, 10 + 10 * (h as u8));
-        //     renderer.draw_chunk(draw_pos, c);
-        // }
+        // let (d, h, m) = crate::time::game_time(timestamp);
+        // let c = Color::RGBA(255, 0, 255, 10 + 10 * (h as u8));
+        renderer.draw_chunk(draw_pos, color);
     }
-    pub fn render(&self, renderer: &mut Renderer, ants: &Vec<Ant>, timestamp: f64) {
+
+    pub fn render(&self, renderer: &mut Renderer, colony: &[Colony; 2], timestamp: f64) {
         if !cfg!(test) && renderer.tile_size < 5 {
             let (world_x, world_y) = Renderer::to_world_coords((self.pos.0, self.pos.1), (0, 0));
             let draw_pos = renderer.tile_to_screen_coords((world_x, world_y));
-            self.biome_render(renderer, draw_pos, timestamp);
+            self.height_render(renderer, draw_pos, timestamp);
             return;
         }
 
@@ -90,21 +94,17 @@ impl LoadedChunk {
                     let c = Color::RGBA(25, 25, 25, 175);
                     renderer.fill_rect(draw_pos, c);
                 }
+                ////////////////////////////////////////////////////////////////
+                ////////////////////  Ants  Rendering //////////////////////////
+                ////////////////////////////////////////////////////////////////
+
+                renderer.draw_ants(&colony[Colony::PLAYER], timestamp);
+                renderer.draw_ants(&colony[Colony::AI], timestamp);
+                ////////////////////////////////////////////////////////////////
 
                 // Draw transparent blocks
                 'bottom_to_top: loop {
                     if let Some(tile) = tiles_to_draw.pop() {
-                        ////////////////////////////////////////////////////////////////
-                        ////////////////////  Ants  Rendering //////////////////////////
-                        ////////////////////////////////////////////////////////////////
-                        for a in ants {
-                            if a.pos.2 == z {
-                                a.render(renderer);
-                                continue;
-                            }
-                        }
-                        ////////////////////////////////////////////////////////////////
-
                         let mut fog = tile.color();
                         fog.a += tile.color().a;
                         renderer.fill_rect(draw_pos, fog);

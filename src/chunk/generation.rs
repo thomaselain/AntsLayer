@@ -139,7 +139,8 @@ impl Chunk {
         } else if tunnel > 0.3 {
             Tile::DIRT
         } else {
-            Tile::ERROR
+            // Tile::ERROR
+            Tile::DIRT
         }
     }
     pub fn tile_at((x, y, z): (i32, i32, i32), world_noise: &WorldNoise) -> Tile {
@@ -148,20 +149,21 @@ impl Chunk {
         if z == 0.0 {
             return Tile::BEDROCK;
         }
+
         let biome = Biome::get_biome_params(x, y, world_noise);
 
         let scale = world_noise[Manager::SURFACE].scale;
-        // let surface_noise = world_noise[Manager::SURFACE].get((x, y, 0.0));
+        let surface_noise = world_noise[Manager::SURFACE].get((x, y, z));
         // For trees or surface items
 
         let varitation_noise = world_noise[Manager::VARIATIONS]
-            .get((x * scale, y * scale, 0.0))
+            .get((x * scale, y * scale, z * scale))
             .powf(2.0);
         let detail_noise = world_noise[Manager::DETAIL]
-            .get((x * scale * 0.5, y * scale * 0.5, 10.0))
+            .get((x * scale, y * scale, z * scale))
             .powf(2.0);
 
-        let mut surface_height = varitation_noise * detail_noise + biome.get();
+        let mut surface_height = surface_noise + varitation_noise + detail_noise;
 
         // Normalization 0..CHUNK_HEIGHT
         surface_height = (surface_height + 1.0) * ((HEIGHT as f64) / 2.0);

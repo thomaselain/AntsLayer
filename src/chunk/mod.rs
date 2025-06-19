@@ -10,6 +10,8 @@ pub mod manager;
 #[allow(unused)]
 pub use manager::Manager as ChunkManager;
 
+use crate::chunk::tile::TileFlag;
+
 pub mod tile;
 pub mod index;
 pub mod thread;
@@ -18,11 +20,11 @@ pub mod thread;
 #[derive(Hash, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct ChunkContent([Tile; Self::FLAT_SIZE]);
 impl ChunkContent {
-    const FLAT_SIZE: usize = WIDTH * WIDTH * HEIGHT;
+    pub const FLAT_SIZE: usize = WIDTH * WIDTH * HEIGHT;
 }
 pub const WIDTH: usize = if cfg!(test) { 8 } else { 8 };
 pub const HEIGHT: usize = if cfg!(test) { 64 } else { 64 };
-pub const SEA_LEVEL: usize = ((HEIGHT as f64) * 0.55) as usize;
+pub const SEA_LEVEL: usize = ((HEIGHT as f64) * 0.52) as usize;
 
 /// Allows ASCII display
 impl fmt::Debug for Chunk {
@@ -41,10 +43,22 @@ impl ChunkContent {
     pub fn len() -> usize {
         ChunkContent::FLAT_SIZE
     }
-    pub fn column(index: i32) -> Vec<(i32, i32, i32)> {
-        assert!(index >= 0 && index < ((WIDTH * WIDTH * HEIGHT) as i32));
-        let (x, y, _) = index::to_xyz(index as usize);
-        (0..HEIGHT as i32).map(|z| (x, y, z)).collect()
+    pub fn tiles_above_surface(self, (x, y): (i32, i32)) -> Vec<Tile> {
+        let mut ret = vec![];
+
+        assert!(x < (WIDTH as i32));
+        assert!(y < (WIDTH as i32));
+
+        for z in (0..HEIGHT as i32).rev() {
+            let tile = self[(x, y, z)];
+
+            ret.push(tile);
+
+            if !tile.properties.contains(TileFlag::TRAVERSABLE) {
+                break;
+            }
+        }
+        ret
     }
 }
 

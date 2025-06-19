@@ -1,6 +1,6 @@
 use std::{ collections::HashMap };
 
-use crate::{ ant::Direction, chunk::{ manager::LoadedChunk, HEIGHT, WIDTH} };
+use crate::{ ant::direction::Direction, chunk::{ manager::LoadedChunk, HEIGHT, WIDTH } };
 
 use super::Renderer;
 
@@ -18,18 +18,16 @@ impl<'ttf> Renderer<'ttf> {
     /// Filtre la liste des LoadedChunk pour ne garder que ceux visibles
     pub fn filter_visible_chunks(&self, chunks: &mut HashMap<(i32, i32), LoadedChunk>) {
         let (x_min, x_max, y_min, y_max) = self.camera_range_i32();
-    
-        chunks.retain(|&(x, y), _| {
-            x >= x_min && x <= x_max && y >= y_min && y <= y_max
-        });
+
+        chunks.retain(|&(x, y), _| { x >= x_min && x <= x_max && y >= y_min && y <= y_max });
     }
-    
+
     pub fn increase_view_dist(&mut self) -> Result<(), ()> {
         self.view_distance += WIDTH as i32;
         Ok(())
     }
     pub fn decrease_view_dist(&mut self) -> Result<(), ()> {
-        if self.view_distance > WIDTH as i32 {
+        if self.view_distance > (WIDTH as i32) {
             self.view_distance -= WIDTH as i32;
         } else {
             self.view_distance = 0;

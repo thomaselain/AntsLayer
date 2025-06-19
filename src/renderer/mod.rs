@@ -3,7 +3,7 @@ use sdl2::{ pixels::Color, ttf::{ Font, Sdl2TtfContext }, Sdl };
 
 use crate::chunk::WIDTH;
 #[allow(unused)]
-use crate::{ ant::Ant, chunk::{ biomes::NoiseParams, HEIGHT, SEA_LEVEL } };
+use crate::{ chunk::{ biomes::NoiseParams, HEIGHT, SEA_LEVEL } };
 
 /// SDL methods for drawing squares
 /// for tiles rendering
@@ -21,7 +21,7 @@ mod camera;
 
 /// When drawing an air tile, the renderer looks for tiles to draw bellow
 /// This is maximum of air tiles to display
-pub const MAX_RENDERING_DEPTH: u8 = if cfg!(test){25} else{25};
+pub const MAX_RENDERING_DEPTH: u8 = if cfg!(test) { 25 } else { 25 };
 // pub const MAX_RENDERING_DEPTH: u8 = (CHUNK_HEIGHT as u8) / 4;
 
 /// Width of a renderer tile (in pixels)
@@ -33,10 +33,10 @@ const GRID_COLOR: Color = Color::RGBA(0, 0, 0, 25);
 pub const CLOUDS_HEIGHT: i32 = (SEA_LEVEL as i32) + 10;
 pub const CLOUDS_RENDERING: bool = false;
 ///
-pub const VIEW_DISTANCE: i32 = if cfg!(test){ WIDTH as i32 * 10 } else {WIDTH as i32 * 5};
+pub const VIEW_DISTANCE: i32 = if cfg!(test) { (WIDTH as i32) * 10 } else { (WIDTH as i32) * 5 };
 
 /// Window starting dimentions
-pub const WIN_DEFAULT_W: u32 = 300 ;
+pub const WIN_DEFAULT_W: u32 = 300;
 pub const WIN_DEFAULT_H: u32 = 300;
 
 /// Rendering sizes
@@ -130,15 +130,5 @@ impl<'ttf> Renderer<'ttf> {
             tile_size: DEFAULT_TILE_SIZE,
             view_distance: VIEW_DISTANCE,
         })
-    }
-}
-
-/// Ant rendering
-///
-impl Ant {
-    pub fn render(self, renderer: &mut Renderer) {
-        let (x, y) = (self.pos.0, self.pos.1);
-        let (x, y) = renderer.tile_to_screen_coords((x, y));
-        renderer.draw_tile((x, y), Color::RED);
     }
 }

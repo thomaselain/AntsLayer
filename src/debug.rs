@@ -53,9 +53,9 @@ impl<'ttf> Game<'ttf> {
         // self.display_info_at(format!("Visible chunks : {:?}", chunks_in_fov), 6)?;
         self.display_info_at(format!("Clouds height : {:?}", CLOUDS_HEIGHT), 7)?;
 
-        if let Some(joette) = self.ant_manager.ants.first() {
-            self.display_info_at(format!("Joette's pos {:?}", joette.pos), 9)?;
-        }
+        // if let Some(joette) = self.ant_manager.ants.first() {
+        //     self.display_info_at(format!("Joette's pos {:?}", joette.pos), 9)?;
+        // }
 
         self.display_info_at(
             format!("map is {:?} of size {:?}", STARTING_MAP_SHAPE, STARTING_AREA),

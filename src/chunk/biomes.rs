@@ -1,4 +1,4 @@
-use std::{ fmt::Debug };
+use std::{ collections::HashMap, fmt::Debug, sync::{mpsc, Arc} };
 
 use noise::{ Fbm, NoiseFn, Perlin };
 
@@ -75,7 +75,7 @@ impl Default for NoiseParams {
             frequency: 0.5,
             lacunarity: 2.0,
             persistence: 1.1,
-            scale: 0.1,
+            scale: 0.001,
         }
     }
 }
@@ -101,3 +101,103 @@ impl Biome {
     }
 }
 //
+impl Manager {
+    pub const SURFACE: usize = 0;
+    pub const VARIATIONS: usize = 1;
+    pub const DETAIL: usize = 2;
+    pub const CAVES: usize = 3;
+    pub const TUNNELS: usize = 4;
+    pub const VEINS: usize = 5;
+    pub const HUMIDITY: usize = 6;
+    pub const ELEVATION: usize = 7;
+    pub const ROUGHNESS: usize = 8;
+    pub const TEMPERATURE: usize = 9;
+
+    pub fn empty() -> Self {
+        let (rx, tx) = mpsc::channel();
+        Self {
+            world_noise: Arc::new([
+                // Surface
+                NoiseParams {
+                    fbm: Fbm::new(1),
+                    octaves: 5,
+                    frequency: 0.5,
+                    lacunarity: 2.0,
+                    persistence: 1.5,
+                    scale: 0.012,
+                },
+                // Variations
+                NoiseParams {
+                    fbm: Fbm::new(1),
+                    octaves: 1,
+                    frequency: 1.0,
+                    lacunarity: 2.0,
+                    persistence: 1.0,
+                    scale: 0.1,
+                },
+                // Details
+                NoiseParams {
+                    fbm: Fbm::new(1),
+                    octaves: 4,
+                    frequency: 1.0,
+                    lacunarity: 2.0,
+                    persistence: 1.0,
+                    scale: 0.1,
+                },
+                // Caves
+                NoiseParams {
+                    fbm: Fbm::new(64),
+                    octaves: 4,
+                    frequency: 1.4,
+                    lacunarity: 2.0,
+                    persistence: 1.5,
+                    scale:0.9, // IS MULTIPLIED BY SURFACE SCALE
+                },
+                // Tunnels
+                NoiseParams {
+                    fbm: Fbm::new(65),
+                    octaves: 1,
+                    frequency: 1.0,
+                    lacunarity: 2.0,
+                    persistence: 0.1,
+                    scale: 1.0, // IS MULTIPLIED BY SURFACE SCALE
+                },
+                // Layers
+                NoiseParams {
+                    fbm: Fbm::new(3),
+                    octaves: 4,
+                    frequency: 0.02,
+                    lacunarity: 2.0,
+                    persistence: 0.4,
+                    scale: 0.09,
+                },
+                // HUMIDITY
+                NoiseParams::default(),
+                // ELEVATION
+                NoiseParams {
+                    fbm: Fbm::new(333),
+                    octaves: 3,
+                    frequency: 1.1,
+                    lacunarity: 2.0,
+                    persistence: 1.1,
+                    scale: 0.0001,
+                },
+                // ROUGHNESS
+                NoiseParams::default(),
+                // TEMPERATURE
+                NoiseParams {
+                    fbm: Fbm::new(33),
+                    octaves: 3,
+                    frequency: 1.2,
+                    lacunarity: 2.0,
+                    persistence: 0.99,
+                    scale: 0.001,
+                },
+            ]),
+            rx,
+            tx,
+            pending_chunks: vec![],
+            loaded_chunks: HashMap::new(),
+        }
+    }
+}

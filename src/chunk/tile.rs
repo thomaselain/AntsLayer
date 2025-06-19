@@ -58,6 +58,13 @@ impl TileType {
     pub const ERROR: TileType = TileType::Custom(0);
     pub const AIR: TileType = TileType::Gas(Gas::Air);
     pub const WATER: TileType = TileType::Fluid(Fluid::Water);
+
+    pub fn is_fluid(self) -> bool {
+        match self {
+            TileType::Fluid(_) => true,
+            _ => { false }
+        }
+    }
 }
 impl Tile {
     // Placeholder tile for cases that should not happen
