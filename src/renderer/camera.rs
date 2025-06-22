@@ -1,11 +1,14 @@
 use std::{ collections::HashMap };
 
-use crate::{ ant::direction::Direction, chunk::{ manager::LoadedChunk, HEIGHT, WIDTH } };
+use crate::{ ant::{colony::Colony, direction::Direction, ColonyMember}, chunk::{ manager::LoadedChunk, HEIGHT, WIDTH } };
 
 use super::Renderer;
 
 // Camera
 impl<'ttf> Renderer<'ttf> {
+    pub fn center_on_queen(&mut self, colony: &Colony){
+        self.camera = colony.queen.pos();
+    }
     pub fn camera_range_i32(&self) -> (i32, i32, i32, i32) {
         (
             (-self.camera.0 - self.view_distance) / (WIDTH as i32),

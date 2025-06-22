@@ -36,8 +36,8 @@ pub const CLOUDS_RENDERING: bool = false;
 pub const VIEW_DISTANCE: i32 = if cfg!(test) { (WIDTH as i32) * 10 } else { (WIDTH as i32) * 5 };
 
 /// Window starting dimentions
-pub const WIN_DEFAULT_W: u32 = 300;
-pub const WIN_DEFAULT_H: u32 = 300;
+pub const WIN_DEFAULT_W: u32 = 800;
+pub const WIN_DEFAULT_H: u32 = 600;
 
 /// Rendering sizes
 pub const FONT_SIZE: u16 = 15;

@@ -1,7 +1,7 @@
 use sdl2::pixels::Color;
 
 use crate::{
-    ant::{ colony::Colony, ColonyMember },
+    ant::{ colony::Colony },
     chunk::{
         index::{ self, flatten_index_i32 },
         manager::LoadedChunk,
@@ -37,7 +37,7 @@ impl LoadedChunk {
         renderer.draw_chunk(draw_pos, color);
     }
 
-    pub fn render(&self, renderer: &mut Renderer, colony: &[Colony; 2], timestamp: f64) {
+    pub fn render(&self, renderer: &mut Renderer,timestamp: f64) {
         if !cfg!(test) && renderer.tile_size < 5 {
             let (world_x, world_y) = Renderer::to_world_coords((self.pos.0, self.pos.1), (0, 0));
             let draw_pos = renderer.tile_to_screen_coords((world_x, world_y));
@@ -94,13 +94,7 @@ impl LoadedChunk {
                     let c = Color::RGBA(25, 25, 25, 175);
                     renderer.fill_rect(draw_pos, c);
                 }
-                ////////////////////////////////////////////////////////////////
-                ////////////////////  Ants  Rendering //////////////////////////
-                ////////////////////////////////////////////////////////////////
-
-                renderer.draw_ants(&colony[Colony::PLAYER], timestamp);
-                renderer.draw_ants(&colony[Colony::AI], timestamp);
-                ////////////////////////////////////////////////////////////////
+              
 
                 // Draw transparent blocks
                 'bottom_to_top: loop {

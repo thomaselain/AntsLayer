@@ -1,8 +1,6 @@
 use sdl2::{ event::Event, keyboard::Keycode, mouse::MouseButton };
 
-use crate::{
-    ant::direction::Direction, chunk::biomes::Biome, interface::{ self }, Game
-};
+use crate::{ ant::direction::Direction, chunk::biomes::Biome, interface::{ self }, Game };
 
 pub trait ToDirection {
     fn to_direction(self) -> Result<Direction, Keycode>;
@@ -145,6 +143,14 @@ impl<'ttf> Game<'ttf> {
                     }
                     Keycode::E => {
                         self.renderer.increase_view_dist().unwrap();
+                    }
+                    Keycode::RETURN => {
+                        self.renderer.center_on_queen(
+                            &self.ant_manager.colonies[crate::ant::colony::Colony::PLAYER]
+                        );
+                    }
+                    Keycode::SPACE => {
+                        self.paused = if self.paused { false} else {true};
                     }
                     Keycode::ESCAPE => {
                         self.chunk_manager.loaded_chunks.clear();

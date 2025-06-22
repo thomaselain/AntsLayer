@@ -10,7 +10,7 @@ pub mod manager;
 #[allow(unused)]
 pub use manager::Manager as ChunkManager;
 
-use crate::chunk::tile::TileFlag;
+use crate::chunk::{ index::to_xyz, tile::TileFlag };
 
 pub mod tile;
 pub mod index;
@@ -21,6 +21,25 @@ pub mod thread;
 pub struct ChunkContent([Tile; Self::FLAT_SIZE]);
 impl ChunkContent {
     pub const FLAT_SIZE: usize = WIDTH * WIDTH * HEIGHT;
+    pub fn column(self, (x, y): (i32, i32)) -> Vec<Tile> {
+        let mut ret = Vec::with_capacity(HEIGHT);
+        for z in 0..HEIGHT as i32 {
+            ret.push(self[(x, y, z)]);
+        }
+
+        assert!(ret.len() == HEIGHT);
+        ret
+    }
+    pub fn column_from_index(self, index: usize) -> Vec<Tile> {
+        let mut ret = Vec::with_capacity(HEIGHT);
+        let (x, y, z) = to_xyz(index);
+
+        for _z in 0..(HEIGHT as i32) - z {
+            ret.push(self[(x, y, _z)]);
+        }
+
+        ret
+    }
 }
 pub const WIDTH: usize = if cfg!(test) { 8 } else { 8 };
 pub const HEIGHT: usize = if cfg!(test) { 64 } else { 64 };

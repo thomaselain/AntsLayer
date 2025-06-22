@@ -27,6 +27,7 @@ mod renderer;
 pub struct Game<'ttf> {
     // Engine
     pub running: bool,
+    pub paused: bool,
     pub interface: Interface,
 
     // Frames and Ticks tracking
@@ -59,7 +60,10 @@ impl<'ttf> Game<'ttf> {
         let ant_manager = AntManager::new();
 
         Game {
+            // if set to false, the program will exit
             running: true,
+            // Stops in game time
+            paused: true,
             interface: Interface::new(),
 
             tps: Default::default(),
@@ -96,11 +100,8 @@ impl<'ttf> Game<'ttf> {
         self.update_tps();
 
         // Let the ants think !
-        self.ant_manager.tick(&self.chunk_manager, self.last_tick);
-
-        if self.process_input().is_err() {
-            todo!("Invalid input handling");
-        }
+        self.ant_manager.tick(&self.chunk_manager);
+        self.last_tick = Instant::now();
     }
     #[allow(unused)]
     fn update_fps(&mut self) {
@@ -112,7 +113,6 @@ impl<'ttf> Game<'ttf> {
             if let Some(mut fps) = self.fps.lock().ok() {
                 *fps = self.frames;
                 self.frames = 0;
-                self.last_frame = Instant::now();
             }
         }
     }
@@ -126,7 +126,6 @@ impl<'ttf> Game<'ttf> {
             if let Some(mut tps) = self.tps.lock().ok() {
                 *tps = self.ticks;
                 self.ticks = 0;
-                self.last_tick = Instant::now();
             }
         }
     }
@@ -134,13 +133,14 @@ impl<'ttf> Game<'ttf> {
     fn render(&mut self) {
         let timestamp = self.elapsed_secs();
         // let dims = self.renderer.dims;
-
         #[cfg(test)]
         self.update_fps();
 
         self.chunk_manager.look_for_new_chunks(&mut self.renderer);
 
-        self.chunk_manager.render(&mut self.renderer, &self.ant_manager, timestamp);
+        self.chunk_manager.render(&mut self.renderer, timestamp);
+        self.ant_manager.render(&mut self.renderer, timestamp);
+
 
         // Top-left info display
         #[cfg(test)]
@@ -149,6 +149,7 @@ impl<'ttf> Game<'ttf> {
         }
 
         self.interface.render(&mut self.renderer);
+        self.last_frame = Instant::now();
     }
 
     pub fn run(&mut self) {
@@ -164,7 +165,13 @@ impl<'ttf> Game<'ttf> {
                 self.events.push(event);
             }
 
-            self.tick();
+            if self.process_input().is_err() {
+                todo!("Invalid input handling");
+            }
+
+            if !self.paused {
+                self.tick();
+            }
 
             // Maybe multithread will be needed for chunks rendering
             self.renderer.update_window_size();

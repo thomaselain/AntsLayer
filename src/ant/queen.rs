@@ -1,8 +1,10 @@
+#[allow(unused)]
 use std::{ any::Any, time::{ Duration, Instant } };
 
 use sdl2::pixels::Color;
 
-use crate::ant::{ colony::Colony, Action };
+#[allow(unused)]
+use crate::ant::{ colony::Colony, direction::Direction, Action };
 #[allow(unused)]
 use crate::{
     ant::{ explorer::Explorer, worker::Worker, AntManager, ColonyMember },
@@ -24,36 +26,55 @@ pub struct Queen {
 }
 
 impl ColonyMember for Queen where Self: Sized {
-    fn new(self, pos: (i32, i32, i32)) -> Box<dyn ColonyMember> {
-        Box::new(Self { pos, last_action: Instant::now(), eggs: vec![] })
+    fn last_action(&self) -> Instant {
+        self.last_action
     }
-    fn render(self, renderer: &mut Renderer) {
-        if self.pos.2 != renderer.camera.2 {
-            return;
-        }
-        let (x, y) = (self.pos.0, self.pos.1);
-        let (x, y) = renderer.tile_to_screen_coords((x, y));
-        renderer.draw_tile((x, y), Color::YELLOW);
+    fn reset_last_action(&mut self) {
+        self.last_action = Instant::now();
     }
-
     fn as_any(&self) -> &dyn Any {
         self
     }
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn pos(&self) -> (i32, i32, i32) {
+        self.pos
+    }
+    fn set_pos(&mut self, pos: (i32, i32, i32)) {
+        self.pos = pos;
+    }
+    fn render(&self, renderer: &mut Renderer) {
+        let (x, y, z) = self.pos;
+
+        if z > renderer.camera.2 {
+            return;
+        }
+        let (x, y) = renderer.tile_to_screen_coords((x, y));
+        renderer.draw_tile((x, y), Color::YELLOW);
+    }
     fn think(&mut self) -> Option<Action> {
-        if Instant::now().duration_since(self.last_action) > Duration::from_secs_f32(1.0) {
+        if self.eggs.len() > 0 {
             println!(
                 "The queen is giving birth, {:?} new ants arrived in this world !",
                 self.eggs.len()
             );
-            self.clone().breed();
-            self.last_action = Instant::now();
+            let newborns = self.breed();
+            Some(Action::Breed(newborns))
+        } else {
+            None
         }
+    }
 
-        None
+    #[allow(unused)]
+    fn walk(&mut self, chunk_mngr: &ChunkManager, direction: Direction) {
+        panic!("Why would i go anywhere ?")
     }
 }
 
 impl Queen {
+    pub const BREEDING_TIMER: f32 = 2.0;
     pub fn breed(&mut self) -> Vec<Box<dyn ColonyMember>> where Self: Sized {
         let mut newborns = vec![];
 
@@ -69,39 +90,30 @@ impl Queen {
     }
 }
 
-impl Colony {
-    pub fn babies(&mut self, babies: Vec<Box<dyn ColonyMember + 'static>>) -> Result<(), ()> {
-        for baby in babies {
-            // todo!("Change 0 to find the colony");
-            self.ants.push(baby);
-        }
-        Ok(())
-    }
-}
 #[test]
 fn queen() {
-    let pos = (0, 0, 0);
-
-    let mut queen = Queen {
-        pos,
-        last_action: Instant::now(),
-        eggs: vec![Egg { hatch: Explorer::new }],
-    };
-    assert!(queen.eggs.len() == 1);
-    queen.new_worker();
-    assert!(queen.eggs.len() == 2);
-
     let mut ant_manager = AntManager::new();
     let mut chunk_manager = ChunkManager::empty();
     let chunk = Chunk::generate((0, 0), &chunk_manager.world_noise);
     let chunk = chunk.join().unwrap();
     chunk_manager.loaded_chunks.insert((0, 0), chunk.clone());
 
-    let newborns = queen.breed();
-
     let bok: &mut Colony = &mut ant_manager.colonies[Colony::PLAYER];
 
-    bok.babies(newborns);
-
-    queen.think();
+    // println!("{:?}", self.queen.last_action().duration_since(last_tick));
+    if bok.queen.last_action().duration_since(Instant::now()) > Duration::from_millis(1000) {
+        if let Some(action) = bok.queen.think() {
+            match action {
+                Action::Walk(_) => {
+                    panic!("Why would the queen go anywhere ?");
+                }
+                Action::Breed(mut newborns) => {
+                    bok.ants.append(&mut newborns);
+                    bok.queen.reset_last_action();
+                }
+            }
+        }
+    } else {
+        panic!("The queen should have something to do !");
+    }
 }

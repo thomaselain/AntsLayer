@@ -1,6 +1,6 @@
 use std::{ collections::HashMap, sync::{ mpsc::{ Receiver, Sender }, Arc, Mutex } };
 
-use crate::{ ant::{colony::Colony, AntManager}, chunk::biomes::NoiseParams, renderer::Renderer };
+use crate::{ ant::{ colony::Colony, AntManager }, chunk::biomes::NoiseParams, renderer::Renderer };
 
 use super::{
     generation::{ MapShape, STARTING_AREA, STARTING_MAP_SHAPE },
@@ -25,23 +25,24 @@ pub struct LoadedChunk {
     pub c: Arc<Mutex<Chunk>>,
 }
 impl Manager {
-    pub fn render(&mut self, renderer: &mut Renderer, a_mngr: &AntManager, timestamp: f64) {
+    pub fn render(&mut self, renderer: &mut Renderer, timestamp: f64) {
         renderer.filter_visible_chunks(&mut self.loaded_chunks);
 
         for (pos, loaded) in self.loaded_chunks.clone() {
-            if renderer.is_chunk_on_screen(pos) && a_mngr.colonies.len() > 0 {
-                loaded.render(renderer, &a_mngr.colonies, timestamp);
+            if renderer.is_chunk_on_screen(pos){
+                loaded.render(renderer, timestamp);
             }
         }
     }
 
     pub fn tile_at(&self, p: (i32, i32, i32)) -> Option<Tile> {
-        let chunk_pos = (p.0 / (WIDTH as i32), p.1 / (WIDTH as i32));
+        let chunk_pos = (p.0.div_euclid(WIDTH as i32), p.1.div_euclid(WIDTH as i32));
         for (_pos, loaded_chunk) in &self.loaded_chunks {
             if loaded_chunk.pos == chunk_pos {
                 return Some(loaded_chunk.c.lock().unwrap().get(p));
             }
         }
+        panic!("Failed to find tile at {:?}", p);
         // Could not find this tile in loaded chunks
         None
     }
